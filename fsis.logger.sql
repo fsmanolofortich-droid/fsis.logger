@@ -1,5 +1,5 @@
 -- =====================================================
--- BFP LOGBOOK MANAGEMENT SYSTEM — SUPABASE SQL SCHEMA
+-- BFP INSPECTION MANAGEMENT SYSTEM — SUPABASE SQL SCHEMA
 -- Run this in Supabase Dashboard → SQL Editor
 -- =====================================================
 
@@ -20,9 +20,21 @@ CREATE TABLE IF NOT EXISTS inspection_logbook (
   inspected_by    VARCHAR(255),
   latitude        DECIMAL(10,8) NULL,
   longitude       DECIMAL(11,8) NULL,
+  photo_url       TEXT NULL,
+  photo_taken_at  TEXT NULL,
   created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Schema upgrades for existing projects (safe to run multiple times)
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,8) NULL;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS longitude DECIMAL(11,8) NULL;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS photo_url TEXT NULL;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS photo_taken_at TEXT NULL;
 
 -- Auto-update updated_at on row change
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -198,6 +210,47 @@ BEGIN
   )
   RETURNING id INTO v_id;
   RETURN v_id;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS update_app_user(TEXT, UUID, TEXT, TEXT, TEXT, TEXT);
+CREATE FUNCTION update_app_user(
+  admin_secret TEXT,
+  p_user_id UUID,
+  p_username TEXT,
+  p_display_name TEXT,
+  p_password_plain TEXT,
+  p_role TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_secret TEXT;
+BEGIN
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'User id is required';
+  END IF;
+
+  IF p_role IS NOT NULL AND p_role NOT IN ('user', 'admin') THEN
+    RAISE EXCEPTION 'Role must be user or admin';
+  END IF;
+
+  SELECT secret INTO v_secret FROM app_admin_secret WHERE id = 1 LIMIT 1;
+  IF v_secret IS NULL OR v_secret <> admin_secret THEN
+    RAISE EXCEPTION 'Invalid admin secret';
+  END IF;
+
+  UPDATE app_users
+  SET
+    username = COALESCE(NULLIF(trim(p_username), ''), username),
+    display_name = NULLIF(trim(COALESCE(p_display_name, display_name::text)), ''),
+    password_hash = COALESCE(NULLIF(p_password_plain, ''), password_hash),
+    role = COALESCE(p_role, role),
+    updated_at = NOW()
+  WHERE id = p_user_id;
 END;
 $$;
 

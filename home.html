@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BFP Logbook Management System — Home</title>
+  <title>BFP Inspection Management System — Home</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./bfp.css">
   <link
@@ -370,7 +370,10 @@
 
     /* Map detail panel (left-side metadata sidebar) */
     .map-detail-panel {
-      position: relative;
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
       width: 320px;
       max-width: 100%;
       background: rgba(13, 27, 42, 0.96);
@@ -580,6 +583,7 @@
           <span id="lastLogin" class="last-login" aria-hidden="true"></span>
         </span>
       </div>
+      <span id="storageBadge" class="storage-badge local" title="Storage mode">LOCAL</span>
       <button id="logoutBtn" class="logout-btn" type="button">Log out</button>
     </div>
     <nav class="header-nav" aria-label="Main navigation">
@@ -651,7 +655,7 @@
       <p>Manage Fire Safety Inspection Certificates for businesses and establishments in Manolo Fortich.</p>
     </div>
     <div class="home-embed">
-      <main id="inspection_list">
+      <div id="inspection_list">
       <!-- Inspection Logbook Panel -->
       <div class="logbook-panel visible" id="panel-inspection">
         <div class="print-header">
@@ -660,7 +664,7 @@
           <p class="print-subtitle"><strong>Inspection Logbook</strong> — Fire Safety Inspection Certificates</p>
           <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span id="inspection-print-date">—</span></p>
         </div>
-        <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Logbook Management System.</div>
+        <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Inspection Management System.</div>
         <div class="panel-header">
           <div class="panel-title">
             <span>Active Logbook</span>
@@ -691,210 +695,12 @@
           <strong>No Inspection Records Yet</strong>
           <p>Use the red + button on the map to log a new inspection.</p>
         </div>
-    
-    <!-- Modal -->
-    <div class="modal-overlay" id="inspection-modal-overlay" onclick="inspectionCloseOnOverlay(event)">
-      <div class="modal">
-        <div class="modal-header">
-          <div>
-            <small id="inspection-modal-subtitle">New Entry</small>
-            <h2 id="inspection-modal-title">Add Record</h2>
-          </div>
-          <button class="btn-close" onclick="inspectionCloseModal()" aria-label="Close">×</button>
-        </div>
-        <div class="modal-body">
-          <form id="inspection-entry-form" onsubmit="inspectionSaveEntry(event)">
-            <div id="fields-inspection">
-              <div class="form-section">
-                <div class="form-section-title">Record details</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_io_number">IO Number</label>
-                    <input type="text" id="inspection_io_number" placeholder="e.g. IO-2025-001">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_fsic_number">FSIC Number</label>
-                    <input type="text" id="inspection_fsic_number" placeholder="e.g. FSIC-2025-001">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_owner">Name of Owner</label>
-                    <input type="text" id="inspection_owner" placeholder="Full name of owner">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_business_name">Business / Establishment</label>
-                    <input type="text" id="inspection_business_name" placeholder="Business or establishment name">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Address</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_addr_region">Region</label>
-                    <input type="text" id="inspection_addr_region" value="X" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_province">Province</label>
-                    <input type="text" id="inspection_addr_province" value="Bukidnon" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_municipal">Municipal</label>
-                    <input type="text" id="inspection_addr_municipal" value="Manolo Fortich" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_barangay">Barangay</label>
-                    <input type="text" id="inspection_addr_barangay" placeholder="e.g. Tankulan">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_addr_line">House no. / Street / Zone</label>
-                    <input type="text" id="inspection_addr_line" placeholder="e.g. Purok 3, Zone 1, National Highway">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Inspection</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_date_inspected">Date Inspected</label>
-                    <input type="date" id="inspection_date_inspected">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_inspected_by">Inspected By</label>
-                    <input type="text" id="inspection_inspected_by" placeholder="Name of inspecting officer">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Location &amp; photo</div>
-                <div class="form-grid">
-                  <div class="form-group full">
-                    <label for="inspection_photo">
-                      Attach photo (uses GPS from EXIF if available)
-                    </label>
-                    <input
-                      type="file"
-                      id="inspection_photo"
-                      accept="image/*"
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
-          <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save Record</button>
-        </div>
       </div>
     </div>
-
-    <div class="toast" id="inspection-toast"></div>
-    
-    <!-- Modal -->
-    <div class="modal-overlay" id="inspection-modal-overlay" onclick="inspectionCloseOnOverlay(event)">
-      <div class="modal">
-        <div class="modal-header">
-          <div>
-            <small id="inspection-modal-subtitle">New Entry</small>
-            <h2 id="inspection-modal-title">Add Record</h2>
-          </div>
-          <button class="btn-close" onclick="inspectionCloseModal()" aria-label="Close">×</button>
-        </div>
-        <div class="modal-body">
-          <form id="inspection-entry-form" onsubmit="inspectionSaveEntry(event)">
-            <div id="fields-inspection">
-              <div class="form-section">
-                <div class="form-section-title">Record details</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_io_number">IO Number</label>
-                    <input type="text" id="inspection_io_number" placeholder="e.g. IO-2025-001">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_fsic_number">FSIC Number</label>
-                    <input type="text" id="inspection_fsic_number" placeholder="e.g. FSIC-2025-001">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_owner">Name of Owner</label>
-                    <input type="text" id="inspection_owner" placeholder="Full name of owner">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_business_name">Business / Establishment</label>
-                    <input type="text" id="inspection_business_name" placeholder="Business or establishment name">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Address</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_addr_region">Region</label>
-                    <input type="text" id="inspection_addr_region" value="X" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_province">Province</label>
-                    <input type="text" id="inspection_addr_province" value="Bukidnon" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_municipal">Municipal</label>
-                    <input type="text" id="inspection_addr_municipal" value="Manolo Fortich" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_barangay">Barangay</label>
-                    <input type="text" id="inspection_addr_barangay" placeholder="e.g. Tankulan">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_addr_line">House no. / Street / Zone</label>
-                    <input type="text" id="inspection_addr_line" placeholder="e.g. Purok 3, Zone 1, National Highway">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Inspection</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_date_inspected">Date Inspected</label>
-                    <input type="date" id="inspection_date_inspected">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_inspected_by">Inspected By</label>
-                    <input type="text" id="inspection_inspected_by" placeholder="Name of inspecting officer">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Location &amp; photo</div>
-                <div class="form-grid">
-                  <div class="form-group full">
-                    <label for="inspection_photo">
-                      Attach photo (uses GPS from EXIF if available)
-                    </label>
-                    <input
-                      type="file"
-                      id="inspection_photo"
-                      accept="image/*"
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
-          <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save Record</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="toast" id="inspection-toast"></div>
-      </div>
-    </main>
     </div>
     
     <footer>
-      Bureau of Fire Protection &mdash; Logbook Management System &copy; 2025. All rights reserved.
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
     </footer>
   </section>
 
@@ -904,7 +710,7 @@
       <p>Track Fire Safety Evaluation Clearances for new and proposed building projects.</p>
     </div>
     <div class="home-embed">
-    <main id="fsec_list">
+    <div id="fsec_list">
       <div class="logbook-panel" id="panel-fsec">
         <div class="print-header">
           <h2>Bureau of Fire Protection</h2>
@@ -912,7 +718,7 @@
           <p class="print-subtitle"><strong>FSEC Building Plan Logbook</strong> — Fire Safety Evaluation Clearances</p>
           <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span id="fsec-print-date">—</span></p>
         </div>
-        <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Logbook Management System.</div>
+        <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Inspection Management System.</div>
         <div class="panel-header">
           <div class="panel-title">
             <span>Active Logbook</span>
@@ -943,11 +749,11 @@
           <p>Click "Add Entry" to log a new building plan.</p>
         </div>
       </div>
-    </main>
+    </div>
     </div>
 
     <footer>
-      Bureau of Fire Protection &mdash; Logbook Management System &copy; 2025. All rights reserved.
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
     </footer>
 
     <div class="modal-overlay" id="fsec-modal-overlay" onclick="fsecCloseOnOverlay(event)">

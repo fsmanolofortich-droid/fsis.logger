@@ -59,6 +59,7 @@ let currentExifLat = null;
 let currentExifLng = null;
 let currentExifPreviewUrl = null;
 let currentExifTakenAt = null;
+let currentExifFile = null;
 
 let inspectionMarkersLayer = null;
 
@@ -165,7 +166,10 @@ function showView(name) {
   const views = Array.from(document.querySelectorAll("[data-view]"));
   for (const v of views) {
     const viewName = v.getAttribute("data-view");
-    v.hidden = viewName !== name;
+    const isActive = viewName === name;
+    v.hidden = !isActive;
+    // Ensure sections are truly removed from layout when inactive
+    v.style.display = isActive ? "" : "none";
   }
 
   const links = Array.from(document.querySelectorAll("[data-view-link]"));
@@ -182,7 +186,16 @@ function showView(name) {
       // Ensure map resizes correctly when returning to the tab
       resizeMapLayout();
     }
+  } else {
+    // When leaving the map view, clear any map-specific heights
+    const mapSection = document.querySelector('[data-view="map"]');
+    const layout = document.querySelector(".map-layout");
+    if (mapSection) mapSection.style.height = "";
+    if (layout) layout.style.height = "";
   }
+
+  // Always reset scroll to top when changing main views
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function startUserLocationTracking() {
@@ -262,7 +275,11 @@ function initViewRouting() {
     if (!view) return;
 
     e.preventDefault();
-    window.location.hash = view;
+    // Always update the view immediately, even if the hash doesn't change
+    showView(view);
+    if (getCurrentView() !== view) {
+      window.location.hash = view;
+    }
   });
 
   applyFromHash();
@@ -297,6 +314,7 @@ function init() {
   inspectionInitData();
   fsecInitData();
   initInspectionPhotoExif();
+  refreshStorageBadge();
 }
 
 document.addEventListener("DOMContentLoaded", init);
@@ -316,6 +334,35 @@ const supabaseClient =
 
 function isSupabaseEnabled() {
   return !!supabaseClient;
+}
+
+function setStorageBadge(mode) {
+  const el = document.getElementById("storageBadge");
+  if (!el) return;
+  const isDb = mode === "db";
+  el.textContent = isDb ? "DB" : "LOCAL";
+  el.classList.toggle("db", isDb);
+  el.classList.toggle("local", !isDb);
+  el.title = isDb ? "Database connected" : "Offline mode (local storage)";
+}
+
+async function refreshStorageBadge() {
+  if (!supabaseClient) {
+    setStorageBadge("local");
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from("inspection_logbook")
+      .select("id")
+      .limit(1);
+    if (error) throw error;
+    setStorageBadge("db");
+  } catch (err) {
+    console.warn("Database check failed, using local mode:", err);
+    setStorageBadge("local");
+  }
 }
 
 function logbookEsc(str) {
@@ -661,13 +708,45 @@ function inspectionSaveEntry(e) {
     inspectionCloseModal();
     logbookShowToast(
       "inspection-toast",
-      "Saved to browser only. Paste Supabase anon key in this file to save to the database."
+      "Saved on this device only (offline mode)."
     );
     return;
   }
 
   (async () => {
     try {
+      // If we have a file and Supabase Storage, upload to the 'storage' bucket
+      if (currentExifFile && supabaseClient?.storage) {
+        const fileExt =
+          (currentExifFile.name && currentExifFile.name.split(".").pop()) ||
+          "jpg";
+        const safeExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const path = `inspection-photos/${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}.${safeExt}`;
+        try {
+          const { error: uploadError } = await supabaseClient.storage
+            .from("storage")
+            .upload(path, currentExifFile, {
+              cacheControl: "3600",
+              upsert: false,
+              contentType: currentExifFile.type || "image/jpeg",
+            });
+          if (!uploadError) {
+            const { data: urlData } = supabaseClient.storage
+              .from("storage")
+              .getPublicUrl(path);
+            if (urlData?.publicUrl) {
+              entry.photo_url = urlData.publicUrl;
+            }
+          } else {
+            console.warn("Photo upload failed:", uploadError);
+          }
+        } catch (uploadErr) {
+          console.warn("Photo upload threw error:", uploadErr);
+        }
+      }
+
       const payload = {
         io_number: entry.io_number,
         owner_name: entry.insp_owner,
@@ -678,16 +757,39 @@ function inspectionSaveEntry(e) {
         inspected_by: entry.inspected_by || null,
         latitude: entry.lat ?? null,
         longitude: entry.lng ?? null,
+        photo_url: entry.photo_url ?? null,
+        photo_taken_at: entry.photo_taken_at ?? null,
       };
       const q = supabaseClient.from("inspection_logbook");
-      const { error } = inspectionEditingId
-        ? await q.update(payload).eq("id", inspectionEditingId)
-        : await q.insert(payload);
-      if (error) throw error;
+
+      const runWrite = async (data) =>
+        inspectionEditingId
+          ? await q.update(data).eq("id", inspectionEditingId)
+          : await q.insert(data);
+
+      let { error } = await runWrite(payload);
+      if (error) {
+        const msg = (error?.message || String(error)).toLowerCase();
+        const missingGeo = msg.includes("latitude") || msg.includes("longitude");
+        if (missingGeo) {
+          const payloadNoGeo = {
+            io_number: entry.io_number,
+            owner_name: entry.insp_owner,
+            business_name: entry.business_name,
+            address: entry.insp_address,
+            date_inspected: entry.date_inspected,
+            fsic_number: entry.fsic_number,
+            inspected_by: entry.inspected_by || null,
+          };
+          const retry = await runWrite(payloadNoGeo);
+          if (retry.error) throw retry.error;
+        } else {
+          throw error;
+        }
+      }
       await inspectionLoadFromSupabase();
       inspectionRenderTable();
-      // We don't have coordinates in the DB schema yet, so we only place a marker
-      // based on the EXIF data from this save, if available.
+      // Place a marker based on the coordinates available on this entry.
       addInspectionMarkerFromEntry(entry);
       inspectionCloseModal();
       logbookShowToast("inspection-toast", "Saved to database.");
@@ -782,9 +884,11 @@ function initInspectionPhotoExif() {
     currentExifLng = null;
     currentExifPreviewUrl = null;
     currentExifTakenAt = null;
+    currentExifFile = null;
 
     const file = input.files && input.files[0];
     if (!file) return;
+    currentExifFile = file;
 
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -900,13 +1004,33 @@ function inspectionPrintPanel() {
 }
 
 async function inspectionLoadFromSupabase() {
-  const { data: rows, error } = await supabaseClient
-    .from("inspection_logbook")
-    .select(
-      "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, latitude, longitude, created_at"
-    )
-    .order("created_at", { ascending: true });
-  if (error) throw error;
+  const selectWithGeo =
+    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, latitude, longitude, photo_url, photo_taken_at, created_at";
+  const selectWithoutGeo =
+    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, created_at";
+
+  const run = async (select) =>
+    await supabaseClient
+      .from("inspection_logbook")
+      .select(select)
+      .order("created_at", { ascending: true });
+
+  let rows;
+  {
+    const { data, error } = await run(selectWithGeo);
+    if (!error) rows = data;
+    else {
+      const msg = (error?.message || String(error)).toLowerCase();
+      const missingGeo = msg.includes("latitude") || msg.includes("longitude");
+      if (!missingGeo) throw error;
+
+      // Backward compatibility: database exists but hasn't been migrated yet
+      const retry = await run(selectWithoutGeo);
+      if (retry.error) throw retry.error;
+      rows = retry.data;
+    }
+  }
+
   inspectionData = (rows || []).map((r) => ({
     id: r.id,
     io_number: r.io_number,
@@ -918,6 +1042,8 @@ async function inspectionLoadFromSupabase() {
     inspected_by: r.inspected_by || "",
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
+    photo_url: r.photo_url ?? null,
+    photo_taken_at: r.photo_taken_at ?? null,
     created_at: r.created_at,
   }));
 }
@@ -928,10 +1054,8 @@ async function inspectionInitData() {
     else inspectionLoadFromLocal();
   } catch (err) {
     inspectionLoadFromLocal();
-    logbookShowToast(
-      "inspection-toast",
-      "⚠️ Could not load from database. Using local data."
-    );
+    console.warn("Inspection load failed, using local storage:", err);
+    logbookShowToast("inspection-toast", "Using data stored on this device.");
   }
   inspectionSetPrintDate();
   inspectionRenderTable();
@@ -1211,7 +1335,7 @@ function fsecSaveEntry(e) {
     fsecCloseModal();
     logbookShowToast(
       "fsec-toast",
-      "Saved to browser only. Paste Supabase anon key in this file to save to the database."
+      "Saved on this device only (offline mode)."
     );
     return;
   }
@@ -1295,10 +1419,8 @@ async function fsecInitData() {
     else fsecLoadFromLocal();
   } catch (err) {
     fsecLoadFromLocal();
-    logbookShowToast(
-      "fsec-toast",
-      "⚠️ Could not load from database. Using local data."
-    );
+    console.warn("FSEC load failed, using local storage:", err);
+    logbookShowToast("fsec-toast", "Using data stored on this device.");
   }
   fsecSetPrintDate();
   fsecRenderTable();
