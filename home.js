@@ -63,6 +63,7 @@ let currentExifFile = null;
 
 let inspectionMarkersLayer = null;
 let inspectionDataLoaded = false;
+let inspectionActiveTab = "with-location";
 
 function resizeMapLayout() {
   const mapSection = document.querySelector('[data-view="map"]');
@@ -173,6 +174,10 @@ function showView(name) {
   }
 
   document.body.classList.toggle("is-map-view", name === "map");
+
+  if (name === "inspection") {
+    setInspectionTab(inspectionActiveTab);
+  }
 
   if ((name === "map" || name === "inspection") && !inspectionDataLoaded) {
     inspectionInitData();
@@ -346,6 +351,15 @@ function init() {
   const navOverlay = document.getElementById("navSidebarOverlay");
   navOverlay?.addEventListener("click", closeNavSidebar);
 
+  // Inspection sub‑nav (With location / No location yet)
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest?.(".inspection-subnav-btn");
+    if (!btn) return;
+    const tab = btn.getAttribute("data-inspection-tab");
+    if (!tab) return;
+    setInspectionTab(tab);
+  });
+
   // Keep the map sized correctly on window resize
   window.addEventListener("resize", () => {
     if (getCurrentView() === "map") {
@@ -360,6 +374,9 @@ function init() {
   const initialView = getCurrentView();
   if ((initialView === "map" || initialView === "inspection") && !inspectionDataLoaded) {
     inspectionInitData();
+    if (initialView === "inspection") {
+      setInspectionTab(inspectionActiveTab);
+    }
   } else if (initialView === "fsec" && !fsecDataLoaded) {
     fsecInitData();
   }
@@ -453,6 +470,24 @@ function showSaveIndicator(message) {
   }, 2200);
 }
 
+function setInspectionTab(tab) {
+  inspectionActiveTab = tab;
+
+  const panelWith = document.getElementById("panel-inspection");
+  const panelNoLocation = document.getElementById("panel-inspection-nophoto");
+  const buttons = document.querySelectorAll(".inspection-subnav-btn");
+
+  buttons.forEach((btn) => {
+    const t = btn.getAttribute("data-inspection-tab");
+    const isActive = t === tab;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  if (panelWith) panelWith.style.display = tab === "with-location" ? "" : "none";
+  if (panelNoLocation) panelNoLocation.style.display = tab === "no-location" ? "" : "none";
+}
+
 // -----------------------------
 // Inspection logbook module
 // -----------------------------
@@ -531,37 +566,86 @@ function inspectionRenderTable() {
   const tbody = document.getElementById("tbody-inspection");
   const empty = document.getElementById("empty-inspection");
   const tableWrap = document.getElementById("table-inspection")?.closest(".table-wrap");
+  const tbodyNoPhoto = document.getElementById("tbody-inspection-nophoto");
+  const emptyNoPhoto = document.getElementById("empty-inspection-nophoto");
+  const tableWrapNoPhoto = document.getElementById("table-inspection-nophoto")?.closest(".table-wrap");
+  const panelNoPhoto = document.getElementById("panel-inspection-nophoto");
+
   if (!tbody || !empty) return;
 
   tbody.innerHTML = "";
+  if (tbodyNoPhoto) tbodyNoPhoto.innerHTML = "";
+  let withLocationCount = 0;
+  let noLocationCount = 0;
+
   if (inspectionData.length === 0) {
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
-    return;
+  } else {
+    empty.style.display = "none";
+    if (tableWrap) tableWrap.style.display = "";
+
+    inspectionData.forEach((row, i) => {
+      const hasLocation = row.lat != null && row.lng != null;
+
+      const baseRowHtml = `
+        <td data-label="#">${i + 1}</td>
+        <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
+        <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
+        <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
+        <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
+        <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
+        <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
+        <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
+      `;
+
+      if (hasLocation) {
+        withLocationCount++;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          ${baseRowHtml}
+          <td class="col-action" data-label="Action">
+            <div class="tbl-actions">
+              <button class="btn-edit" onclick="inspectionEditEntry(${i})">Edit</button>
+              <button class="btn-del" onclick="inspectionDeleteEntry(${i})">Delete</button>
+              <button class="btn-edit" onclick="inspectionDownloadPdf(${i})">Download PDF</button>
+              <button class="btn-edit" onclick="inspectionAddPhoto(${i})">Add photo</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      } else {
+        noLocationCount++;
+        if (tbodyNoPhoto) {
+          const tr2 = document.createElement("tr");
+          tr2.innerHTML = `
+            ${baseRowHtml}
+            <td class="col-action" data-label="Action">
+              <div class="tbl-actions">
+                <button class="btn-edit" onclick="inspectionEditEntry(${i})">Edit</button>
+                <button class="btn-del" onclick="inspectionDeleteEntry(${i})">Delete</button>
+                <button class="btn-edit" onclick="inspectionDownloadPdf(${i})">Download PDF</button>
+                <button class="btn-edit" onclick="inspectionAddPhoto(${i})">Add photo</button>
+              </div>
+            </td>
+          `;
+          tbodyNoPhoto.appendChild(tr2);
+        }
+      }
+    });
   }
 
-  empty.style.display = "none";
-  if (tableWrap) tableWrap.style.display = "";
-  inspectionData.forEach((row, i) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td data-label="#">${i + 1}</td>
-      <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
-      <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
-      <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
-      <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
-      <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
-      <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
-      <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
-      <td class="col-action" data-label="Action">
-        <div class="tbl-actions">
-          <button class="btn-edit" onclick="inspectionEditEntry(${i})">Edit</button>
-          <button class="btn-del" onclick="inspectionDeleteEntry(${i})">Delete</button>
-        </div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+  if (tbodyNoPhoto && emptyNoPhoto && panelNoPhoto) {
+    if (noLocationCount === 0) {
+      emptyNoPhoto.style.display = "block";
+      if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
+      panelNoPhoto.style.display = "none";
+    } else {
+      emptyNoPhoto.style.display = "none";
+      if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "";
+      panelNoPhoto.style.display = "";
+    }
+  }
 }
 
 function inspectionEditEntry(idx) {
@@ -597,6 +681,98 @@ function inspectionEditEntry(idx) {
   setText("inspection-modal-subtitle", "Inspection Logbook");
   const btn = document.getElementById("inspection-btn-save");
   if (btn) btn.textContent = "Update Record";
+}
+
+function inspectionAddPhoto(idx) {
+  inspectionEditEntry(idx);
+  const photoInput = document.getElementById("inspection_photo");
+  if (photoInput) {
+    photoInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    photoInput.focus();
+  }
+}
+
+async function inspectionDownloadPdf(idx) {
+  const row = inspectionData[idx];
+  if (!row || !window.PDFLib) return;
+
+  try {
+    const url = "./io_fsis.pdf"; // base template
+    const existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
+
+    const { PDFDocument, StandardFonts } = PDFLib;
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const pages = pdfDoc.getPages();
+    const page = pages[0];
+
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontSize = 9;
+
+    // NOTE: x,y positions are placeholders and should be tuned against your template.
+    page.drawText(row.io_number || "", {
+      x: 120,
+      y: 640,
+      size: fontSize,
+      font,
+    });
+
+    page.drawText(row.insp_owner || "", {
+      x: 120,
+      y: 625,
+      size: fontSize,
+      font,
+    });
+
+    page.drawText(row.business_name || "", {
+      x: 120,
+      y: 610,
+      size: fontSize,
+      font,
+    });
+
+    page.drawText(inspectionFormatAddressDisplay(row), {
+      x: 120,
+      y: 595,
+      size: fontSize,
+      font,
+      maxWidth: 360,
+    });
+
+    page.drawText(logbookFormatDate(row.date_inspected), {
+      x: 120,
+      y: 580,
+      size: fontSize,
+      font,
+    });
+
+    page.drawText(row.fsic_number || "", {
+      x: 120,
+      y: 565,
+      size: fontSize,
+      font,
+    });
+
+    page.drawText(row.inspected_by || "", {
+      x: 120,
+      y: 550,
+      size: fontSize,
+      font,
+    });
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `inspection-${row.io_number || row.id || "form"}.pdf`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch (err) {
+    console.error("Failed to generate inspection PDF", err);
+    logbookShowToast(
+      "inspection-toast",
+      "Could not generate PDF for this inspection."
+    );
+  }
 }
 
 function inspectionDeleteEntry(idx) {
@@ -745,6 +921,12 @@ function inspectionSaveEntry(e) {
   if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
     entry.lat = lastUserLatitude;
     entry.lng = lastUserLongitude;
+  }
+
+  // If we still have no coordinates, treat this as \"no location yet\" and don't keep a photo reference
+  if (entry.lat == null || entry.lng == null) {
+    entry.photo_url = null;
+    entry.photo_taken_at = null;
   }
 
   if (!entry.business_name || !barangay || !line || !entry.date_inspected) {
@@ -1050,23 +1232,6 @@ function initInspectionPhotoExif() {
 
             currentExifLat = dmsToDecimal(lat, latRef);
             currentExifLng = dmsToDecimal(lng, lngRef);
-
-            if (
-              currentExifLat != null &&
-              currentExifLng != null &&
-              mapInstance
-            ) {
-              addInspectionMarkerFromEntry({
-                lat: currentExifLat,
-                lng: currentExifLng,
-                business_name:
-                  (document.getElementById("inspection_business_name") || {
-                    value: "",
-                  }).value || "Inspection location",
-                photo_url: currentExifPreviewUrl,
-                photo_taken_at: currentExifTakenAt,
-              });
-            }
           });
         } catch (err) {
           console.error("Failed to read EXIF data", err);
@@ -1247,8 +1412,10 @@ async function inspectionLoadFromSupabase() {
     inspected_by: r.inspected_by || "",
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
-    photo_url: r.photo_url ?? null,
-    photo_taken_at: r.photo_taken_at ?? null,
+    photo_url:
+      r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
+    photo_taken_at:
+      r.latitude != null && r.longitude != null ? r.photo_taken_at ?? null : null,
     created_at: r.created_at,
   }));
 }
@@ -1262,6 +1429,7 @@ function inspectionInitData() {
   inspectionSetPrintDate();
   inspectionRenderTable();
   renderInspectionMarkersBatched();
+  setInspectionTab(inspectionActiveTab);
 
   if (!isSupabaseEnabled()) return;
 
@@ -1272,6 +1440,7 @@ function inspectionInitData() {
       inspectionSetPrintDate();
       inspectionRenderTable();
       renderInspectionMarkersBatched();
+      setInspectionTab(inspectionActiveTab);
     } catch (err) {
       console.warn("Inspection refresh from database failed:", err);
       logbookShowToast("inspection-toast", "Using cached data. Could not refresh from server.");

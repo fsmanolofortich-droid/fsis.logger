@@ -324,6 +324,34 @@
       font-size: 0.86rem;
     }
 
+    /* Inspection sub‑navigation inside Inspection view */
+    .inspection-subnav {
+      display: inline-flex;
+      gap: 8px;
+      margin: 0 0 16px 0;
+      border-radius: 999px;
+      padding: 2px;
+      background: var(--cream-dark);
+    }
+
+    .inspection-subnav-btn {
+      border: none;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--text-light);
+      cursor: pointer;
+    }
+
+    .inspection-subnav-btn.is-active {
+      background: var(--navy);
+      color: #fff;
+    }
+
     @media (max-width: 900px) {
       .cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -343,6 +371,11 @@
       flex: 1;
       display: flex;
       height: 100vh;
+    }
+
+    body.is-map-view [data-view="map"] {
+      position: fixed;
+      inset: 0;
     }
 
     .map-layout {
@@ -808,6 +841,26 @@
       <h1>Inspection Logbook</h1>
       <p>Manage Fire Safety Inspection Certificates for businesses and establishments in Manolo Fortich.</p>
     </div>
+    <div class="inspection-subnav" role="tablist" aria-label="Inspection categories">
+      <button
+        type="button"
+        class="inspection-subnav-btn is-active"
+        data-inspection-tab="with-location"
+        role="tab"
+        aria-selected="true"
+      >
+        With location
+      </button>
+      <button
+        type="button"
+        class="inspection-subnav-btn"
+        data-inspection-tab="no-location"
+        role="tab"
+        aria-selected="false"
+      >
+        No location yet
+      </button>
+    </div>
     <div class="home-embed">
       <div id="inspection_list">
       <!-- Inspection Logbook Panel -->
@@ -848,6 +901,39 @@
           <div class="empty-icon" aria-hidden="true">—</div>
           <strong>No Inspection Records Yet</strong>
           <p>Use the red + button on the map to log a new inspection.</p>
+        </div>
+      </div>
+
+      <!-- Inspected buildings without photo yet -->
+      <div class="logbook-panel" id="panel-inspection-nophoto">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>Pending photos</span>
+            Inspected buildings without photo
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="table-inspection-nophoto">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>IO Number</th>
+                <th>Name of Owner</th>
+                <th>Business / Establishment</th>
+                <th>Address</th>
+                <th class="th-date">Date Inspected</th>
+                <th>FSIC Number</th>
+                <th>Inspected By</th>
+                <th class="col-action">Action</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-inspection-nophoto"></tbody>
+          </table>
+        </div>
+        <div id="empty-inspection-nophoto" class="empty-state">
+          <div class="empty-icon" aria-hidden="true">—</div>
+          <strong>No pending building photos</strong>
+          <p>All inspection records already have an attached building photo.</p>
         </div>
       </div>
     </div>
@@ -1093,6 +1179,7 @@
   defer
 ></script>
 <script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
 <script src="./home.js" defer></script>
 </body>
 </html>

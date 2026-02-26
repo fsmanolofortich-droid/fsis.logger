@@ -599,8 +599,8 @@ footer {
 
   th.th-date,
   td.td-date {
-    min-width: 4.8em;
-    width: 4.8em;
+    min-width: 5.5em;
+    width: 5.5em;
     white-space: nowrap;
     overflow: visible;
   }
@@ -609,27 +609,35 @@ footer {
     box-shadow: none !important;
     border: none !important;
   }
+
+  /* Do not print the secondary inspection \"no photo\" panel */
+  #panel-inspection-nophoto {
+    display: none !important;
+  }
 }
 
 .print-header, .print-footer { display: none; }
 
-/* RESPONSIVE — inspection/FSEC tables: horizontal scroll on medium screens (print unchanged) */
-@media screen and (max-width: 900px) and (min-width: 641px) {
+/* RESPONSIVE — inspection/FSEC tables: horizontal scroll on small/medium screens (print unchanged) */
+@media screen and (max-width: 1024px) and (min-width: 641px) {
   #table-inspection,
-  #table-fsec {
-    min-width: 720px;
+  #table-fsec,
+  #table-inspection-nophoto {
+    min-width: 800px;
   }
 }
 
 /* Phone: card layout for inspection & FSEC tables (screen only; print keeps table layout) */
 @media screen and (max-width: 640px) {
   #table-inspection thead,
-  #table-fsec thead {
+  #table-fsec thead,
+  #table-inspection-nophoto thead {
     display: none;
   }
 
   #table-inspection tbody tr,
-  #table-fsec tbody tr {
+  #table-fsec tbody tr,
+  #table-inspection-nophoto tbody tr {
     display: block;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
@@ -640,13 +648,15 @@ footer {
   }
 
   #table-inspection tbody tr:hover,
-  #table-fsec tbody tr:hover {
+  #table-fsec tbody tr:hover,
+  #table-inspection-nophoto tbody tr:hover {
     background: #fff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   #table-inspection tbody td,
-  #table-fsec tbody td {
+  #table-fsec tbody td,
+  #table-inspection-nophoto tbody td {
     display: block;
     padding: 6px 0;
     border: none;
@@ -654,7 +664,8 @@ footer {
   }
 
   #table-inspection tbody td::before,
-  #table-fsec tbody td::before {
+  #table-fsec tbody td::before,
+  #table-inspection-nophoto tbody td::before {
     content: attr(data-label);
     display: block;
     font-size: 0.7rem;
@@ -666,17 +677,20 @@ footer {
   }
 
   #table-inspection tbody td.col-action::before,
-  #table-fsec tbody td.col-action::before {
+  #table-fsec tbody td.col-action::before,
+  #table-inspection-nophoto tbody td.col-action::before {
     margin-bottom: 8px;
   }
 
   #table-inspection .table-wrap,
-  #table-fsec .table-wrap {
+  #table-fsec .table-wrap,
+  #table-inspection-nophoto .table-wrap {
     overflow-x: visible;
   }
 
   #table-inspection,
-  #table-fsec {
+  #table-fsec,
+  #table-inspection-nophoto {
     min-width: 0;
   }
 }
