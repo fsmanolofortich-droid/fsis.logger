@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BFP Inspection Management System — Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./bfp.css">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <style>
+    :root {
+      --fire: #C1272D;
+      --fire-dark: #8B0000;
+      --fire-light: #E8424A;
+      --gold: #D4A843;
+      --gold-light: #F0C96A;
+      --navy: #0D1B2A;
+      --navy-mid: #162234;
+      --navy-light: #1E2F42;
+      --cream: #FAF7F2;
+      --cream-dark: #F0EBE1;
+      --text: #1A1A1A;
+      --text-mid: #4A4A4A;
+      --text-light: #888;
+      --white: #FFFFFF;
+      --shadow: 0 4px 24px rgba(13, 27, 42, 0.12);
+      --shadow-lg: 0 12px 48px rgba(13, 27, 42, 0.2);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.is-map-view {
+      overflow: hidden;
+    }
+
+    /* Floating burger + right nav sidebar (no header) */
+    .burger-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      border: none;
+      background: var(--navy);
+      color: var(--white);
+      box-shadow: var(--shadow-lg);
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+      padding: 0;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .burger-btn:hover {
+      background: var(--navy-mid);
+      transform: scale(1.02);
+    }
+    .burger-btn:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
+    }
+
+    .nav-sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1050;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+    .nav-sidebar-overlay.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .nav-sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: auto;
+      bottom: 0;
+      width: 280px;
+      max-width: 90vw;
+      background: var(--navy);
+      color: var(--white);
+      box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+      z-index: 1060;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease-out;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .nav-sidebar.is-open {
+      transform: translateX(0);
+    }
+
+    .nav-sidebar-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .nav-sidebar-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .nav-sidebar-header p {
+      font-size: 0.7rem;
+      color: var(--gold-light);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .nav-sidebar-nav {
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .nav-sidebar-nav a {
+      display: block;
+      text-decoration: none;
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-sidebar-nav a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--white);
+    }
+    .nav-sidebar-nav a.is-active {
+      background: rgba(240, 201, 106, 0.2);
+      color: #FFF8E5;
+      border: 1px solid rgba(240, 201, 106, 0.5);
+    }
+
+    .nav-sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 0.85rem;
+    }
+    .user-pill span.dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #12B981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    }
+    .user-pill > span:last-child { display: flex; flex-direction: column; gap: 0; align-items: flex-start; }
+    .last-login { display: block; font-size: 0.65rem; color: rgba(255,255,255,0.7); font-weight: 400; }
+    .nav-sidebar-footer .logout-btn {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: transparent;
+      color: var(--white);
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .nav-sidebar-footer .logout-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .nav-sidebar-footer .storage-badge {
+      align-self: flex-start;
+    }
+
+    /* MAIN */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem;
+      margin-bottom: 6px;
+      color: var(--navy);
+    }
+
+    .muted {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      margin-bottom: 18px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 10px;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 20px rgba(13, 27, 42, 0.12);
+      border: 1px solid rgba(212, 168, 67, 0.18);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 160px;
+    }
+
+    .card-title {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--cream-dark);
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--navy);
+      background: linear-gradient(135deg, #FAF5E9, #FDF0D8);
+    }
+
+    .card-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .kpi {
+      display: grid;
+      gap: 4px;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .kpi-value {
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .btn-link {
+      align-self: flex-start;
+      border-radius: 999px;
+      border: 1px solid rgba(193, 39, 45, 0.4);
+      background: rgba(193, 39, 45, 0.05);
+      color: var(--fire-dark);
+      padding: 7px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-link.primary {
+      border-color: rgba(193, 39, 45, 0.7);
+      background: rgba(193, 39, 45, 0.12);
+    }
+
+    .btn-link:hover {
+      background: rgba(193, 39, 45, 0.18);
+    }
+
+    .small {
+      font-size: 0.86rem;
+    }
+
+    @media (max-width: 900px) {
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Map */
+    [data-view="map"] {
+      padding: 0;
+      margin: 0;
+      flex: 1;
+      display: flex;
+      height: 100vh;
+    }
+
+    .map-layout {
+      position: relative;
+      display: flex;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+    }
+
+    /* Floating action button for new inspection */
+    .fab-add-inspection {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      border: none;
+      background: var(--fire);
+      color: var(--white);
+      font-size: 32px;
+      line-height: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      z-index: 1200; /* above map tiles, controls, and detail panel */
+      pointer-events: auto;
+    }
+    .fab-add-inspection:hover {
+      background: var(--fire-light);
+      transform: translateY(-1px);
+    }
+
+    /* Logbook sections: listing, add entry, print layout */
+    [data-view="inspection"],
+    [data-view="fsec"] {
+      padding: 28px 20px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    [data-view="inspection"] .home-hero,
+    [data-view="fsec"] .home-hero {
+      margin-bottom: 20px;
+    }
+    [data-view="inspection"] .home-embed,
+    [data-view="fsec"] .home-embed {
+      margin-bottom: 24px;
+    }
+    [data-view="inspection"] #inspection_list,
+    [data-view="fsec"] #fsec_list {
+      padding: 0;
+    }
+
+    /* Table action column and empty state in logbook */
+    #table-inspection .col-action,
+    #table-fsec .col-action {
+      white-space: nowrap;
+      width: 1%;
+    }
+    #empty-inspection,
+    #empty-fsec {
+      text-align: center;
+      padding: 48px 24px;
+    }
+
+    /* Map detail panel (right-side metadata sidebar) */
+    .map-detail-panel {
+      position: absolute;
+      right: 0;
+      left: auto;
+      top: 0;
+      bottom: 0;
+      width: 360px;
+      max-width: 95vw;
+      background: rgba(13, 27, 42, 0.96);
+      color: var(--white);
+      box-shadow: -8px 0 30px rgba(0, 0, 0, 0.45);
+      z-index: 400;
+      transform: translateX(100%);
+      opacity: 0;
+      transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-detail-panel.is-open {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .map-detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      background: linear-gradient(135deg, #111827, #1f2937);
+    }
+
+    .map-detail-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.98rem;
+    }
+
+    .map-detail-body {
+      padding: 12px 16px 16px;
+      overflow-y: auto;
+      display: grid;
+      gap: 10px;
+      font-size: 0.86rem;
+    }
+
+    .map-detail-photo-wrapper {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(156, 163, 175, 0.6);
+      background: radial-gradient(circle at top, rgba(248, 250, 252, 0.12), transparent 55%);
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-detail-photo-wrapper img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+    }
+
+    .map-detail-meta h3 {
+      font-size: 0.98rem;
+      margin-bottom: 4px;
+      letter-spacing: 0.01em;
+    }
+
+    .map-detail-meta p {
+      margin: 0 0 8px;
+      color: rgba(209, 213, 219, 0.9);
+      line-height: 1.35;
+    }
+
+    .map-detail-meta dl {
+      margin: 10px 0 0;
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 8px 10px;
+      font-size: 0.82rem;
+      padding: 12px 12px;
+      border-radius: 12px;
+      background: rgba(17, 24, 39, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .map-detail-meta dt {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(156, 163, 175, 1);
+      font-size: 0.72rem;
+      align-self: center;
+    }
+
+    .map-detail-meta dd {
+      margin: 0;
+      color: rgba(243, 244, 246, 0.96);
+      font-weight: 600;
+      line-height: 1.25;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .map-detail-meta .meta-muted {
+      font-weight: 500;
+      color: rgba(209, 213, 219, 0.9);
+    }
+
+    .map-detail-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.18);
+      background: rgba(31, 41, 55, 0.9);
+      color: #e5e7eb;
+      font-size: 0.78rem;
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .map-detail-action-btn:hover {
+      background: rgba(55, 65, 81, 0.95);
+      border-color: rgba(248, 250, 252, 0.35);
+      color: #f9fafb;
+    }
+
+    .map-detail-directions-link::after { content: "↗"; font-size: 0.8rem; }
+
+    @media (max-width: 420px) {
+      .map-detail-meta dl {
+        grid-template-columns: 1fr;
+      }
+      .map-detail-meta dt {
+        margin-top: 6px;
+      }
+      .map-detail-meta dd {
+        justify-content: flex-start;
+      }
+    }
+
+    .map-detail-close-btn {
+      background: rgba(31, 41, 55, 0.9);
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      color: #e5e7eb;
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .map-detail-close-btn:hover {
+      background: rgba(55, 65, 81, 0.95);
+    }
+
+    /* Custom map markers with EXIF thumbnails */
+    .inspection-marker {
+      border: none;
+      background: none;
+    }
+
+    .inspection-marker-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 3px solid #fbbf24;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+      background-size: cover;
+      background-position: center;
+      background-color: #111827;
+      position: relative;
+    }
+
+    .inspection-marker-thumb::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -6px;
+      width: 12px;
+      height: 12px;
+      background: #fbbf24;
+      border-radius: 2px;
+      transform: translateX(-50%) rotate(45deg);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .inspection-marker-pin {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #dc2626;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+
+    .inspection-marker-pin::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -6px;
+      width: 10px;
+      height: 10px;
+      background: #b91c1c;
+      border-radius: 2px;
+      transform: translateX(-50%) rotate(45deg);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    @media (max-width: 900px) {
+      .map-layout {
+        height: 100vh;
+      }
+
+      .map-detail-panel {
+        right: 0;
+        left: auto;
+        width: 100%;
+        max-width: 100%;
+        transform: translateX(100%);
+      }
+
+      .map-detail-panel.is-open {
+        transform: translateX(0);
+      }
+    }
+
+    /* Print: show only the visible logbook section */
+    @media print {
+      section[hidden] {
+        display: none !important;
+      }
+      .burger-btn,
+      .nav-sidebar-overlay,
+      .nav-sidebar {
+        display: none !important;
+      }
+      .home-hero {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<button type="button" class="burger-btn" id="burgerBtn" aria-label="Open menu" aria-expanded="false">☰</button>
+<div class="nav-sidebar-overlay" id="navSidebarOverlay" aria-hidden="true"></div>
+<aside class="nav-sidebar" id="navSidebar" aria-label="Main navigation">
+  <div class="nav-sidebar-header">
+    <h2>BFP — Manolo Fortich</h2>
+    <p>Inspection Management System</p>
+  </div>
+  <nav class="nav-sidebar-nav">
+    <a href="#map" data-view-link="map">Map</a>
+    <a href="#inspection" data-view-link="inspection">Inspection Logbook</a>
+    <a href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
+  </nav>
+  <div class="nav-sidebar-footer">
+    <div class="user-pill" aria-label="Signed in user">
+      <span class="dot" aria-hidden="true"></span>
+      <span>
+        <span id="userName">User</span>
+        <span id="lastLogin" class="last-login" aria-hidden="true"></span>
+      </span>
+    </div>
+    <span id="storageBadge" class="storage-badge local" title="Storage mode">LOCAL</span>
+    <button id="logoutBtn" class="logout-btn" type="button">Log out</button>
+  </div>
+</aside>
+
+<main role="main">
+  <section data-view="map">
+    <button
+      type="button"
+      class="fab-add-inspection"
+      onclick="handleFabAddInspection()"
+      aria-label="Add inspection entry"
+      title="Add inspection entry"
+    >
+      +
+    </button>
+    <div class="map-layout">
+      <aside
+        class="map-detail-panel"
+        id="map-detail-panel"
+        aria-hidden="true"
+        aria-label="Inspection details"
+      >
+        <div class="map-detail-header">
+          <div class="map-detail-title">Inspection details</div>
+          <button
+            type="button"
+            class="map-detail-close-btn"
+            onclick="closeInspectionDetailPanel()"
+            aria-label="Close details panel"
+          >
+            ×
+          </button>
+        </div>
+        <div class="map-detail-body">
+          <div
+            class="map-detail-photo-wrapper"
+            id="map-detail-photo-wrapper"
+            style="display:none"
+          >
+            <img id="map-detail-photo" alt="Inspection photo preview" />
+          </div>
+          <div class="map-detail-meta">
+            <h3 id="map-detail-business">—</h3>
+            <p id="map-detail-address">—</p>
+            <dl>
+              <dt>Coordinates</dt>
+              <dd>
+                <span id="map-detail-coords">—</span>
+                <button
+                  type="button"
+                  id="map-detail-copy-coords"
+                  class="map-detail-action-btn"
+                  style="display:none"
+                >
+                  Copy
+                </button>
+              </dd>
+              <dt>Date inspected</dt>
+              <dd id="map-detail-date">—</dd>
+              <dt>Photo taken</dt>
+              <dd id="map-detail-taken" class="meta-muted">—</dd>
+              <dt>Inspected by</dt>
+              <dd id="map-detail-inspector">—</dd>
+              <dt>Directions</dt>
+              <dd>
+                <a
+                  id="map-detail-directions"
+                  class="map-detail-action-btn map-detail-directions-link"
+                  href="#"
+                  target="_blank"
+                  rel="noopener"
+                  style="display:none"
+                >
+                  Open in Google Maps
+                </a>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </aside>
+      <div id="map" role="region" aria-label="Municipality map"></div>
+    </div>
+  </section>
+
+  <section data-view="inspection" hidden>
+    <div class="home-hero">
+      <h1>Inspection Logbook</h1>
+      <p>Manage Fire Safety Inspection Certificates for businesses and establishments in Manolo Fortich.</p>
+    </div>
+    <div class="home-embed">
+      <div id="inspection_list">
+      <!-- Inspection Logbook Panel -->
+      <div class="logbook-panel visible" id="panel-inspection">
+        <div class="print-header">
+          <h2>Bureau of Fire Protection</h2>
+          <p class="print-subtitle">Manolo Fortich Fire Station</p>
+          <p class="print-subtitle"><strong>Inspection Logbook</strong> — Fire Safety Inspection Certificates</p>
+          <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span id="inspection-print-date">—</span></p>
+        </div>
+        <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Inspection Management System.</div>
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>Active Logbook</span>
+            Inspection Logbook
+          </div>
+          <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-inspection">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>IO Number</th>
+                <th>Name of Owner</th>
+                <th>Business / Establishment</th>
+                <th>Address</th>
+                <th>Date Inspected</th>
+                <th>FSIC Number</th>
+                <th>Inspected By</th>
+                <th class="col-action">Action</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-inspection"></tbody>
+          </table>
+        </div>
+        <div id="empty-inspection" class="empty-state" style="display:none;">
+          <div class="empty-icon" aria-hidden="true">—</div>
+          <strong>No Inspection Records Yet</strong>
+          <p>Use the red + button on the map to log a new inspection.</p>
+        </div>
+      </div>
+    </div>
+    </div>
+    
+    <footer>
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+    </footer>
+  </section>
+
+  <section data-view="fsec" hidden>
+    <div class="home-hero">
+      <h1>FSEC Building Plan Logbook</h1>
+      <p>Track Fire Safety Evaluation Clearances for new and proposed building projects.</p>
+    </div>
+    <div class="home-embed">
+    <div id="fsec_list">
+      <div class="logbook-panel" id="panel-fsec">
+        <div class="print-header">
+          <h2>Bureau of Fire Protection</h2>
+          <p class="print-subtitle">Manolo Fortich Fire Station</p>
+          <p class="print-subtitle"><strong>FSEC Building Plan Logbook</strong> — Fire Safety Evaluation Clearances</p>
+          <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span id="fsec-print-date">—</span></p>
+        </div>
+        <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Inspection Management System.</div>
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>Active Logbook</span>
+            FSEC Building Plan Logbook
+          </div>
+          <button class="btn btn-print" onclick="fsecPrintPanel()">Print</button>
+          <button class="btn btn-add" onclick="fsecOpenModal()">Add Entry</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-fsec">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name of Owner</th>
+                <th>Proposed Project</th>
+                <th>Address</th>
+                <th>Date</th>
+                <th>Contact Number</th>
+                <th class="col-action">Action</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-fsec"></tbody>
+          </table>
+        </div>
+        <div id="empty-fsec" class="empty-state" style="display:none;">
+          <div class="empty-icon" aria-hidden="true">—</div>
+          <strong>No FSEC Records Yet</strong>
+          <p>Click "Add Entry" to log a new building plan.</p>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <footer>
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+    </footer>
+
+    <div class="modal-overlay" id="fsec-modal-overlay" onclick="fsecCloseOnOverlay(event)">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <small id="fsec-modal-subtitle">FSEC Building Plan Logbook</small>
+            <h2 id="fsec-modal-title">Add FSEC Building Plan Record</h2>
+          </div>
+          <button class="btn-close" onclick="fsecCloseModal()" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="fsec-entry-form" onsubmit="fsecSaveEntry(event)">
+            <div class="form-section">
+              <div class="form-section-title">Record details</div>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label for="fsec_owner">Name of Owner</label>
+                  <input type="text" id="fsec_owner" placeholder="Full name of owner">
+                </div>
+                <div class="form-group full">
+                  <label for="proposed_project">Proposed Project</label>
+                  <input type="text" id="proposed_project" placeholder="Name or description of proposed project">
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Address</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="fsec_addr_region">Region</label>
+                  <input type="text" id="fsec_addr_region" value="X" readonly>
+                </div>
+                <div class="form-group">
+                  <label for="fsec_addr_province">Province</label>
+                  <input type="text" id="fsec_addr_province" value="Bukidnon" readonly>
+                </div>
+                <div class="form-group">
+                  <label for="fsec_addr_municipal">Municipal</label>
+                  <input type="text" id="fsec_addr_municipal" value="Manolo Fortich" readonly>
+                </div>
+                <div class="form-group">
+                  <label for="fsec_addr_barangay">Barangay</label>
+                  <input type="text" id="fsec_addr_barangay" placeholder="e.g. Tankulan">
+                </div>
+                <div class="form-group full">
+                  <label for="fsec_addr_line">House no. / Street / Zone</label>
+                  <input type="text" id="fsec_addr_line" placeholder="e.g. Purok 3, Zone 1, National Highway">
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Date and contact</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="fsec_date">Date</label>
+                  <input type="date" id="fsec_date">
+                </div>
+                <div class="form-group">
+                  <label for="contact_number">Contact Number</label>
+                  <input type="tel" id="contact_number" placeholder="e.g. 09XX-XXX-XXXX">
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-cancel" onclick="fsecCloseModal()">Cancel</button>
+          <button type="submit" class="btn btn-save" id="fsec-btn-save" form="fsec-entry-form">Save Record</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="fsec-toast"></div>
+  </section>
+  <!-- Global inspection modal so it can be opened from the map or inspection views -->
+  <div class="modal-overlay" id="inspection-modal-overlay" onclick="inspectionCloseOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <small id="inspection-modal-subtitle">New Entry</small>
+          <h2 id="inspection-modal-title">Add Record</h2>
+        </div>
+        <button class="btn-close" onclick="inspectionCloseModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="inspection-entry-form" onsubmit="inspectionSaveEntry(event)">
+          <div id="fields-inspection">
+            <div class="form-section">
+              <div class="form-section-title">Record details</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inspection_io_number">IO Number</label>
+                  <input type="text" id="inspection_io_number" placeholder="e.g. IO-2025-001">
+                </div>
+                <div class="form-group">
+                  <label for="inspection_fsic_number">FSIC Number</label>
+                  <input type="text" id="inspection_fsic_number" placeholder="e.g. FSIC-2025-001">
+                </div>
+                <div class="form-group full">
+                  <label for="inspection_owner">Name of Owner</label>
+                  <input type="text" id="inspection_owner" placeholder="Full name of owner">
+                </div>
+                <div class="form-group full">
+                  <label for="inspection_business_name">Business / Establishment</label>
+                  <input type="text" id="inspection_business_name" placeholder="Business or establishment name">
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Address</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inspection_addr_region">Region</label>
+                  <input type="text" id="inspection_addr_region" value="X" readonly>
+                </div>
+                <div class="form-group">
+                  <label for="inspection_addr_province">Province</label>
+                  <input type="text" id="inspection_addr_province" value="Bukidnon" readonly>
+                </div>
+                <div class="form-group">
+                  <label for="inspection_addr_municipal">Municipal</label>
+                  <input type="text" id="inspection_addr_municipal" value="Manolo Fortich" readonly>
+                </div>
+                <div class="form-group">
+                  <label for="inspection_addr_barangay">Barangay</label>
+                  <input type="text" id="inspection_addr_barangay" placeholder="e.g. Tankulan">
+                </div>
+                <div class="form-group full">
+                  <label for="inspection_addr_line">House no. / Street / Zone</label>
+                  <input type="text" id="inspection_addr_line" placeholder="e.g. Purok 3, Zone 1, National Highway">
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Inspection</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inspection_date_inspected">Date Inspected</label>
+                  <input type="date" id="inspection_date_inspected">
+                </div>
+                <div class="form-group">
+                  <label for="inspection_inspected_by">Inspected By</label>
+                  <input type="text" id="inspection_inspected_by" placeholder="Name of inspecting officer">
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Location &amp; photo</div>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label for="inspection_photo">
+                    Attach photo (uses GPS from EXIF if available)
+                  </label>
+                  <input
+                    type="file"
+                    id="inspection_photo"
+                    accept="image/*"
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
+        <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save Record</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="inspection-toast"></div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+<script src="./home.js" defer></script>
+</body>
+</html>

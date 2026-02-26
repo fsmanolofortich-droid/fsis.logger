@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — BFP Inspection Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./bfp.css">
+  <style>
+    .admin-wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
+    .admin-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+    .admin-head h1 { font-family: 'Playfair Display', serif; font-size: 1.35rem; color: var(--navy); }
+    .admin-back { color: var(--navy); text-decoration: none; font-size: 0.9rem; font-weight: 600; }
+    .admin-back:hover { text-decoration: underline; }
+    .gate-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; margin-bottom: 24px; border: 1px solid rgba(212,168,67,0.2); }
+    .gate-card h2 { font-size: 1.1rem; margin-bottom: 8px; color: var(--navy); }
+    .gate-card p { color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px; }
+    .gate-card input { width: 100%; padding: 10px 12px; border: 1px solid #e2e0dc; border-radius: 8px; font-size: 0.95rem; }
+    .gate-card .btn { margin-top: 12px; }
+    .form-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 24px; border: 1px solid rgba(212,168,67,0.2); }
+    .form-card h2 { font-size: 1.05rem; margin-bottom: 16px; color: var(--navy); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-mid); }
+    .form-group input, .form-group select { padding: 10px 12px; border: 1px solid #e2e0dc; border-radius: 8px; font-size: 0.9rem; }
+    .form-actions { margin-top: 16px; }
+    .table-wrap { overflow-x: auto; }
+    .table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .table-wrap th { text-align: left; padding: 10px 12px; background: var(--cream-dark); font-weight: 600; color: var(--text-mid); }
+    .table-wrap td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+    .table-wrap tr:hover td { background: #fafaf8; }
+    .role-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+    .role-badge.admin { background: rgba(193,39,45,0.12); color: var(--fire-dark); }
+    .role-badge.user { background: rgba(13,27,42,0.08); color: var(--navy); }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy); color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 999; display: none; box-shadow: var(--shadow-lg); }
+    .toast.show { display: block; animation: toastIn 0.3s ease; }
+    .toast.err { background: var(--fire-dark); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-text">
+      <h1>Bureau of Fire Protection — Manolo Fortich</h1>
+      <p>Admin — Account Management</p>
+    </div>
+  </div>
+</header>
+
+<main class="admin-wrap">
+  <div class="admin-head">
+    <h1>Admin dashboard</h1>
+    <a href="./home.html" class="admin-back">← Back to app</a>
+  </div>
+
+  <!-- Gate: enter admin secret -->
+  <div id="gate-card" class="gate-card">
+    <h2>Admin access</h2>
+    <p>Enter the admin secret to manage user accounts.</p>
+    <input type="password" id="admin-secret-input" placeholder="Admin secret" autocomplete="off">
+    <button type="button" class="btn btn-add" id="gate-submit">Continue</button>
+  </div>
+
+  <!-- Dashboard (hidden until secret is verified) -->
+  <div id="dashboard" style="display: none;">
+    <div class="form-card">
+      <h2>Create account</h2>
+      <form id="create-user-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="new-username">Username</label>
+            <input type="text" id="new-username" required placeholder="e.g. jdelacruz" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="new-display-name">Display name</label>
+            <input type="text" id="new-display-name" placeholder="e.g. Juan Dela Cruz">
+          </div>
+          <div class="form-group">
+            <label for="new-password">Password</label>
+            <input type="password" id="new-password" required minlength="4" placeholder="Min 4 characters" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label for="new-role">Role</label>
+            <select id="new-role">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-add">Create account</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="form-card">
+      <h2>Users</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Display name</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+      <p id="users-empty" style="display:none; color: var(--text-light); font-size: 0.9rem; margin-top: 12px;">No users yet. Create one above.</p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function() {
+  const SUPABASE_URL = 'https://drqgbkninqpvhvhnbatk.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRycWdia25pbnFwdmh2aG5iYXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MTQzODQsImV4cCI6MjA4NzQ5MDM4NH0.CliUD5Ow17OXvaqDzYdAbi-rrTg_u-e4OyomcGrgZk0';
+  const ADMIN_SECRET_KEY = 'fsis.admin.secret';
+
+  const supabase = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (!supabase) {
+    showToast('Supabase not loaded.', true);
+    return;
+  }
+
+  function getStoredSecret() {
+    try {
+      return sessionStorage.getItem(ADMIN_SECRET_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function setStoredSecret(secret) {
+    try { sessionStorage.setItem(ADMIN_SECRET_KEY, secret); } catch (_) {}
+  }
+
+  function showToast(msg, isError) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.toggle('err', !!isError);
+    el.classList.add('show');
+    setTimeout(function() { el.classList.remove('show'); }, 4000);
+  }
+
+  function showGate() {
+    document.getElementById('gate-card').style.display = 'block';
+    document.getElementById('dashboard').style.display = 'none';
+  }
+
+  function showDashboard() {
+    document.getElementById('gate-card').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadUsers();
+  }
+
+  function loadUsers() {
+    const secret = getStoredSecret();
+    if (!secret) { showGate(); return; }
+
+    const tbody = document.getElementById('users-tbody');
+    const empty = document.getElementById('users-empty');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    empty.style.display = 'none';
+
+    supabase.rpc('list_app_users', { admin_secret: secret })
+      .then(function(r) {
+        if (r.error) {
+          if (r.error.message && r.error.message.includes('Invalid admin secret')) {
+            setStoredSecret('');
+            showGate();
+            showToast('Session expired. Enter admin secret again.', true);
+          } else {
+            showToast('Failed to load users: ' + (r.error.message || r.error), true);
+          }
+          return;
+        }
+        const rows = r.data || [];
+        if (rows.length === 0) {
+          empty.style.display = 'block';
+          return;
+        }
+        rows.forEach(function(row) {
+          const tr = document.createElement('tr');
+          const created = row.created_at ? new Date(row.created_at).toLocaleDateString('en-PH', { dateStyle: 'short' }) : '—';
+          tr.innerHTML =
+            '<td>' + escapeHtml(row.username || '') + '</td>' +
+            '<td>' + escapeHtml(row.display_name || '—') + '</td>' +
+            '<td><span class="role-badge ' + (row.role === 'admin' ? 'admin' : 'user') + '">' + escapeHtml(row.role || 'user') + '</span></td>' +
+            '<td>' + escapeHtml(created) + '</td>';
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(function(err) {
+        showToast('Error: ' + (err?.message || err), true);
+      });
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function verifySecret(secret, callback) {
+    if (!secret || !secret.trim()) {
+      callback(false, 'Enter the admin secret.');
+      return;
+    }
+    supabase.rpc('list_app_users', { admin_secret: secret.trim() })
+      .then(function(r) {
+        if (r.error) {
+          callback(false, r.error.message || 'Invalid admin secret.');
+          return;
+        }
+        callback(true);
+      })
+      .catch(function(err) {
+        callback(false, err?.message || 'Request failed.');
+      });
+  }
+
+  document.getElementById('gate-submit').addEventListener('click', function() {
+    const input = document.getElementById('admin-secret-input');
+    const secret = (input && input.value) ? input.value.trim() : '';
+    verifySecret(secret, function(ok, errMsg) {
+      if (ok) {
+        setStoredSecret(secret);
+        input.value = '';
+        showDashboard();
+      } else {
+        showToast(errMsg || 'Invalid secret', true);
+      }
+    });
+  });
+
+  document.getElementById('admin-secret-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('gate-submit').click();
+  });
+
+  document.getElementById('create-user-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const secret = getStoredSecret();
+    if (!secret) { showGate(); return; }
+
+    const username = (document.getElementById('new-username') && document.getElementById('new-username').value) ? document.getElementById('new-username').value.trim() : '';
+    const displayName = (document.getElementById('new-display-name') && document.getElementById('new-display-name').value) ? document.getElementById('new-display-name').value.trim() : '';
+    const password = (document.getElementById('new-password') && document.getElementById('new-password').value) || '';
+    const role = (document.getElementById('new-role') && document.getElementById('new-role').value) || 'user';
+
+    if (!username) {
+      showToast('Username is required.', true);
+      return;
+    }
+    if (password.length < 4) {
+      showToast('Password must be at least 4 characters.', true);
+      return;
+    }
+
+    supabase.rpc('create_app_user', {
+      admin_secret: secret,
+      p_username: username,
+      p_display_name: displayName || null,
+      p_password_plain: password,
+      p_role: role
+    })
+      .then(function(r) {
+        if (r.error) {
+          showToast(r.error.message || 'Failed to create account', true);
+          return;
+        }
+        showToast('Account created: ' + username);
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-display-name').value = '';
+        document.getElementById('new-password').value = '';
+        loadUsers();
+      })
+      .catch(function(err) {
+        showToast('Error: ' + (err?.message || err), true);
+      });
+  });
+
+  if (getStoredSecret()) {
+    verifySecret(getStoredSecret(), function(ok) {
+      if (ok) showDashboard();
+      else showGate();
+    });
+  } else {
+    showGate();
+  }
+})();
+</script>
+</body>
+</html>
