@@ -36,6 +36,10 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html, body {
+      height: 100%;
+    }
+
     body {
       font-family: 'DM Sans', sans-serif;
       background: var(--cream);
@@ -45,93 +49,140 @@
       flex-direction: column;
     }
 
-    /* HEADER */
-    header {
+    body.is-map-view {
+      overflow: hidden;
+    }
+
+    /* Floating burger + right nav sidebar (no header) */
+    .burger-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      border: none;
       background: var(--navy);
       color: var(--white);
-      padding: 0 24px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 20px rgba(0,0,0,0.3);
-    }
-
-    .header-inner {
-      max-width: 1200px;
-      margin: 0 auto;
+      box-shadow: var(--shadow-lg);
+      z-index: 1100;
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 14px 0 10px;
-      flex-wrap: wrap;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+      padding: 0;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .burger-btn:hover {
+      background: var(--navy-mid);
+      transform: scale(1.02);
+    }
+    .burger-btn:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
     }
 
-    .header-text h1 {
+    .nav-sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1050;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+    .nav-sidebar-overlay.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .nav-sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: auto;
+      bottom: 0;
+      width: 280px;
+      max-width: 90vw;
+      background: var(--navy);
+      color: var(--white);
+      box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+      z-index: 1060;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease-out;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .nav-sidebar.is-open {
+      transform: translateX(0);
+    }
+
+    .nav-sidebar-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .nav-sidebar-header h2 {
       font-family: 'Playfair Display', serif;
-      font-size: 1.15rem;
+      font-size: 1rem;
       font-weight: 700;
       letter-spacing: 0.02em;
-      line-height: 1.2;
     }
-
-    .header-text p {
-      font-size: 0.72rem;
+    .nav-sidebar-header p {
+      font-size: 0.7rem;
       color: var(--gold-light);
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      font-weight: 500;
       margin-top: 2px;
     }
 
-    .header-right {
-      margin-left: auto;
+    .nav-sidebar-nav {
+      padding: 16px 12px;
       display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.8rem;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
     }
-
-    .header-nav {
-      width: 100%;
-      display: flex;
-      gap: 10px;
-      margin-top: 6px;
-      font-size: 0.8rem;
-      flex-wrap: wrap;
-    }
-
-    .header-nav a {
+    .nav-sidebar-nav a {
+      display: block;
       text-decoration: none;
-      padding: 5px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(250, 250, 250, 0.18);
+      padding: 12px 14px;
+      border-radius: 10px;
       color: rgba(255, 255, 255, 0.9);
-      background: rgba(255, 255, 255, 0.04);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-size: 0.9rem;
       font-weight: 500;
+      letter-spacing: 0.02em;
+      transition: background 0.2s, color 0.2s;
     }
-
-    .header-nav a:hover {
-      background: rgba(255, 255, 255, 0.12);
+    .nav-sidebar-nav a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--white);
     }
-
-    .header-nav a.is-active {
-      border-color: rgba(240, 201, 106, 0.9);
-      background: rgba(240, 201, 106, 0.18);
+    .nav-sidebar-nav a.is-active {
+      background: rgba(240, 201, 106, 0.2);
       color: #FFF8E5;
+      border: 1px solid rgba(240, 201, 106, 0.5);
     }
 
+    .nav-sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
     .user-pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 10px;
-      border-radius: 999px;
+      padding: 8px 12px;
+      border-radius: 10px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 0.85rem;
     }
-
     .user-pill span.dot {
       width: 10px;
       height: 10px;
@@ -141,20 +192,22 @@
     }
     .user-pill > span:last-child { display: flex; flex-direction: column; gap: 0; align-items: flex-start; }
     .last-login { display: block; font-size: 0.65rem; color: rgba(255,255,255,0.7); font-weight: 400; }
-
-    .logout-btn {
-      border-radius: 999px;
+    .nav-sidebar-footer .logout-btn {
+      width: 100%;
+      border-radius: 10px;
       border: 1px solid rgba(255, 255, 255, 0.35);
       background: transparent;
       color: var(--white);
-      padding: 6px 12px;
-      font-size: 0.8rem;
+      padding: 10px 16px;
+      font-size: 0.85rem;
       font-weight: 500;
       cursor: pointer;
     }
-
-    .logout-btn:hover {
+    .nav-sidebar-footer .logout-btn:hover {
       background: rgba(255, 255, 255, 0.12);
+    }
+    .nav-sidebar-footer .storage-badge {
+      align-self: flex-start;
     }
 
     /* MAIN */
@@ -278,10 +331,6 @@
     }
 
     @media (max-width: 640px) {
-      .header-inner {
-        flex-wrap: wrap;
-        align-items: flex-start;
-      }
       .cards {
         grid-template-columns: 1fr;
       }
@@ -293,6 +342,7 @@
       margin: 0;
       flex: 1;
       display: flex;
+      height: 100vh;
     }
 
     .map-layout {
@@ -368,19 +418,20 @@
       padding: 48px 24px;
     }
 
-    /* Map detail panel (left-side metadata sidebar) */
+    /* Map detail panel (right-side metadata sidebar) */
     .map-detail-panel {
       position: absolute;
-      left: 0;
+      right: 0;
+      left: auto;
       top: 0;
       bottom: 0;
-      width: 320px;
-      max-width: 100%;
+      width: 360px;
+      max-width: 95vw;
       background: rgba(13, 27, 42, 0.96);
       color: var(--white);
-      box-shadow: 8px 0 30px rgba(0, 0, 0, 0.45);
+      box-shadow: -8px 0 30px rgba(0, 0, 0, 0.45);
       z-index: 400;
-      transform: translateX(-100%);
+      transform: translateX(100%);
       opacity: 0;
       transition: transform 0.25s ease-out, opacity 0.25s ease-out;
       display: flex;
@@ -435,30 +486,84 @@
     .map-detail-meta h3 {
       font-size: 0.98rem;
       margin-bottom: 4px;
+      letter-spacing: 0.01em;
     }
 
     .map-detail-meta p {
-      margin: 0 0 4px;
+      margin: 0 0 8px;
       color: rgba(209, 213, 219, 0.9);
+      line-height: 1.35;
     }
 
     .map-detail-meta dl {
-      margin: 8px 0 0;
+      margin: 10px 0 0;
       display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 4px 8px;
-      font-size: 0.8rem;
+      grid-template-columns: 110px 1fr;
+      gap: 8px 10px;
+      font-size: 0.82rem;
+      padding: 12px 12px;
+      border-radius: 12px;
+      background: rgba(17, 24, 39, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.18);
     }
 
     .map-detail-meta dt {
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: rgba(156, 163, 175, 1);
+      font-size: 0.72rem;
+      align-self: center;
     }
 
     .map-detail-meta dd {
       margin: 0;
       color: rgba(243, 244, 246, 0.96);
+      font-weight: 600;
+      line-height: 1.25;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .map-detail-meta .meta-muted {
+      font-weight: 500;
+      color: rgba(209, 213, 219, 0.9);
+    }
+
+    .map-detail-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.18);
+      background: rgba(31, 41, 55, 0.9);
+      color: #e5e7eb;
+      font-size: 0.78rem;
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .map-detail-action-btn:hover {
+      background: rgba(55, 65, 81, 0.95);
+      border-color: rgba(248, 250, 252, 0.35);
+      color: #f9fafb;
+    }
+
+    .map-detail-directions-link::after { content: "↗"; font-size: 0.8rem; }
+
+    @media (max-width: 420px) {
+      .map-detail-meta dl {
+        grid-template-columns: 1fr;
+      }
+      .map-detail-meta dt {
+        margin-top: 6px;
+      }
+      .map-detail-meta dd {
+        justify-content: flex-start;
+      }
     }
 
     .map-detail-close-btn {
@@ -536,21 +641,19 @@
 
     @media (max-width: 900px) {
       .map-layout {
-        height: calc(100vh - 72px);
+        height: 100vh;
       }
 
       .map-detail-panel {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
+        right: 0;
+        left: auto;
         width: 100%;
         max-width: 100%;
-        transform: translateY(100%);
+        transform: translateX(100%);
       }
 
       .map-detail-panel.is-open {
-        transform: translateY(0);
+        transform: translateX(0);
       }
     }
 
@@ -559,8 +662,11 @@
       section[hidden] {
         display: none !important;
       }
-      [data-view="inspection"] header,
-      [data-view="fsec"] header,
+      .burger-btn,
+      .nav-sidebar-overlay,
+      .nav-sidebar {
+        display: none !important;
+      }
       .home-hero {
         display: none !important;
       }
@@ -569,30 +675,30 @@
 </head>
 <body>
 
-<header>
-  <div class="header-inner">
-    <div class="header-text">
-      <h1>Bureau of Fire Protection — Manolo Fortich</h1>
-      <p>Inspection Management System</p>
-    </div>
-    <div class="header-right">
-      <div class="user-pill" aria-label="Signed in user">
-        <span class="dot" aria-hidden="true"></span>
-        <span>
-          <span id="userName">User</span>
-          <span id="lastLogin" class="last-login" aria-hidden="true"></span>
-        </span>
-      </div>
-      <span id="storageBadge" class="storage-badge local" title="Storage mode">LOCAL</span>
-      <button id="logoutBtn" class="logout-btn" type="button">Log out</button>
-    </div>
-    <nav class="header-nav" aria-label="Main navigation">
-      <a href="#map" data-view-link="map">Map</a>
-      <a href="#inspection" data-view-link="inspection">Inspection Logbook</a>
-      <a href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
-    </nav>
+<button type="button" class="burger-btn" id="burgerBtn" aria-label="Open menu" aria-expanded="false">☰</button>
+<div class="nav-sidebar-overlay" id="navSidebarOverlay" aria-hidden="true"></div>
+<aside class="nav-sidebar" id="navSidebar" aria-label="Main navigation">
+  <div class="nav-sidebar-header">
+    <h2>BFP — Manolo Fortich</h2>
+    <p>Inspection Management System</p>
   </div>
-</header>
+  <nav class="nav-sidebar-nav">
+    <a href="#map" data-view-link="map">Map</a>
+    <a href="#inspection" data-view-link="inspection">Inspection Logbook</a>
+    <a href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
+  </nav>
+  <div class="nav-sidebar-footer">
+    <div class="user-pill" aria-label="Signed in user">
+      <span class="dot" aria-hidden="true"></span>
+      <span>
+        <span id="userName">User</span>
+        <span id="lastLogin" class="last-login" aria-hidden="true"></span>
+      </span>
+    </div>
+    <span id="storageBadge" class="storage-badge local" title="Storage mode">LOCAL</span>
+    <button id="logoutBtn" class="logout-btn" type="button">Log out</button>
+  </div>
+</aside>
 
 <main role="main">
   <section data-view="map">
@@ -636,11 +742,36 @@
             <p id="map-detail-address">—</p>
             <dl>
               <dt>Coordinates</dt>
-              <dd id="map-detail-coords">—</dd>
+              <dd>
+                <span id="map-detail-coords">—</span>
+                <button
+                  type="button"
+                  id="map-detail-copy-coords"
+                  class="map-detail-action-btn"
+                  style="display:none"
+                >
+                  Copy
+                </button>
+              </dd>
               <dt>Date inspected</dt>
               <dd id="map-detail-date">—</dd>
+              <dt>Photo taken</dt>
+              <dd id="map-detail-taken" class="meta-muted">—</dd>
               <dt>Inspected by</dt>
               <dd id="map-detail-inspector">—</dd>
+              <dt>Directions</dt>
+              <dd>
+                <a
+                  id="map-detail-directions"
+                  class="map-detail-action-btn map-detail-directions-link"
+                  href="#"
+                  target="_blank"
+                  rel="noopener"
+                  style="display:none"
+                >
+                  Open in Google Maps
+                </a>
+              </dd>
             </dl>
           </div>
         </div>

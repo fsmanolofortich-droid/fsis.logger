@@ -165,8 +165,6 @@
     loadUsers();
   }
 
-  let editingUserId = null;
-
   function loadUsers() {
     const secret = getStoredSecret();
     if (!secret) { showGate(); return; }
@@ -202,8 +200,7 @@
             '<td>' + escapeHtml(row.username || '') + '</td>' +
             '<td>' + escapeHtml(row.display_name || '—') + '</td>' +
             '<td><span class="role-badge ' + (row.role === 'admin' ? 'admin' : 'user') + '">' + escapeHtml(row.role || 'user') + '</span></td>' +
-            '<td>' + escapeHtml(created) + '</td>' +
-            '<td><button type="button" class="btn btn-edit" data-user-id="' + escapeHtml(row.id) + '" data-username="' + escapeHtml(row.username || '') + '" data-display-name="' + escapeHtml(row.display_name || '') + '" data-role="' + escapeHtml(row.role || 'user') + '">Edit</button></td>';
+            '<td>' + escapeHtml(created) + '</td>';
           tbody.appendChild(tr);
         });
       })
@@ -262,103 +259,41 @@
     const secret = getStoredSecret();
     if (!secret) { showGate(); return; }
 
-    const usernameInput = document.getElementById('new-username');
-    const displayInput = document.getElementById('new-display-name');
-    const passwordInput = document.getElementById('new-password');
-    const roleSelect = document.getElementById('new-role');
+    const username = (document.getElementById('new-username') && document.getElementById('new-username').value) ? document.getElementById('new-username').value.trim() : '';
+    const displayName = (document.getElementById('new-display-name') && document.getElementById('new-display-name').value) ? document.getElementById('new-display-name').value.trim() : '';
+    const password = (document.getElementById('new-password') && document.getElementById('new-password').value) || '';
+    const role = (document.getElementById('new-role') && document.getElementById('new-role').value) || 'user';
 
-    const username = usernameInput && usernameInput.value ? usernameInput.value.trim() : '';
-    const displayName = displayInput && displayInput.value ? displayInput.value.trim() : '';
-    const password = (passwordInput && passwordInput.value) || '';
-    const role = (roleSelect && roleSelect.value) || 'user';
-
-    if (!editingUserId) {
-      // Creating a new user
-      if (!username) {
-        showToast('Username is required.', true);
-        return;
-      }
-      if (password.length < 4) {
-        showToast('Password must be at least 4 characters.', true);
-        return;
-      }
-
-      supabase.rpc('create_app_user', {
-        admin_secret: secret,
-        p_username: username,
-        p_display_name: displayName || null,
-        p_password_plain: password,
-        p_role: role
-      })
-        .then(function(r) {
-          if (r.error) {
-            showToast(r.error.message || 'Failed to create account', true);
-            return;
-          }
-          showToast('Account created: ' + username);
-          usernameInput.value = '';
-          displayInput.value = '';
-          passwordInput.value = '';
-          editingUserId = null;
-          (document.querySelector('#create-user-form .btn.btn-add') || {}).textContent = 'Create account';
-          loadUsers();
-        })
-        .catch(function(err) {
-          showToast('Error: ' + (err?.message || err), true);
-        });
-    } else {
-      // Updating an existing user (password optional)
-      if (!username) {
-        showToast('Username is required.', true);
-        return;
-      }
-
-      supabase.rpc('update_app_user', {
-        admin_secret: secret,
-        p_user_id: editingUserId,
-        p_username: username,
-        p_display_name: displayName || null,
-        p_password_plain: password || null,
-        p_role: role
-      })
-        .then(function(r) {
-          if (r.error) {
-            showToast(r.error.message || 'Failed to update account', true);
-            return;
-          }
-          showToast('Account updated: ' + username);
-          passwordInput.value = '';
-          editingUserId = null;
-          (document.querySelector('#create-user-form .btn.btn-add') || {}).textContent = 'Create account';
-          loadUsers();
-        })
-        .catch(function(err) {
-          showToast('Error: ' + (err?.message || err), true);
-        });
+    if (!username) {
+      showToast('Username is required.', true);
+      return;
     }
-  });
+    if (password.length < 4) {
+      showToast('Password must be at least 4 characters.', true);
+      return;
+    }
 
-  document.getElementById('users-tbody').addEventListener('click', function(e) {
-    const btn = e.target.closest('button[data-user-id]');
-    if (!btn) return;
-
-    editingUserId = btn.getAttribute('data-user-id');
-    const username = btn.getAttribute('data-username') || '';
-    const displayName = btn.getAttribute('data-display-name') || '';
-    const role = btn.getAttribute('data-role') || 'user';
-
-    const usernameInput = document.getElementById('new-username');
-    const displayInput = document.getElementById('new-display-name');
-    const roleSelect = document.getElementById('new-role');
-    const passwordInput = document.getElementById('new-password');
-
-    if (usernameInput) usernameInput.value = username;
-    if (displayInput) displayInput.value = displayName === '—' ? '' : displayName;
-    if (roleSelect) roleSelect.value = role === 'admin' ? 'admin' : 'user';
-    if (passwordInput) passwordInput.value = '';
-
-    const submitBtn = document.querySelector('#create-user-form .btn.btn-add');
-    if (submitBtn) submitBtn.textContent = 'Update account';
+    supabase.rpc('create_app_user', {
+      admin_secret: secret,
+      p_username: username,
+      p_display_name: displayName || null,
+      p_password_plain: password,
+      p_role: role
+    })
+      .then(function(r) {
+        if (r.error) {
+          showToast(r.error.message || 'Failed to create account', true);
+          return;
+        }
+        showToast('Account created: ' + username);
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-display-name').value = '';
+        document.getElementById('new-password').value = '';
+        loadUsers();
+      })
+      .catch(function(err) {
+        showToast('Error: ' + (err?.message || err), true);
+      });
   });
 
   if (getStoredSecret()) {

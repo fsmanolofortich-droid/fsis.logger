@@ -67,11 +67,10 @@ function resizeMapLayout() {
   const mapSection = document.querySelector('[data-view="map"]');
   const layout = document.querySelector(".map-layout");
   const mapEl = document.getElementById("map");
-  const header = document.querySelector("header");
 
-  if (!mapSection || !layout || !mapEl || !header) return;
+  if (!mapSection || !layout || !mapEl) return;
 
-  const available = window.innerHeight - header.offsetHeight;
+  const available = window.innerHeight;
   if (available <= 0) return;
 
   layout.style.height = available + "px";
@@ -88,13 +87,10 @@ function initLeafletMap() {
   const el = document.getElementById("map");
   if (!el) return;
 
-  // Ensure the map fits the remaining viewport below the header
   resizeMapLayout();
 
-  // Clear in case Leaflet ever attached before
   el.innerHTML = "";
-
-  mapInstance = L.map(el).setView(MAP_CENTER, MAP_ZOOM);
+  mapInstance = L.map(el, { zoomControl: false }).setView(MAP_CENTER, MAP_ZOOM);
 
   // Layer to hold all inspection markers so we can manage them together
   inspectionMarkersLayer = L.layerGroup().addTo(mapInstance);
@@ -171,6 +167,8 @@ function showView(name) {
     // Ensure sections are truly removed from layout when inactive
     v.style.display = isActive ? "" : "none";
   }
+
+  document.body.classList.toggle("is-map-view", name === "map");
 
   const links = Array.from(document.querySelectorAll("[data-view-link]"));
   for (const link of links) {
@@ -261,6 +259,36 @@ function startUserLocationTracking() {
   );
 }
 
+function openNavSidebar() {
+  const sidebar = document.getElementById("navSidebar");
+  const overlay = document.getElementById("navSidebarOverlay");
+  const burger = document.getElementById("burgerBtn");
+  if (sidebar) sidebar.classList.add("is-open");
+  if (overlay) overlay.classList.add("is-open");
+  if (burger) {
+    burger.setAttribute("aria-expanded", "true");
+    burger.setAttribute("aria-label", "Close menu");
+  }
+}
+
+function closeNavSidebar() {
+  const sidebar = document.getElementById("navSidebar");
+  const overlay = document.getElementById("navSidebarOverlay");
+  const burger = document.getElementById("burgerBtn");
+  if (sidebar) sidebar.classList.remove("is-open");
+  if (overlay) overlay.classList.remove("is-open");
+  if (burger) {
+    burger.setAttribute("aria-expanded", "false");
+    burger.setAttribute("aria-label", "Open menu");
+  }
+}
+
+function toggleNavSidebar() {
+  const sidebar = document.getElementById("navSidebar");
+  if (sidebar?.classList.contains("is-open")) closeNavSidebar();
+  else openNavSidebar();
+}
+
 function initViewRouting() {
   const applyFromHash = () => showView(getCurrentView());
 
@@ -275,11 +303,11 @@ function initViewRouting() {
     if (!view) return;
 
     e.preventDefault();
-    // Always update the view immediately, even if the hash doesn't change
     showView(view);
     if (getCurrentView() !== view) {
       window.location.hash = view;
     }
+    closeNavSidebar();
   });
 
   applyFromHash();
@@ -302,6 +330,11 @@ function init() {
     clearSession();
     window.location.replace("./index.html");
   });
+
+  const burgerBtn = document.getElementById("burgerBtn");
+  burgerBtn?.addEventListener("click", toggleNavSidebar);
+  const navOverlay = document.getElementById("navSidebarOverlay");
+  navOverlay?.addEventListener("click", closeNavSidebar);
 
   // Keep the map sized correctly on window resize
   window.addEventListener("resize", () => {
@@ -827,9 +860,12 @@ function openInspectionDetailPanel(entry) {
   const addressEl = document.getElementById("map-detail-address");
   const coordsEl = document.getElementById("map-detail-coords");
   const dateEl = document.getElementById("map-detail-date");
+  const takenEl = document.getElementById("map-detail-taken");
   const inspectorEl = document.getElementById("map-detail-inspector");
   const photoWrap = document.getElementById("map-detail-photo-wrapper");
   const photoImg = document.getElementById("map-detail-photo");
+  const directionsLink = document.getElementById("map-detail-directions");
+  const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
 
   if (businessEl) {
     businessEl.textContent =
@@ -848,8 +884,57 @@ function openInspectionDetailPanel(entry) {
   if (dateEl) {
     dateEl.textContent = logbookFormatDate(entry.date_inspected);
   }
+  if (takenEl) {
+    takenEl.textContent = entry.photo_taken_at ? String(entry.photo_taken_at) : "—";
+    takenEl.classList.toggle("meta-muted", !entry.photo_taken_at);
+  }
   if (inspectorEl) {
     inspectorEl.textContent = entry.inspected_by || "—";
+  }
+
+  if (directionsLink) {
+    if (entry.lat != null && entry.lng != null) {
+      const dest = `${entry.lat},${entry.lng}`;
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        dest
+      )}&travelmode=driving`;
+      directionsLink.href = url;
+      directionsLink.style.display = "";
+    } else {
+      directionsLink.removeAttribute("href");
+      directionsLink.style.display = "none";
+    }
+  }
+
+  if (copyCoordsBtn) {
+    if (entry.lat != null && entry.lng != null) {
+      copyCoordsBtn.style.display = "";
+      copyCoordsBtn.onclick = async () => {
+        const text = `${entry.lat.toFixed(6)}, ${entry.lng.toFixed(6)}`;
+        try {
+          await navigator.clipboard.writeText(text);
+          logbookShowToast("inspection-toast", "Coordinates copied.");
+        } catch {
+          // Fallback
+          try {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            logbookShowToast("inspection-toast", "Coordinates copied.");
+          } catch {
+            logbookShowToast("inspection-toast", "Copy failed.");
+          }
+        }
+      };
+    } else {
+      copyCoordsBtn.style.display = "none";
+      copyCoordsBtn.onclick = null;
+    }
   }
 
   if (photoWrap && photoImg) {

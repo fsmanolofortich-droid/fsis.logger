@@ -464,15 +464,49 @@ footer {
 }
 
 /* PRINT STYLES — professional letterhead layout */
-@page { size: auto; margin: 12mm; }
+@page { size: A4 portrait; margin: 14mm 14mm 16mm 14mm; }
 
 @media print {
-  header, .btn-print, .btn-add, .btn-edit, .btn-del, .tbl-actions, footer { display: none !important; }
-  body { background: white; color: #1a1a1a; font-size: 11px; overflow: visible !important; }
-  main { padding: 0; max-width: 100%; overflow: visible !important; }
-  .logbook-panel { display: block !important; box-shadow: none; border: none; overflow: visible !important; }
-  .panel-header { display: none !important; }
-  th.col-action, td.col-action { display: none !important; }
+  header,
+  .btn-print,
+  .btn-add,
+  .btn-edit,
+  .btn-del,
+  .tbl-actions,
+  footer {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #1a1a1a;
+    font-size: 11px;
+    overflow: visible !important;
+  }
+
+  main {
+    padding: 0;
+    max-width: 100%;
+    overflow: visible !important;
+  }
+
+  .logbook-panel {
+    display: block !important;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    overflow: visible !important;
+    padding-top: 4mm;
+  }
+
+  .panel-header {
+    display: none !important;
+  }
+
+  th.col-action,
+  td.col-action {
+    display: none !important;
+  }
 
   .table-wrap {
     overflow: visible !important;
@@ -483,69 +517,87 @@ footer {
   .print-header {
     display: block !important;
     text-align: center;
-    padding: 0 0 16px 0;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #1a1a1a;
+    padding: 0 0 10px 0;
+    margin: 0 0 14px 0;
+    border-bottom: 2px solid #111827;
     font-family: 'Playfair Display', 'Times New Roman', serif;
   }
+
   .print-header h2 {
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    margin: 0 0 6px 0;
-    color: #1a1a1a;
+    letter-spacing: 0.04em;
+    margin: 0 0 4px 0;
+    text-transform: uppercase;
+    color: #111827;
   }
+
   .print-header .print-subtitle {
-    font-size: 11px;
-    color: #444;
-    margin: 2px 0;
-    font-family: 'DM Sans', Arial, sans-serif;
-  }
-  .print-header .print-meta {
     font-size: 10px;
-    color: #555;
-    margin-top: 8px;
+    color: #374151;
+    margin: 1px 0;
     font-family: 'DM Sans', Arial, sans-serif;
   }
+
+  .print-header .print-meta {
+    font-size: 9px;
+    color: #4b5563;
+    margin-top: 6px;
+    font-family: 'DM Sans', Arial, sans-serif;
+  }
+
   .print-footer {
     display: block !important;
     text-align: center;
-    font-size: 9px;
-    color: #666;
-    margin-top: 24px;
-    padding-top: 12px;
-    border-top: 1px solid #ddd;
+    font-size: 8.5px;
+    color: #4b5563;
+    margin-top: 16px;
+    padding-top: 8px;
+    border-top: 1px solid #d4d4d4;
   }
 
   table {
-    font-size: 9px;
+    font-size: 8.5px;
     width: 100% !important;
     max-width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
-    border-bottom: 2px solid #1a1a1a;
+    border-bottom: 1px solid #111827;
   }
-  thead tr { background: #f0f0f0 !important; }
+
+  thead tr {
+    background: #f3f4f6 !important;
+  }
+
   th {
-    background: #e8e8e8 !important;
-    padding: 5px 6px;
+    background: #e5e7eb !important;
+    padding: 4px 5px;
     text-align: left;
     font-weight: 600;
-    font-size: 8px;
-    letter-spacing: 0.05em;
+    font-size: 7.5px;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    border: 1px solid #ccc;
+    border: 1px solid #d1d5db;
     overflow: hidden;
     word-wrap: break-word;
   }
+
   td {
-    padding: 4px 6px;
-    border: 1px solid #ddd;
+    padding: 3px 5px;
+    border: 1px solid #e5e7eb;
     overflow: hidden;
     word-wrap: break-word;
     word-break: break-word;
   }
-  tbody tr:nth-child(even) td { background: #fafafa; }
+
+  tbody tr:nth-child(even) td {
+    background: #f9fafb;
+  }
+
+  .home-embed .logbook-panel {
+    box-shadow: none !important;
+    border: none !important;
+  }
 }
 
 .print-header, .print-footer { display: none; }
