@@ -184,7 +184,10 @@ main {
 .btn-add:hover { background: var(--fire-light); transform: scale(1.02); }
 
 /* TABLE */
-.table-wrap { overflow-x: auto; }
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 table {
   width: 100%;
@@ -610,15 +613,85 @@ footer {
 
 .print-header, .print-footer { display: none; }
 
-/* RESPONSIVE */
+/* RESPONSIVE — inspection/FSEC tables: horizontal scroll on medium screens (print unchanged) */
+@media screen and (max-width: 900px) and (min-width: 641px) {
+  #table-inspection,
+  #table-fsec {
+    min-width: 720px;
+  }
+}
+
+/* Phone: card layout for inspection & FSEC tables (screen only; print keeps table layout) */
+@media screen and (max-width: 640px) {
+  #table-inspection thead,
+  #table-fsec thead {
+    display: none;
+  }
+
+  #table-inspection tbody tr,
+  #table-fsec tbody tr {
+    display: block;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  #table-inspection tbody tr:hover,
+  #table-fsec tbody tr:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  #table-inspection tbody td,
+  #table-fsec tbody td {
+    display: block;
+    padding: 6px 0;
+    border: none;
+    text-align: left;
+  }
+
+  #table-inspection tbody td::before,
+  #table-fsec tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    margin-bottom: 2px;
+  }
+
+  #table-inspection tbody td.col-action::before,
+  #table-fsec tbody td.col-action::before {
+    margin-bottom: 8px;
+  }
+
+  #table-inspection .table-wrap,
+  #table-fsec .table-wrap {
+    overflow-x: visible;
+  }
+
+  #table-inspection,
+  #table-fsec {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .category-cards { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .cat-card { padding: 18px 16px; }
   .cat-icon { width: 44px; height: 44px; font-size: 20px; }
   .panel-header { padding: 16px; }
-  th, td { padding: 10px 12px; }
   .header-badge { display: none; }
+}
+
+@media (max-width: 768px) {
+  th, td { padding: 10px 12px; }
 }
 
 @media (max-width: 480px) {
