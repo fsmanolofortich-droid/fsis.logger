@@ -1142,6 +1142,57 @@
               </div>
             </div>
             <div class="form-section">
+              <div class="form-section-title">Inspection Order (IO)</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inspection_inspector_position">Inspector Position</label>
+                  <input
+                    type="text"
+                    id="inspection_inspector_position"
+                    placeholder="e.g. Fire Safety Inspector"
+                  >
+                </div>
+                <div class="form-group">
+                  <label for="inspection_included_personnel_name">Included Personnel</label>
+                  <input
+                    type="text"
+                    id="inspection_included_personnel_name"
+                    placeholder="Name of additional inspector (optional)"
+                  >
+                </div>
+                <div class="form-group">
+                  <label for="inspection_included_personnel_position">Included Position</label>
+                  <input
+                    type="text"
+                    id="inspection_included_personnel_position"
+                    placeholder="Position of additional inspector"
+                  >
+                </div>
+                <div class="form-group">
+                  <label for="inspection_duration_start">Duration — From</label>
+                  <input
+                    type="date"
+                    id="inspection_duration_start"
+                  >
+                </div>
+                <div class="form-group">
+                  <label for="inspection_duration_end">Duration — To</label>
+                  <input
+                    type="date"
+                    id="inspection_duration_end"
+                  >
+                </div>
+                <div class="form-group full">
+                  <label for="inspection_remarks">Remarks on IO</label>
+                  <textarea
+                    id="inspection_remarks"
+                    rows="2"
+                    placeholder="Any special instructions or remarks to show on the Inspection Order"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
               <div class="form-section-title">Location &amp; photo</div>
               <div class="form-grid">
                 <div class="form-group full">
@@ -1152,6 +1203,7 @@
                     type="file"
                     id="inspection_photo"
                     accept="image/*"
+                    capture="environment"
                   >
                 </div>
               </div>

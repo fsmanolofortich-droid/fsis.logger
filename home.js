@@ -388,9 +388,9 @@ document.addEventListener("DOMContentLoaded", init);
 // Shared Supabase + utilities
 // -----------------------------
 
-const SUPABASE_URL = "https://drqgbkninqpvhvhnbatk.supabase.co";
+const SUPABASE_URL = "https://ezpwbgpbveazutmrnzlf.supabase.co";
 const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRycWdia25pbnFwdmh2aG5iYXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MTQzODQsImV4cCI6MjA4NzQ5MDM4NH0.CliUD5Ow17OXvaqDzYdAbi-rrTg_u-e4OyomcGrgZk0";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6cHdiZ3BidmVhenV0bXJuemxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4Nzk2NDksImV4cCI6MjA4NzQ1NTY0OX0.C5118CQPYAqay0FhtmKdJyl9LKUHFzMnN5ecnAx1NU8";
 
 const supabaseClient =
   window.supabase?.createClient && SUPABASE_URL && SUPABASE_ANON_KEY
@@ -605,12 +605,17 @@ function inspectionRenderTable() {
         tr.innerHTML = `
           ${baseRowHtml}
           <td class="col-action" data-label="Action">
-            <div class="tbl-actions">
-              <button class="btn-edit" onclick="inspectionEditEntry(${i})">Edit</button>
-              <button class="btn-del" onclick="inspectionDeleteEntry(${i})">Delete</button>
-              <button class="btn-edit" onclick="inspectionDownloadPdf(${i})">Download PDF</button>
-              <button class="btn-edit" onclick="inspectionAddPhoto(${i})">Add photo</button>
-            </div>
+            <select
+              aria-label="Row actions"
+              onchange="inspectionHandleAction(this.value, ${i}); this.selectedIndex = 0;"
+            >
+              <option value="">Actions…</option>
+              <option value="edit">Edit</option>
+              <option value="download_pdf">Download IO (PDF)</option>
+              <option value="open_io_html">Open IO (HTML)</option>
+              <option value="add_photo">Add photo</option>
+              <option value="delete">Delete</option>
+            </select>
           </td>
         `;
         tbody.appendChild(tr);
@@ -621,12 +626,17 @@ function inspectionRenderTable() {
           tr2.innerHTML = `
             ${baseRowHtml}
             <td class="col-action" data-label="Action">
-              <div class="tbl-actions">
-                <button class="btn-edit" onclick="inspectionEditEntry(${i})">Edit</button>
-                <button class="btn-del" onclick="inspectionDeleteEntry(${i})">Delete</button>
-                <button class="btn-edit" onclick="inspectionDownloadPdf(${i})">Download PDF</button>
-                <button class="btn-edit" onclick="inspectionAddPhoto(${i})">Add photo</button>
-              </div>
+              <select
+                aria-label="Row actions"
+                onchange="inspectionHandleAction(this.value, ${i}); this.selectedIndex = 0;"
+              >
+                <option value="">Actions…</option>
+                <option value="edit">Edit</option>
+                <option value="download_pdf">Download IO (PDF)</option>
+                <option value="open_io_html">Open IO (HTML)</option>
+                <option value="add_photo">Add photo</option>
+                <option value="delete">Delete</option>
+              </select>
             </td>
           `;
           tbodyNoPhoto.appendChild(tr2);
@@ -667,6 +677,17 @@ function inspectionEditEntry(idx) {
   setVal("inspection_date_inspected", row.date_inspected);
   setVal("inspection_inspected_by", row.inspected_by);
 
+  // Optional IO-specific fields (may not exist on older records or in the DOM)
+  setVal("inspection_inspector_position", row.inspector_position);
+  setVal("inspection_included_personnel_name", row.included_personnel_name);
+  setVal(
+    "inspection_included_personnel_position",
+    row.included_personnel_position
+  );
+  setVal("inspection_duration_start", row.duration_start);
+  setVal("inspection_duration_end", row.duration_end);
+  setVal("inspection_remarks", row.remarks);
+
   const addr = (row.insp_address || "").toString();
   const brgyMatch = addr.match(/Barangay\s+([^,]+)/i);
   setVal(
@@ -692,6 +713,41 @@ function inspectionAddPhoto(idx) {
   }
 }
 
+function inspectionHandleAction(action, idx) {
+  if (!action) return;
+  if (action === "edit") {
+    inspectionEditEntry(idx);
+    return;
+  }
+  if (action === "download_pdf") {
+    inspectionDownloadPdf(idx);
+    return;
+  }
+  if (action === "open_io_html") {
+    inspectionOpenIoHtml(idx);
+    return;
+  }
+  if (action === "add_photo") {
+    inspectionAddPhoto(idx);
+    return;
+  }
+  if (action === "delete") {
+    inspectionDeleteEntry(idx);
+  }
+}
+
+function inspectionOpenIoHtml(idx) {
+  const row = inspectionData[idx];
+  if (!row) return;
+  try {
+    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
+  } catch {
+    // If sessionStorage is unavailable, we still open the template;
+    // it will show a friendly notice instead of data.
+  }
+  window.open("./io_fsis.html", "_blank");
+}
+
 async function inspectionDownloadPdf(idx) {
   const row = inspectionData[idx];
   if (!row || !window.PDFLib) return;
@@ -708,55 +764,123 @@ async function inspectionDownloadPdf(idx) {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontSize = 9;
 
-    // NOTE: x,y positions are placeholders and should be tuned against your template.
+    // Helper to format dates for the IO; falls back gracefully.
+    const formatIoDate = (d) => {
+      if (!d) return "";
+      try {
+        return logbookFormatDate(d);
+      } catch {
+        return String(d);
+      }
+    };
+
+    // Use the current date for the header date, regardless of the inspection date.
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayText = formatIoDate(todayIso);
+
+    // Common x positions tuned to align with the template columns.
+    const colLeftX = 155; // text inside the main left cells
+    const headerDateX = 410; // top-right <DATE>
+    const durationStartX = 225; // after "From:"
+    const durationEndX = 360; // after "to :"
+
+    // Baseline y positions tuned to sit on each row in the Word template.
+    const headerDateY = 742;
+    const ioNumberY = 720;
+    const toNameY = 678;
+    const toPositionY = 663;
+    const includedNameY = 637;
+    const includedPositionY = 622;
+    const proceedAddressY = 597;
+    const durationY = 571;
+    const remarksY = 545;
+
+    // INSPECTION ORDER < DATE >  (top-right)
+    page.drawText(todayText, {
+      x: headerDateX,
+      y: headerDateY,
+      size: fontSize,
+      font,
+    });
+
+    // NUMBER: <IO Number>
     page.drawText(row.io_number || "", {
-      x: 120,
-      y: 640,
+      x: colLeftX,
+      y: ioNumberY,
       size: fontSize,
       font,
     });
 
-    page.drawText(row.insp_owner || "", {
-      x: 120,
-      y: 625,
+    // TO : < Personnel Name>
+    page.drawText(row.inspected_by || "", {
+      x: colLeftX,
+      y: toNameY,
       size: fontSize,
       font,
+      maxWidth: 260,
     });
 
-    page.drawText(row.business_name || "", {
-      x: 120,
-      y: 610,
+    // < Position> (main inspector)
+    page.drawText(row.inspector_position || "", {
+      x: colLeftX,
+      y: toPositionY,
       size: fontSize,
       font,
+      maxWidth: 260,
     });
 
+    // Included: < Personnel Name>
+    page.drawText(row.included_personnel_name || "", {
+      x: colLeftX,
+      y: includedNameY,
+      size: fontSize,
+      font,
+      maxWidth: 260,
+    });
+
+    // < Position> (included personnel)
+    page.drawText(row.included_personnel_position || "", {
+      x: colLeftX,
+      y: includedPositionY,
+      size: fontSize,
+      font,
+      maxWidth: 260,
+    });
+
+    // PROCEED : <Address>
     page.drawText(inspectionFormatAddressDisplay(row), {
-      x: 120,
-      y: 595,
+      x: colLeftX,
+      y: proceedAddressY,
       size: fontSize,
       font,
       maxWidth: 360,
     });
 
-    page.drawText(logbookFormatDate(row.date_inspected), {
-      x: 120,
-      y: 580,
+    // DURATION : From: <Start Date> to : <End Date>
+    const durationStart = row.duration_start || row.date_inspected || todayIso;
+    const durationEnd = row.duration_end || row.date_inspected || todayIso;
+
+    page.drawText(formatIoDate(durationStart), {
+      x: durationStartX,
+      y: durationY,
       size: fontSize,
       font,
     });
 
-    page.drawText(row.fsic_number || "", {
-      x: 120,
-      y: 565,
+    page.drawText(formatIoDate(durationEnd), {
+      x: durationEndX,
+      y: durationY,
       size: fontSize,
       font,
     });
 
-    page.drawText(row.inspected_by || "", {
-      x: 120,
-      y: 550,
+    // REMARKS : <Remarks>
+    page.drawText(row.remarks || "", {
+      x: colLeftX,
+      y: remarksY,
       size: fontSize,
       font,
+      maxWidth: 360,
     });
 
     const pdfBytes = await pdfDoc.save();
@@ -861,6 +985,12 @@ function inspectionClearForm() {
     "inspection_addr_line",
     "inspection_date_inspected",
     "inspection_inspected_by",
+    "inspection_inspector_position",
+    "inspection_included_personnel_name",
+    "inspection_included_personnel_position",
+    "inspection_duration_start",
+    "inspection_duration_end",
+    "inspection_remarks",
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
@@ -909,6 +1039,29 @@ function inspectionSaveEntry(e) {
     inspected_by:
       (document.getElementById("inspection_inspected_by") || { value: "" })
         .value.trim(),
+    inspector_position:
+      (document.getElementById("inspection_inspector_position") || {
+        value: "",
+      }).value.trim(),
+    included_personnel_name: (
+      document.getElementById("inspection_included_personnel_name") || {
+        value: "",
+      }
+    ).value.trim(),
+    included_personnel_position: (
+      document.getElementById("inspection_included_personnel_position") || {
+        value: "",
+      }
+    ).value.trim(),
+    duration_start: (
+      document.getElementById("inspection_duration_start") || { value: "" }
+    ).value,
+    duration_end: (
+      document.getElementById("inspection_duration_end") || { value: "" }
+    ).value,
+    remarks: (
+      document.getElementById("inspection_remarks") || { value: "" }
+    ).value.trim(),
     // Optional coordinates and photo metadata extracted from EXIF / geolocation
     lat: currentExifLat,
     lng: currentExifLng,
@@ -973,13 +1126,13 @@ function inspectionSaveEntry(e) {
       // If we have a file and Supabase Storage, upload to the 'storage' bucket
       if (currentExifFile && supabaseClient?.storage) {
         let uploadFile = currentExifFile;
-        if (uploadFile.size > 1024 * 1024) {
-          try {
-            uploadFile = await compressInspectionImage(uploadFile);
-          } catch (compressErr) {
-            console.warn("Image compression failed, using original file:", compressErr);
-            uploadFile = currentExifFile;
-          }
+        try {
+          // Always pass through the sanitization module so EXIF/metadata
+          // are stripped before the image can ever be embedded into PDFs.
+          uploadFile = await sanitizeInspectionImage(uploadFile);
+        } catch (sanitizeErr) {
+          console.warn("Image sanitization failed, using original file:", sanitizeErr);
+          uploadFile = currentExifFile;
         }
 
         const fileExt =
@@ -1020,6 +1173,12 @@ function inspectionSaveEntry(e) {
         date_inspected: entry.date_inspected,
         fsic_number: entry.fsic_number,
         inspected_by: entry.inspected_by || null,
+        inspector_position: entry.inspector_position || null,
+        included_personnel_name: entry.included_personnel_name || null,
+        included_personnel_position: entry.included_personnel_position || null,
+        duration_start: entry.duration_start || null,
+        duration_end: entry.duration_end || null,
+        remarks: entry.remarks || null,
         latitude: entry.lat ?? null,
         longitude: entry.lng ?? null,
         photo_url: entry.photo_url ?? null,
@@ -1223,12 +1382,27 @@ function initInspectionPhotoExif() {
             const lng = window.EXIF.getTag(this, "GPSLongitude");
             const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
             const takenAt = window.EXIF.getTag(this, "DateTimeOriginal");
+            const make = window.EXIF.getTag(this, "Make");
+            const model = window.EXIF.getTag(this, "Model");
 
             if (takenAt) {
               currentExifTakenAt = takenAt;
             }
 
-            if (!lat || !lng || !latRef || !lngRef) return;
+            // Enforce "real camera photo with GPS EXIF" for inspection entries.
+            if (!lat || !lng || !latRef || !lngRef || !make || !model) {
+              logbookShowToast(
+                "inspection-toast",
+                "Photo must come from a camera with GPS enabled. Please capture a new photo."
+              );
+              input.value = "";
+              currentExifLat = null;
+              currentExifLng = null;
+              currentExifPreviewUrl = null;
+              currentExifTakenAt = null;
+              currentExifFile = null;
+              return;
+            }
 
             currentExifLat = dmsToDecimal(lat, latRef);
             currentExifLng = dmsToDecimal(lng, lngRef);
@@ -1298,6 +1472,68 @@ async function compressInspectionImage(file) {
       reader.readAsDataURL(file);
     } catch (err) {
       reject(err);
+    }
+  });
+}
+
+// Security/privacy: re‑encode an image via canvas so EXIF/metadata
+// are stripped before the image is ever stored or used in PDFs.
+async function sanitizeInspectionImage(file) {
+  return new Promise((resolve) => {
+    try {
+      if (!window.FileReader || !document.createElement) {
+        resolve(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxDimension = 1600;
+            const longest = Math.max(img.width, img.height) || 1;
+            const scale = longest > maxDimension ? maxDimension / longest : 1;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(file);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  resolve(file);
+                  return;
+                }
+                const baseName =
+                  (file.name && file.name.replace(/\.[^.]+$/, "")) || "photo";
+                const sanitized = new File([blob], baseName + ".jpg", {
+                  type: "image/jpeg",
+                });
+                resolve(sanitized);
+              },
+              "image/jpeg",
+              0.8
+            );
+          } catch (err) {
+            console.warn("sanitizeInspectionImage error:", err);
+            resolve(file);
+          }
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn("sanitizeInspectionImage outer error:", err);
+      resolve(file);
     }
   });
 }
@@ -1373,9 +1609,9 @@ function inspectionPrintPanel() {
 
 async function inspectionLoadFromSupabase() {
   const selectWithGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, latitude, longitude, photo_url, photo_taken_at, created_at";
+    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, latitude, longitude, photo_url, photo_taken_at, created_at";
   const selectWithoutGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, created_at";
+    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, created_at";
 
   const INSPECTION_FETCH_LIMIT = 2000;
   const run = async (select) =>
@@ -1410,6 +1646,12 @@ async function inspectionLoadFromSupabase() {
     insp_address: r.address,
     date_inspected: r.date_inspected,
     inspected_by: r.inspected_by || "",
+    inspector_position: r.inspector_position || "",
+    included_personnel_name: r.included_personnel_name || "",
+    included_personnel_position: r.included_personnel_position || "",
+    duration_start: r.duration_start || null,
+    duration_end: r.duration_end || null,
+    remarks: r.remarks || "",
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
     photo_url:
@@ -1532,10 +1774,14 @@ function fsecRenderTable() {
       <td class="td-date" data-label="Date">${logbookFormatDate(row.fsec_date)}</td>
       <td data-label="Contact Number">${logbookEsc(row.contact_number)}</td>
       <td class="col-action" data-label="Action">
-        <div class="tbl-actions">
-          <button class="btn-edit" onclick="fsecEditEntry(${i})">Edit</button>
-          <button class="btn-del" onclick="fsecDeleteEntry(${i})">Delete</button>
-        </div>
+        <select
+          aria-label="Row actions"
+          onchange="fsecHandleAction(this.value, ${i}); this.selectedIndex = 0;"
+        >
+          <option value="">Actions…</option>
+          <option value="edit">Edit</option>
+          <option value="delete">Delete</option>
+        </select>
       </td>
     `;
     tbody.appendChild(tr);
@@ -1573,6 +1819,17 @@ function fsecEditEntry(idx) {
   setText("fsec-modal-subtitle", "FSEC Building Plan Logbook");
   const btn = document.getElementById("fsec-btn-save");
   if (btn) btn.textContent = "Update Record";
+}
+
+function fsecHandleAction(action, idx) {
+  if (!action) return;
+  if (action === "edit") {
+    fsecEditEntry(idx);
+    return;
+  }
+  if (action === "delete") {
+    fsecDeleteEntry(idx);
+  }
 }
 
 function fsecDeleteEntry(idx) {

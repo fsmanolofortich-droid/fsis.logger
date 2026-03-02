@@ -1,7 +1,7 @@
 const SESSION_KEY = "fsis.session";
-const SUPABASE_URL = "https://drqgbkninqpvhvhnbatk.supabase.co";
+const SUPABASE_URL = "https://ezpwbgpbveazutmrnzlf.supabase.co";
 const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRycWdia25pbnFwdmh2aG5iYXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MTQzODQsImV4cCI6MjA4NzQ5MDM4NH0.CliUD5Ow17OXvaqDzYdAbi-rrTg_u-e4OyomcGrgZk0";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6cHdiZ3BidmVhenV0bXJuemxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4Nzk2NDksImV4cCI6MjA4NzQ1NTY0OX0.C5118CQPYAqay0FhtmKdJyl9LKUHFzMnN5ecnAx1NU8";
 
 const supabaseClient =
   window.supabase?.createClient && SUPABASE_URL && SUPABASE_ANON_KEY

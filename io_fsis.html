@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspection Order - BFP Manolo Fortich Fire Station</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .page {
+      position: relative;
+      background: #fff;
+      width: 8.5in;
+      min-height: 11in;
+      padding: 0.5in 0.6in;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+    .header img {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+    }
+    .header-text {
+      text-align: center;
+      line-height: 1.5;
+    }
+    .header-text .agency {
+      font-size: 10pt;
+    }
+    .header-text .dept {
+      font-size: 12pt;
+      font-weight: bold;
+    }
+    .header-text .bureau {
+      font-size: 12pt;
+      font-weight: bold;
+    }
+    .header-text .sub {
+      font-size: 10pt;
+    }
+    .header-text .contact {
+      font-size: 8pt;
+    }
+
+    /* Title */
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-top: 24px;
+      margin-bottom: 4px;
+    }
+    .title-row h1 {
+      font-size: 22pt;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .date-block {
+      font-size: 12pt;
+      text-align: right;
+      padding-top: 4px;
+    }
+    .number-block {
+      font-size: 10pt;
+      margin-bottom: 16px;
+    }
+    .number-block span {
+      font-style: italic;
+    }
+
+    /* Table */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+    .info-table td {
+      border: 1px solid #333;
+      padding: 8px 10px;
+      vertical-align: top;
+    }
+    .info-table .label {
+      font-weight: bold;
+      white-space: nowrap;
+      width: 100px;
+    }
+    .info-table .colon {
+      width: 10px;
+      text-align: center;
+    }
+    .info-table .value {
+      min-height: 40px;
+      color: #555;
+    }
+    .info-table .value em {
+      color: #888;
+    }
+    .included {
+      margin-top: 8px;
+    }
+    .included strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Signatories */
+    .signatories {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+    .signatory-block {
+      width: 45%;
+    }
+    .signatory-block .role-label {
+      font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 20px;
+    }
+    .signatory-block .name {
+      text-decoration: underline;
+      font-size: 10pt;
+      margin-bottom: 2px;
+    }
+    .signatory-block .position {
+      font-weight: bold;
+      font-size: 10pt;
+    }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px dashed #333;
+      margin: 10px 0 16px;
+    }
+
+    /* Acknowledgement */
+    .ack-title {
+      text-align: center;
+      font-weight: bold;
+      font-size: 12pt;
+      margin-bottom: 12px;
+    }
+    .ack-text {
+      font-size: 10pt;
+      line-height: 1.6;
+      text-align: justify;
+      margin-bottom: 40px;
+    }
+    .ack-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 20px;
+    }
+    .ack-footer .sig-line {
+      width: 55%;
+      border-top: 1px solid #333;
+      padding-top: 4px;
+      font-size: 10pt;
+    }
+    .ack-footer .date-line {
+      width: 30%;
+      border-top: 1px solid #333;
+      padding-top: 4px;
+      font-size: 10pt;
+    }
+
+    /* Footer */
+    .form-footer {
+      position: absolute;
+      bottom: 0.4in;
+      left: 0.6in;
+      right: 0.6in;
+      font-size: 9pt;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <img src="./dilg_logo.png" alt="DILG Logo">
+    <div class="header-text">
+      <div class="agency">Republic of the Philippines</div>
+      <div class="dept">Department of the Interior and Local Government</div>
+      <div class="bureau">Bureau of Fire Protection</div>
+      <div class="sub">Region 10</div>
+      <div class="sub">Bukidnon Provincial Office</div>
+      <div class="sub">Manolo Fortich Fire Station</div>
+      <div class="sub">Tankulan, Manolo Fortich, Bukidnon</div>
+      <div class="contact">Cellphone #: 09352307289 / Email Address: manolofortichfs_bfp10@yahoo.com</div>
+    </div>
+    <img src="./Bureau_of_Fire_Protection.png" alt="BFP Logo">
+  </div>
+
+  <!-- Title -->
+  <div class="title-row">
+    <h1>Inspection Order</h1>
+    <div class="date-block">
+      <span id="io_date" contenteditable="true"></span>
+    </div>
+  </div>
+  <div class="number-block">
+    NUMBER:
+    <span id="io_number" contenteditable="true"></span><br>
+    <span>(Pre-numbered)</span>
+  </div>
+
+  <!-- Info Table -->
+  <table class="info-table">
+    <tr>
+      <td class="label">TO</td>
+      <td class="colon">:</td>
+      <td class="value">
+        <span id="io_to_name" contenteditable="true"></span><br>
+        <span id="io_to_position" contenteditable="true"></span>
+        <div class="included">
+          <strong>Included:</strong>
+          <span id="io_included_name" contenteditable="true"></span><br>
+          <span id="io_included_position" contenteditable="true"></span><br>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">PROCEED</td>
+      <td class="colon">:</td>
+      <td class="value">
+        <div id="io_address" contenteditable="true"></div>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">PURPOSE</td>
+      <td class="colon">:</td>
+      <td class="value">Inspection</td>
+    </tr>
+    <tr>
+      <td class="label">DURATION</td>
+      <td class="colon">:</td>
+      <td class="value">
+        From:
+        <span id="io_duration_start" contenteditable="true"></span>
+        &nbsp; to :
+        <span id="io_duration_end" contenteditable="true"></span>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">REMARKS</td>
+      <td class="colon">:</td>
+      <td class="value">
+        <div id="io_remarks" contenteditable="true"></div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Signatories -->
+  <div class="signatories">
+    <div class="signatory-block">
+      <div class="role-label">RECOMMENDING APPROVER:</div>
+      <div class="name">SFO1 Cedric B Gamolo, BFP</div>
+      <div class="position">Chief, Fire Safety Enforcement Section</div>
+    </div>
+    <div class="signatory-block">
+      <div class="role-label">APPROVED:</div>
+      <div class="name">SFO3 Rafael I Corona Jr., BFP</div>
+      <div class="position">Acting, Municipal Fire Marshal</div>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <hr class="divider">
+
+  <!-- Acknowledgement -->
+  <div class="ack-title">ACKNOWLEDGEMENT</div>
+  <div class="ack-text">
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This is to acknowledge that permission was granted to the above-named Fire Safety Inspector/s
+    accompanied by authorized representative to conduct Fire Safety Inspection within the premises in
+    accordance with law.
+  </div>
+
+  <div class="ack-footer">
+    <div class="sig-line">Signature over Printed Name / Authorized Representative</div>
+    <div class="date-line">Date / Time</div>
+  </div>
+
+  <!-- Form Footer -->
+  <div class="form-footer">BFP-QSF-FSED-009</div>
+
+</div>
+
+<script>
+  (function () {
+    function formatDateISOToLong(dateStr) {
+      if (!dateStr) return "";
+      try {
+        const d = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00" : ""));
+        if (!isFinite(d.getTime())) return "";
+        return d.toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch {
+        return dateStr;
+      }
+    }
+
+    const raw = sessionStorage.getItem("fsis.io.current");
+    let entry = null;
+    try {
+      entry = raw ? JSON.parse(raw) : null;
+    } catch {
+      entry = null;
+    }
+
+    if (!entry) {
+      // No data passed in; leave placeholders as-is so the user can type manually.
+      return;
+    }
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    // Use the inspection's own date for the printed date,
+    // falling back to today only if it's missing.
+    const headerSourceDate = entry.date_inspected || todayIso;
+    const headerDate = formatDateISOToLong(headerSourceDate);
+
+    const durationStart =
+      entry.duration_start || entry.date_inspected || todayIso;
+    const durationEnd =
+      entry.duration_end || entry.date_inspected || todayIso;
+
+    const toName = entry.inspected_by || "";
+    const toPosition = entry.inspector_position || "";
+    const includedName = entry.included_personnel_name || "";
+    const includedPosition = entry.included_personnel_position || "";
+    // Prefer structured address fields so the format is:
+    // Purok/House/Street, Barangay <Name>, Municipal, Province, Region.
+    const addrLine = entry.addr_line || "";
+    const addrBarangay = entry.addr_barangay || "";
+    const addressParts = [
+      addrLine,
+      addrBarangay ? "Barangay " + addrBarangay : "",
+      "Manolo Fortich",
+      "Bukidnon",
+      "Region X",
+    ].filter(Boolean);
+    const address =
+      addressParts.length > 0
+        ? addressParts.join(", ")
+        : (entry.insp_address || entry.fsec_address || "");
+    const remarks = entry.remarks || "";
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = value || "";
+    };
+
+    // Map entry fields into the <> areas.
+    setText("io_date", headerDate);
+    setText("io_number", entry.io_number || "");
+    setText("io_to_name", toName);
+    setText("io_to_position", toPosition);
+    setText("io_included_name", includedName);
+    setText("io_included_position", includedPosition);
+    setText("io_address", address);
+    setText("io_duration_start", formatDateISOToLong(durationStart));
+    setText("io_duration_end", formatDateISOToLong(durationEnd));
+    setText("io_remarks", remarks);
+  })();
+</script>
+
+</body>
+</html>

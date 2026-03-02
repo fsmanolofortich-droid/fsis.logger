@@ -10,20 +10,27 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- TABLE: inspection_logbook
 -- ========================
 CREATE TABLE IF NOT EXISTS inspection_logbook (
-  id              UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  io_number       VARCHAR(50) NOT NULL,
-  owner_name      VARCHAR(255) NOT NULL,
-  business_name   VARCHAR(255) NOT NULL,
-  address         TEXT NOT NULL,
-  date_inspected  DATE NOT NULL,
-  fsic_number     VARCHAR(50) NOT NULL,
-  inspected_by    VARCHAR(255),
-  latitude        DECIMAL(10,8) NULL,
-  longitude       DECIMAL(11,8) NULL,
-  photo_url       TEXT NULL,
-  photo_taken_at  TEXT NULL,
-  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  updated_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL
+  id                          UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  io_number                   VARCHAR(50) NOT NULL,
+  owner_name                  VARCHAR(255) NOT NULL,
+  business_name               VARCHAR(255) NOT NULL,
+  address                     TEXT NOT NULL,
+  date_inspected              DATE NOT NULL,
+  fsic_number                 VARCHAR(50) NOT NULL,
+  inspected_by                VARCHAR(255),
+  -- IO‑specific metadata used for the Inspection Order PDF
+  inspector_position          VARCHAR(255),
+  included_personnel_name     VARCHAR(255),
+  included_personnel_position VARCHAR(255),
+  duration_start              DATE,
+  duration_end                DATE,
+  remarks                     TEXT,
+  latitude                    DECIMAL(10,8) NULL,
+  longitude                   DECIMAL(11,8) NULL,
+  photo_url                   TEXT NULL,
+  photo_taken_at              TEXT NULL,
+  created_at                  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at                  TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- Schema upgrades for existing projects (safe to run multiple times)
@@ -35,6 +42,18 @@ ALTER TABLE inspection_logbook
   ADD COLUMN IF NOT EXISTS photo_url TEXT NULL;
 ALTER TABLE inspection_logbook
   ADD COLUMN IF NOT EXISTS photo_taken_at TEXT NULL;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS inspector_position VARCHAR(255);
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS included_personnel_name VARCHAR(255);
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS included_personnel_position VARCHAR(255);
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS duration_start DATE;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS duration_end DATE;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS remarks TEXT;
 
 -- Auto-update updated_at on row change
 CREATE OR REPLACE FUNCTION update_updated_at()
