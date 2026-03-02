@@ -545,15 +545,15 @@ function inspectionRenderTable() {
   inspectionData.forEach((row, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${i + 1}</td>
-      <td class="td-io">${logbookEsc(row.io_number)}</td>
-      <td>${logbookEsc(row.insp_owner)}</td>
-      <td><strong>${logbookEsc(row.business_name)}</strong></td>
-      <td>${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
-      <td class="td-date">${logbookFormatDate(row.date_inspected)}</td>
-      <td class="td-fsic">${logbookEsc(row.fsic_number)}</td>
-      <td>${logbookEsc(row.inspected_by)}</td>
-      <td class="col-action">
+      <td data-label="#">${i + 1}</td>
+      <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
+      <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
+      <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
+      <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
+      <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
+      <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
+      <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
+      <td class="col-action" data-label="Action">
         <div class="tbl-actions">
           <button class="btn-edit" onclick="inspectionEditEntry(${i})">Edit</button>
           <button class="btn-del" onclick="inspectionDeleteEntry(${i})">Delete</button>
@@ -1356,13 +1356,13 @@ function fsecRenderTable() {
   fsecData.forEach((row, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${i + 1}</td>
-      <td>${logbookEsc(row.fsec_owner)}</td>
-      <td><strong>${logbookEsc(row.proposed_project)}</strong></td>
-      <td>${logbookEsc(fsecFormatAddressDisplay(row))}</td>
-      <td class="td-date">${logbookFormatDate(row.fsec_date)}</td>
-      <td>${logbookEsc(row.contact_number)}</td>
-      <td class="col-action">
+      <td data-label="#">${i + 1}</td>
+      <td data-label="Name of Owner">${logbookEsc(row.fsec_owner)}</td>
+      <td data-label="Proposed Project"><strong>${logbookEsc(row.proposed_project)}</strong></td>
+      <td data-label="Address">${logbookEsc(fsecFormatAddressDisplay(row))}</td>
+      <td class="td-date" data-label="Date">${logbookFormatDate(row.fsec_date)}</td>
+      <td data-label="Contact Number">${logbookEsc(row.contact_number)}</td>
+      <td class="col-action" data-label="Action">
         <div class="tbl-actions">
           <button class="btn-edit" onclick="fsecEditEntry(${i})">Edit</button>
           <button class="btn-del" onclick="fsecDeleteEntry(${i})">Delete</button>
