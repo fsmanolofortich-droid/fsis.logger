@@ -6,6 +6,7 @@
   <title>Inspection Order - BFP Manolo Fortich Fire Station</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { background: #fff; }
     body {
       font-family: 'Times New Roman', Times, serif;
       font-size: 12pt;
@@ -14,6 +15,11 @@
       justify-content: center;
       padding: 20px;
     }
+    body.render-pdf {
+      background: #fff;
+      padding: 0;
+      display: block;
+    }
     .page {
       position: relative;
       background: #fff;
@@ -21,6 +27,42 @@
       min-height: 11in;
       padding: 0.5in 0.6in;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      /* Double-line border: thick outer, gap, thin inner (kept INSIDE the page) */
+    }
+    body.render-pdf .page {
+      box-shadow: none;
+    }
+    /* In render-pdf mode, lock exact page size and avoid overflow */
+    html.render-pdf,
+    body.render-pdf {
+      width: 8.5in;
+      height: 11in;
+      overflow: hidden;
+      margin: 0;
+    }
+    body.render-pdf .page {
+      width: 8.5in;
+      height: 11in;
+      min-height: 11in;
+      margin: 0;
+    }
+    .page::before,
+    .page::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      border: 0 solid #000;
+      border-radius: 0;
+    }
+    /* Outer line */
+    .page::before {
+      inset: 12px;
+      border-width: 3px;
+    }
+    /* Inner line */
+    .page::after {
+      inset: 20px;
+      border-width: 1px;
     }
 
     /* Header */
@@ -32,8 +74,8 @@
       margin-bottom: 10px;
     }
     .header img {
-      width: 70px;
-      height: 70px;
+      width: 95px;
+      height: 95px;
       object-fit: contain;
     }
     .header-text {
@@ -106,10 +148,10 @@
     }
     .info-table .value {
       min-height: 40px;
-      color: #555;
+      color: #000;
     }
     .info-table .value em {
-      color: #888;
+      color: #000;
     }
     .included {
       margin-top: 8px;
@@ -191,6 +233,19 @@
       font-size: 9pt;
       text-align: left;
     }
+
+    /* Print/PDF helpers */
+    @page { size: letter; margin: 0; }
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+        display: block;
+      }
+      .page {
+        box-shadow: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -232,7 +287,7 @@
       <td class="colon">:</td>
       <td class="value">
         <span id="io_to_name" contenteditable="true"></span><br>
-        <span id="io_to_position" contenteditable="true"></span>
+        <span id="io_to_position" contenteditable="true"></span><br>
         <div class="included">
           <strong>Included:</strong>
           <span id="io_included_name" contenteditable="true"></span><br>
@@ -323,12 +378,17 @@
       }
     }
 
-    const raw = sessionStorage.getItem("fsis.io.current");
+    // Accept injected server-side data first, then fall back to sessionStorage.
     let entry = null;
-    try {
-      entry = raw ? JSON.parse(raw) : null;
-    } catch {
-      entry = null;
+    if (window.__FSIS_IO_ENTRY__ && typeof window.__FSIS_IO_ENTRY__ === "object") {
+      entry = window.__FSIS_IO_ENTRY__;
+    } else {
+      const raw = sessionStorage.getItem("fsis.io.current");
+      try {
+        entry = raw ? JSON.parse(raw) : null;
+      } catch {
+        entry = null;
+      }
     }
 
     if (!entry) {
@@ -351,10 +411,18 @@
     const toPosition = entry.inspector_position || "";
     const includedName = entry.included_personnel_name || "";
     const includedPosition = entry.included_personnel_position || "";
-    // Prefer structured address fields so the format is:
-    // Purok/House/Street, Barangay <Name>, Municipal, Province, Region.
-    const addrLine = entry.addr_line || "";
-    const addrBarangay = entry.addr_barangay || "";
+    // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
+    // Merged format: "Region X, Province, Municipal, Barangay Name, Street/Line"
+    let addrLine = entry.addr_line || "";
+    let addrBarangay = entry.addr_barangay || "";
+    const fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
+    if ((!addrLine || !addrBarangay) && fullAddr) {
+      const parts = fullAddr.split(/,\s*/);
+      if (parts.length >= 5) {
+        addrLine = parts[4].trim();
+        addrBarangay = (parts[3] || "").replace(/^Barangay\s+/i, "").trim();
+      }
+    }
     const addressParts = [
       addrLine,
       addrBarangay ? "Barangay " + addrBarangay : "",
@@ -365,7 +433,7 @@
     const address =
       addressParts.length > 0
         ? addressParts.join(", ")
-        : (entry.insp_address || entry.fsec_address || "");
+        : fullAddr || "";
     const remarks = entry.remarks || "";
 
     const setText = (id, value) => {
@@ -378,7 +446,7 @@
     setText("io_date", headerDate);
     setText("io_number", entry.io_number || "");
     setText("io_to_name", toName);
-    setText("io_to_position", toPosition);
+    setText("io_to_position", toPosition ? "" + toPosition : "");
     setText("io_included_name", includedName);
     setText("io_included_position", includedPosition);
     setText("io_address", address);
@@ -386,6 +454,48 @@
     setText("io_duration_end", formatDateISOToLong(durationEnd));
     setText("io_remarks", remarks);
   })();
+
+  // When opened with ?download=pdf, generate PDF from this page and download.
+  if (window.location.search.indexOf("download=pdf") !== -1) {
+    const filename =
+      sessionStorage.getItem("fsis.io.downloadFilename") || "inspection-order.pdf";
+    const script = document.createElement("script");
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+    script.onload = function () {
+      const element = document.querySelector(".page");
+      if (element && window.html2pdf) {
+        // scale: 1 so content fits one letter page; scale 2 was enlarging and causing 2 pages
+        window.html2pdf()
+          .set({
+            margin: 0,
+            filename: filename,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 1, useCORS: true, backgroundColor: "#ffffff" },
+            jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+          })
+          .from(element)
+          .save()
+          .then(function () {
+            try {
+              window.close();
+            } catch (_) {}
+          })
+          .catch(function (err) {
+            console.error("PDF generation failed", err);
+          });
+      }
+    };
+    document.head.appendChild(script);
+  }
+</script>
+
+<script>
+  // Ensure backend render has a white canvas (no gray/black).
+  if (window.location.search.indexOf("render=pdf") !== -1) {
+    document.body.classList.add("render-pdf");
+    document.documentElement.classList.add("render-pdf");
+  }
 </script>
 
 </body>

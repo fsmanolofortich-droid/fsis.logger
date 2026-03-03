@@ -611,7 +611,6 @@ function inspectionRenderTable() {
             >
               <option value="">Actions…</option>
               <option value="edit">Edit</option>
-              <option value="download_pdf">Download IO (PDF)</option>
               <option value="open_io_html">Open IO (HTML)</option>
               <option value="add_photo">Add photo</option>
               <option value="delete">Delete</option>
@@ -632,7 +631,6 @@ function inspectionRenderTable() {
               >
                 <option value="">Actions…</option>
                 <option value="edit">Edit</option>
-                <option value="download_pdf">Download IO (PDF)</option>
                 <option value="open_io_html">Open IO (HTML)</option>
                 <option value="add_photo">Add photo</option>
                 <option value="delete">Delete</option>
@@ -719,10 +717,6 @@ function inspectionHandleAction(action, idx) {
     inspectionEditEntry(idx);
     return;
   }
-  if (action === "download_pdf") {
-    inspectionDownloadPdf(idx);
-    return;
-  }
   if (action === "open_io_html") {
     inspectionOpenIoHtml(idx);
     return;
@@ -750,153 +744,39 @@ function inspectionOpenIoHtml(idx) {
 
 async function inspectionDownloadPdf(idx) {
   const row = inspectionData[idx];
-  if (!row || !window.PDFLib) return;
+  if (!row) return;
+  const filename = `inspection-${row.io_number || row.id || "form"}.pdf`;
 
-  try {
-    const url = "./io_fsis.pdf"; // base template
-    const existingPdfBytes = await fetch(url).then((res) => res.arrayBuffer());
-
-    const { PDFDocument, StandardFonts } = PDFLib;
-    const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    const pages = pdfDoc.getPages();
-    const page = pages[0];
-
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontSize = 9;
-
-    // Helper to format dates for the IO; falls back gracefully.
-    const formatIoDate = (d) => {
-      if (!d) return "";
-      try {
-        return logbookFormatDate(d);
-      } catch {
-        return String(d);
+  // Prefer backend rendering when served over http(s).
+  if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+    try {
+      const resp = await fetch("./api/io/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entry: row, filename }),
+      });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        return;
       }
-    };
-
-    // Use the current date for the header date, regardless of the inspection date.
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const todayText = formatIoDate(todayIso);
-
-    // Common x positions tuned to align with the template columns.
-    const colLeftX = 155; // text inside the main left cells
-    const headerDateX = 410; // top-right <DATE>
-    const durationStartX = 225; // after "From:"
-    const durationEndX = 360; // after "to :"
-
-    // Baseline y positions tuned to sit on each row in the Word template.
-    const headerDateY = 742;
-    const ioNumberY = 720;
-    const toNameY = 678;
-    const toPositionY = 663;
-    const includedNameY = 637;
-    const includedPositionY = 622;
-    const proceedAddressY = 597;
-    const durationY = 571;
-    const remarksY = 545;
-
-    // INSPECTION ORDER < DATE >  (top-right)
-    page.drawText(todayText, {
-      x: headerDateX,
-      y: headerDateY,
-      size: fontSize,
-      font,
-    });
-
-    // NUMBER: <IO Number>
-    page.drawText(row.io_number || "", {
-      x: colLeftX,
-      y: ioNumberY,
-      size: fontSize,
-      font,
-    });
-
-    // TO : < Personnel Name>
-    page.drawText(row.inspected_by || "", {
-      x: colLeftX,
-      y: toNameY,
-      size: fontSize,
-      font,
-      maxWidth: 260,
-    });
-
-    // < Position> (main inspector)
-    page.drawText(row.inspector_position || "", {
-      x: colLeftX,
-      y: toPositionY,
-      size: fontSize,
-      font,
-      maxWidth: 260,
-    });
-
-    // Included: < Personnel Name>
-    page.drawText(row.included_personnel_name || "", {
-      x: colLeftX,
-      y: includedNameY,
-      size: fontSize,
-      font,
-      maxWidth: 260,
-    });
-
-    // < Position> (included personnel)
-    page.drawText(row.included_personnel_position || "", {
-      x: colLeftX,
-      y: includedPositionY,
-      size: fontSize,
-      font,
-      maxWidth: 260,
-    });
-
-    // PROCEED : <Address>
-    page.drawText(inspectionFormatAddressDisplay(row), {
-      x: colLeftX,
-      y: proceedAddressY,
-      size: fontSize,
-      font,
-      maxWidth: 360,
-    });
-
-    // DURATION : From: <Start Date> to : <End Date>
-    const durationStart = row.duration_start || row.date_inspected || todayIso;
-    const durationEnd = row.duration_end || row.date_inspected || todayIso;
-
-    page.drawText(formatIoDate(durationStart), {
-      x: durationStartX,
-      y: durationY,
-      size: fontSize,
-      font,
-    });
-
-    page.drawText(formatIoDate(durationEnd), {
-      x: durationEndX,
-      y: durationY,
-      size: fontSize,
-      font,
-    });
-
-    // REMARKS : <Remarks>
-    page.drawText(row.remarks || "", {
-      x: colLeftX,
-      y: remarksY,
-      size: fontSize,
-      font,
-      maxWidth: 360,
-    });
-
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `inspection-${row.io_number || row.id || "form"}.pdf`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  } catch (err) {
-    console.error("Failed to generate inspection PDF", err);
-    logbookShowToast(
-      "inspection-toast",
-      "Could not generate PDF for this inspection."
-    );
+    } catch (err) {
+      console.warn("Backend PDF generation failed; falling back.", err);
+    }
   }
+
+  // Fallback: client-side HTML-to-PDF in a new tab (works even in file:// mode).
+  try {
+    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
+    sessionStorage.setItem("fsis.io.downloadFilename", filename);
+  } catch {
+    // If sessionStorage is unavailable, open without auto-download
+  }
+  window.open("./io_fsis.html?download=pdf", "_blank");
 }
 
 function inspectionDeleteEntry(idx) {
