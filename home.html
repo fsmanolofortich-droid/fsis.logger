@@ -210,6 +210,11 @@
       align-self: flex-start;
     }
 
+    /* Multi-line cells for inspectors/signature fields */
+    .cell-pre {
+      white-space: pre-line;
+    }
+
     /* MAIN */
     main {
       flex: 1;
@@ -444,32 +449,44 @@
 
     /* Logbook sections: listing, add entry, print layout */
     [data-view="inspection"],
-    [data-view="fsec"] {
+    [data-view="fsec"],
+    [data-view="conveyance"],
+    [data-view="occupancy"] {
       padding: 28px 20px 40px;
       max-width: 1200px;
       margin: 0 auto;
     }
     [data-view="inspection"] .home-hero,
-    [data-view="fsec"] .home-hero {
+    [data-view="fsec"] .home-hero,
+    [data-view="conveyance"] .home-hero,
+    [data-view="occupancy"] .home-hero {
       margin-bottom: 20px;
     }
     [data-view="inspection"] .home-embed,
-    [data-view="fsec"] .home-embed {
+    [data-view="fsec"] .home-embed,
+    [data-view="conveyance"] .home-embed,
+    [data-view="occupancy"] .home-embed {
       margin-bottom: 24px;
     }
     [data-view="inspection"] #inspection_list,
-    [data-view="fsec"] #fsec_list {
+    [data-view="fsec"] #fsec_list,
+    [data-view="conveyance"] #conveyance_list,
+    [data-view="occupancy"] #occupancy_list {
       padding: 0;
     }
 
     /* Table action column and empty state in logbook */
     #table-inspection .col-action,
-    #table-fsec .col-action {
+    #table-fsec .col-action,
+    #table-conveyance .col-action,
+    #table-occupancy .col-action {
       white-space: nowrap;
       width: 1%;
     }
     #empty-inspection,
-    #empty-fsec {
+    #empty-fsec,
+    #empty-conveyance,
+    #empty-occupancy {
       text-align: center;
       padding: 48px 24px;
     }
@@ -742,6 +759,8 @@
     <a href="#map" data-view-link="map">Map</a>
     <a href="#inspection" data-view-link="inspection">Inspection Logbook</a>
     <a href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
+    <a href="#conveyance" data-view-link="conveyance">Conveyance Logbook</a>
+    <a href="#occupancy" data-view-link="occupancy">Occupancy Logbook</a>
   </nav>
   <div class="nav-sidebar-footer">
     <div class="user-pill" aria-label="Signed in user">
@@ -834,6 +853,194 @@
       </aside>
       <div id="map" role="region" aria-label="Municipality map"></div>
     </div>
+  </section>
+
+  <section data-view="conveyance" hidden>
+    <div class="home-hero">
+      <h1>Conveyance Logbook</h1>
+      <p>Track conveyance-related inspection records based on IO numbers, inspectors, and signatures.</p>
+    </div>
+    <div class="home-embed">
+      <div id="conveyance_list">
+        <div class="logbook-panel" id="panel-conveyance">
+          <div class="print-header">
+            <h2>Bureau of Fire Protection</h2>
+            <p class="print-subtitle">Manolo Fortich Fire Station</p>
+            <p class="print-subtitle"><strong>Conveyance Logbook</strong> — Conveyance inspections</p>
+            <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span id="conveyance-print-date">—</span></p>
+          </div>
+          <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Inspection Management System.</div>
+          <div class="panel-header">
+            <div class="panel-title">
+              <span>Supplemental Logbook</span>
+              Conveyance Logbook
+            </div>
+            <button class="btn btn-print" onclick="conveyancePrintPanel()">Print</button>
+            <button class="btn btn-add" onclick="conveyanceOpenModal()">Add Entry</button>
+          </div>
+          <div class="table-wrap">
+            <table id="table-conveyance">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th class="th-date">Date</th>
+                  <th>IO Number</th>
+                  <th>Name of Inspectors</th>
+                  <th>Remarks / Signature</th>
+                  <th class="col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-conveyance"></tbody>
+            </table>
+          </div>
+          <div id="empty-conveyance" class="empty-state" style="display:none;">
+            <div class="empty-icon" aria-hidden="true">—</div>
+            <strong>No Conveyance Records Yet</strong>
+            <p>Use this logbook to track conveyance-related inspections based on IO numbers.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+    </footer>
+
+    <div class="modal-overlay" id="conveyance-modal-overlay" onclick="conveyanceCloseOnOverlay(event)">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <small id="conveyance-modal-subtitle">Conveyance Logbook</small>
+            <h2 id="conveyance-modal-title">Add Conveyance Record</h2>
+          </div>
+          <button class="btn-close" onclick="conveyanceCloseModal()" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="conveyance-entry-form" onsubmit="conveyanceSaveEntry(event)">
+            <div class="form-section">
+              <div class="form-section-title">Record details</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="conveyance_date">Date</label>
+                  <input type="date" id="conveyance_date">
+                </div>
+                <div class="form-group">
+                  <label for="conveyance_io_number">IO Number</label>
+                  <input type="text" id="conveyance_io_number" placeholder="e.g. IO-2026-001">
+                </div>
+                <div class="form-group full">
+                  <label for="conveyance_inspectors">Name of Inspectors (2 or more)</label>
+                  <textarea id="conveyance_inspectors" rows="2" placeholder="Enter names separated by commas or new lines"></textarea>
+                </div>
+                <div class="form-group full">
+                  <label for="conveyance_remarks_signature">Remarks / Signature</label>
+                  <textarea id="conveyance_remarks_signature" rows="2" placeholder="Remarks and/or signature"></textarea>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-cancel" onclick="conveyanceCloseModal()">Cancel</button>
+          <button type="submit" class="btn btn-save" id="conveyance-btn-save" form="conveyance-entry-form">Save Record</button>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="conveyance-toast"></div>
+  </section>
+
+  <section data-view="occupancy" hidden>
+    <div class="home-hero">
+      <h1>Occupancy Logbook</h1>
+      <p>Track occupancy-related inspection records based on IO numbers, inspectors, and signatures.</p>
+    </div>
+    <div class="home-embed">
+      <div id="occupancy_list">
+        <div class="logbook-panel" id="panel-occupancy">
+          <div class="print-header">
+            <h2>Bureau of Fire Protection</h2>
+            <p class="print-subtitle">Manolo Fortich Fire Station</p>
+            <p class="print-subtitle"><strong>Occupancy Logbook</strong> — Occupancy inspections</p>
+            <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span id="occupancy-print-date">—</span></p>
+          </div>
+          <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document is generated from the BFP Inspection Management System.</div>
+          <div class="panel-header">
+            <div class="panel-title">
+              <span>Supplemental Logbook</span>
+              Occupancy Logbook
+            </div>
+            <button class="btn btn-print" onclick="occupancyPrintPanel()">Print</button>
+            <button class="btn btn-add" onclick="occupancyOpenModal()">Add Entry</button>
+          </div>
+          <div class="table-wrap">
+            <table id="table-occupancy">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th class="th-date">Date</th>
+                  <th>IO Number</th>
+                  <th>Name of Inspectors</th>
+                  <th>Remarks / Signature</th>
+                  <th class="col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-occupancy"></tbody>
+            </table>
+          </div>
+          <div id="empty-occupancy" class="empty-state" style="display:none;">
+            <div class="empty-icon" aria-hidden="true">—</div>
+            <strong>No Occupancy Records Yet</strong>
+            <p>Use this logbook to track occupancy-related inspections based on IO numbers.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+    </footer>
+
+    <div class="modal-overlay" id="occupancy-modal-overlay" onclick="occupancyCloseOnOverlay(event)">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <small id="occupancy-modal-subtitle">Occupancy Logbook</small>
+            <h2 id="occupancy-modal-title">Add Occupancy Record</h2>
+          </div>
+          <button class="btn-close" onclick="occupancyCloseModal()" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="occupancy-entry-form" onsubmit="occupancySaveEntry(event)">
+            <div class="form-section">
+              <div class="form-section-title">Record details</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="occupancy_date">Date</label>
+                  <input type="date" id="occupancy_date">
+                </div>
+                <div class="form-group">
+                  <label for="occupancy_io_number">IO Number</label>
+                  <input type="text" id="occupancy_io_number" placeholder="e.g. IO-2026-001">
+                </div>
+                <div class="form-group full">
+                  <label for="occupancy_inspectors">Name of Inspectors (2 or more)</label>
+                  <textarea id="occupancy_inspectors" rows="2" placeholder="Enter names separated by commas or new lines"></textarea>
+                </div>
+                <div class="form-group full">
+                  <label for="occupancy_remarks_signature">Remarks / Signature</label>
+                  <textarea id="occupancy_remarks_signature" rows="2" placeholder="Remarks and/or signature"></textarea>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-cancel" onclick="occupancyCloseModal()">Cancel</button>
+          <button type="submit" class="btn btn-save" id="occupancy-btn-save" form="occupancy-entry-form">Save Record</button>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="occupancy-toast"></div>
   </section>
 
   <section data-view="inspection" hidden>

@@ -599,10 +599,12 @@ footer {
 
   th.th-date,
   td.td-date {
-    min-width: 5.5em;
-    width: 5.5em;
+    /* Prevent date from spilling into next column (no ellipsis) */
+    width: 9.5em;
     white-space: nowrap;
-    overflow: visible;
+    overflow: hidden;
+    font-size: 7.5px;
+    padding: 2px 4px;
   }
 
   .home-embed .logbook-panel {

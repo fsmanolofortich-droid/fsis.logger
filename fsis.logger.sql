@@ -95,6 +95,43 @@ CREATE TRIGGER trg_fsec_updated_at
   BEFORE UPDATE ON fsec_building_plan_logbook
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- ==============================
+-- TABLE: conveyance_logbook
+-- ==============================
+-- Separate from occupancy_logbook even if fields are the same (different purpose).
+CREATE TABLE IF NOT EXISTS conveyance_logbook (
+  id                UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  log_date          DATE NOT NULL,        -- DATE
+  io_number         VARCHAR(50) NOT NULL, -- IO number
+  inspectors        TEXT NOT NULL,        -- one or more names (comma- or line-separated)
+  remarks_signature TEXT,                 -- remarks and/or signature
+  created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS trg_conveyance_updated_at ON conveyance_logbook;
+CREATE TRIGGER trg_conveyance_updated_at
+  BEFORE UPDATE ON conveyance_logbook
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ==============================
+-- TABLE: occupancy_logbook
+-- ==============================
+CREATE TABLE IF NOT EXISTS occupancy_logbook (
+  id                UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  log_date          DATE NOT NULL,        -- DATE
+  io_number         VARCHAR(50) NOT NULL, -- IO number
+  inspectors        TEXT NOT NULL,        -- one or more names (comma- or line-separated)
+  remarks_signature TEXT,                 -- remarks and/or signature
+  created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS trg_occupancy_updated_at ON occupancy_logbook;
+CREATE TRIGGER trg_occupancy_updated_at
+  BEFORE UPDATE ON occupancy_logbook
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- ========================
 -- TABLE: app_users (for login / future auth)
 -- ========================
@@ -157,6 +194,8 @@ $$;
 -- ========================
 ALTER TABLE inspection_logbook ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fsec_building_plan_logbook ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conveyance_logbook ENABLE ROW LEVEL SECURITY;
+ALTER TABLE occupancy_logbook ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
 
 -- Allow anon key full access (app uses anon key without auth)
@@ -166,6 +205,14 @@ CREATE POLICY "Allow anon all inspection_logbook" ON inspection_logbook
 
 DROP POLICY IF EXISTS "Allow anon all fsec_building_plan_logbook" ON fsec_building_plan_logbook;
 CREATE POLICY "Allow anon all fsec_building_plan_logbook" ON fsec_building_plan_logbook
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon all conveyance_logbook" ON conveyance_logbook;
+CREATE POLICY "Allow anon all conveyance_logbook" ON conveyance_logbook
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon all occupancy_logbook" ON occupancy_logbook;
+CREATE POLICY "Allow anon all occupancy_logbook" ON occupancy_logbook
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- app_users: no anon access (keeps password_hash private).

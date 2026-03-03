@@ -41,7 +41,14 @@ function toFriendlyDate(isoString) {
 
 function getCurrentView() {
   const hash = (window.location.hash || "#map").replace(/^#/, "");
-  if (hash === "inspection" || hash === "fsec" || hash === "map") return hash;
+  if (
+    hash === "inspection" ||
+    hash === "fsec" ||
+    hash === "conveyance" ||
+    hash === "occupancy" ||
+    hash === "map"
+  )
+    return hash;
   return "map";
 }
 
@@ -183,6 +190,10 @@ function showView(name) {
     inspectionInitData();
   } else if (name === "fsec" && !fsecDataLoaded) {
     fsecInitData();
+  } else if (name === "conveyance" && !conveyanceDataLoaded) {
+    conveyanceInitData();
+  } else if (name === "occupancy" && !occupancyDataLoaded) {
+    occupancyInitData();
   }
 
   const links = Array.from(document.querySelectorAll("[data-view-link]"));
@@ -379,6 +390,10 @@ function init() {
     }
   } else if (initialView === "fsec" && !fsecDataLoaded) {
     fsecInitData();
+  } else if (initialView === "conveyance" && !conveyanceDataLoaded) {
+    conveyanceInitData();
+  } else if (initialView === "occupancy" && !occupancyDataLoaded) {
+    occupancyInitData();
   }
 }
 
@@ -1916,6 +1931,52 @@ function fsecPrintPanel() {
   }, 0);
 }
 
+function conveyanceSetPrintDate() {
+  const el = document.getElementById("conveyance-print-date");
+  if (!el) return;
+  const now = new Date();
+  el.textContent = now.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function conveyancePrintPanel() {
+  conveyanceSetPrintDate();
+  const oldTitle = document.title;
+  document.title = "";
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.title = oldTitle;
+    }, 500);
+  }, 0);
+}
+
+function occupancySetPrintDate() {
+  const el = document.getElementById("occupancy-print-date");
+  if (!el) return;
+  const now = new Date();
+  el.textContent = now.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function occupancyPrintPanel() {
+  occupancySetPrintDate();
+  const oldTitle = document.title;
+  document.title = "";
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.title = oldTitle;
+    }, 500);
+  }, 0);
+}
+
 async function fsecLoadFromSupabase() {
   const { data: rows, error } = await supabaseClient
     .from("fsec_building_plan_logbook")
@@ -1953,5 +2014,497 @@ async function fsecInitData() {
     logbookShowToast("fsec-toast", "Using data stored on this device.");
     fsecSetPrintDate();
     fsecRenderTable();
+  }
+}
+
+// -----------------------------
+// Conveyance logbook module
+// -----------------------------
+
+const CONVEYANCE_STORAGE_KEY = "bfp_conveyance";
+let conveyanceData = [];
+let conveyanceEditingIdx = null;
+let conveyanceEditingId = null;
+let conveyanceDataLoaded = false;
+
+function conveyanceLoadFromLocal() {
+  conveyanceData = JSON.parse(localStorage.getItem(CONVEYANCE_STORAGE_KEY) || "[]");
+}
+
+function conveyanceSaveToLocal() {
+  localStorage.setItem(CONVEYANCE_STORAGE_KEY, JSON.stringify(conveyanceData));
+}
+
+function conveyanceRenderTable() {
+  const tbody = document.getElementById("tbody-conveyance");
+  const empty = document.getElementById("empty-conveyance");
+  const tableWrap = document.getElementById("table-conveyance")?.closest(".table-wrap");
+  if (!tbody || !empty) return;
+
+  tbody.innerHTML = "";
+  if (conveyanceData.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+    return;
+  }
+
+  empty.style.display = "none";
+  if (tableWrap) tableWrap.style.display = "";
+
+  conveyanceData.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td data-label="#">${i + 1}</td>
+      <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
+      <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
+      <td data-label="Name of Inspectors"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
+      <td data-label="Remarks / Signature"><div class="cell-pre">${logbookEsc(row.remarks_signature)}</div></td>
+      <td class="col-action" data-label="Action">
+        <select aria-label="Row actions" onchange="conveyanceHandleAction(this.value, ${i}); this.selectedIndex = 0;">
+          <option value="">Actions…</option>
+          <option value="edit">Edit</option>
+          <option value="delete">Delete</option>
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function conveyanceHandleAction(action, idx) {
+  if (!action) return;
+  if (action === "edit") return conveyanceEditEntry(idx);
+  if (action === "delete") return conveyanceDeleteEntry(idx);
+}
+
+function conveyanceEditEntry(idx) {
+  const row = conveyanceData[idx];
+  if (!row) return;
+
+  conveyanceEditingIdx = idx;
+  conveyanceEditingId = row.id || null;
+
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+  setVal("conveyance_date", row.log_date);
+  setVal("conveyance_io_number", row.io_number);
+  setVal("conveyance_inspectors", row.inspectors);
+  setVal("conveyance_remarks_signature", row.remarks_signature);
+
+  setText("conveyance-modal-title", "Edit Conveyance Record");
+  const btn = document.getElementById("conveyance-btn-save");
+  if (btn) btn.textContent = "Update Record";
+
+  const overlay = document.getElementById("conveyance-modal-overlay");
+  overlay?.classList.add("open");
+}
+
+function conveyanceOpenModal() {
+  conveyanceEditingIdx = null;
+  conveyanceEditingId = null;
+
+  setText("conveyance-modal-title", "Add Conveyance Record");
+  const btn = document.getElementById("conveyance-btn-save");
+  if (btn) btn.textContent = "Save Record";
+
+  const date = document.getElementById("conveyance_date");
+  if (date) date.value = new Date().toISOString().slice(0, 10);
+  const io = document.getElementById("conveyance_io_number");
+  if (io) io.value = "";
+  const insp = document.getElementById("conveyance_inspectors");
+  if (insp) insp.value = "";
+  const rem = document.getElementById("conveyance_remarks_signature");
+  if (rem) rem.value = "";
+
+  const overlay = document.getElementById("conveyance-modal-overlay");
+  overlay?.classList.add("open");
+}
+
+function conveyanceCloseModal() {
+  const overlay = document.getElementById("conveyance-modal-overlay");
+  overlay?.classList.remove("open");
+}
+
+function conveyanceCloseOnOverlay(e) {
+  if (e?.target?.id === "conveyance-modal-overlay") conveyanceCloseModal();
+}
+
+function conveyanceDeleteEntry(idx) {
+  if (!confirm("Delete this record?")) return;
+
+  const row = conveyanceData[idx];
+  if (!row) return;
+
+  // Optimistic local delete
+  conveyanceData.splice(idx, 1);
+  conveyanceSaveToLocal();
+  conveyanceRenderTable();
+  logbookShowToast("conveyance-toast", "Record deleted.");
+
+  if (!isSupabaseEnabled()) return;
+  if (!row.id) {
+    logbookShowToast("conveyance-toast", "⚠️ Cannot delete: missing record id.");
+    return;
+  }
+
+  (async () => {
+    try {
+      const { error } = await supabaseClient
+        .from("conveyance_logbook")
+        .delete()
+        .eq("id", row.id);
+      if (error) throw error;
+    } catch (err) {
+      logbookShowToast("conveyance-toast", "⚠️ Delete failed: " + (err?.message || err));
+    }
+  })();
+}
+
+function conveyanceSaveEntry(e) {
+  if (e?.preventDefault) e.preventDefault();
+
+  const entry = {
+    log_date: (document.getElementById("conveyance_date") || { value: "" }).value,
+    io_number: (document.getElementById("conveyance_io_number") || { value: "" }).value.trim(),
+    inspectors: (document.getElementById("conveyance_inspectors") || { value: "" }).value.trim(),
+    remarks_signature: (document.getElementById("conveyance_remarks_signature") || { value: "" }).value.trim(),
+    created_at: new Date().toISOString(),
+  };
+
+  if (!entry.log_date || !entry.io_number || !entry.inspectors) {
+    logbookShowToast("conveyance-toast", "⚠️ Please fill in Date, IO Number, and Inspectors.");
+    return;
+  }
+
+  const isOnline = isSupabaseEnabled();
+
+  if (conveyanceEditingIdx !== null) {
+    const prev = conveyanceData[conveyanceEditingIdx] || {};
+    conveyanceData[conveyanceEditingIdx] = {
+      ...prev,
+      ...entry,
+      id: prev.id || null,
+      created_at: prev.created_at || entry.created_at,
+    };
+  } else {
+    conveyanceData.push({ ...entry, id: null });
+  }
+
+  conveyanceSaveToLocal();
+  conveyanceRenderTable();
+  conveyanceCloseModal();
+  showSaveIndicator("Conveyance record saved");
+
+  if (!isOnline) {
+    logbookShowToast("conveyance-toast", "Saved on this device only (offline mode).");
+    return;
+  }
+
+  (async () => {
+    try {
+      const payload = {
+        log_date: entry.log_date,
+        io_number: entry.io_number,
+        inspectors: entry.inspectors,
+        remarks_signature: entry.remarks_signature,
+      };
+      const q = supabaseClient.from("conveyance_logbook");
+      const { error } = conveyanceEditingId
+        ? await q.update(payload).eq("id", conveyanceEditingId)
+        : await q.insert(payload);
+      if (error) throw error;
+      logbookShowToast("conveyance-toast", "Saved to database.");
+    } catch (err) {
+      const msg = err?.message || String(err);
+      const hint =
+        msg.includes("policy") || msg.includes("RLS") || err?.code === "42501"
+          ? " Check Supabase: add anon RLS policy (see fsis.logger.sql)."
+          : "";
+      logbookShowToast("conveyance-toast", "Save failed: " + msg + hint);
+    }
+  })();
+}
+
+async function conveyanceLoadFromSupabase() {
+  const { data: rows, error } = await supabaseClient
+    .from("conveyance_logbook")
+    .select("id, log_date, io_number, inspectors, remarks_signature, created_at")
+    .order("created_at", { ascending: true })
+    .limit(2000);
+  if (error) throw error;
+  conveyanceData = (rows || []).map((r) => ({
+    id: r.id,
+    log_date: r.log_date,
+    io_number: r.io_number,
+    inspectors: r.inspectors,
+    remarks_signature: r.remarks_signature,
+    created_at: r.created_at,
+  }));
+  conveyanceSaveToLocal();
+}
+
+async function conveyanceInitData() {
+  if (conveyanceDataLoaded) return;
+  conveyanceDataLoaded = true;
+  try {
+    conveyanceLoadFromLocal();
+    conveyanceRenderTable();
+    if (isSupabaseEnabled()) {
+      await conveyanceLoadFromSupabase();
+      conveyanceRenderTable();
+    }
+  } catch (err) {
+    conveyanceLoadFromLocal();
+    console.warn("Conveyance load failed, using local storage:", err);
+    logbookShowToast("conveyance-toast", "Using data stored on this device.");
+    conveyanceRenderTable();
+  }
+}
+
+// -----------------------------
+// Occupancy logbook module
+// -----------------------------
+
+const OCCUPANCY_STORAGE_KEY = "bfp_occupancy";
+let occupancyData = [];
+let occupancyEditingIdx = null;
+let occupancyEditingId = null;
+let occupancyDataLoaded = false;
+
+function occupancyLoadFromLocal() {
+  occupancyData = JSON.parse(localStorage.getItem(OCCUPANCY_STORAGE_KEY) || "[]");
+}
+
+function occupancySaveToLocal() {
+  localStorage.setItem(OCCUPANCY_STORAGE_KEY, JSON.stringify(occupancyData));
+}
+
+function occupancyRenderTable() {
+  const tbody = document.getElementById("tbody-occupancy");
+  const empty = document.getElementById("empty-occupancy");
+  const tableWrap = document.getElementById("table-occupancy")?.closest(".table-wrap");
+  if (!tbody || !empty) return;
+
+  tbody.innerHTML = "";
+  if (occupancyData.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+    return;
+  }
+
+  empty.style.display = "none";
+  if (tableWrap) tableWrap.style.display = "";
+
+  occupancyData.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td data-label="#">${i + 1}</td>
+      <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
+      <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
+      <td data-label="Name of Inspectors"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
+      <td data-label="Remarks / Signature"><div class="cell-pre">${logbookEsc(row.remarks_signature)}</div></td>
+      <td class="col-action" data-label="Action">
+        <select aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${i}); this.selectedIndex = 0;">
+          <option value="">Actions…</option>
+          <option value="edit">Edit</option>
+          <option value="delete">Delete</option>
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function occupancyHandleAction(action, idx) {
+  if (!action) return;
+  if (action === "edit") return occupancyEditEntry(idx);
+  if (action === "delete") return occupancyDeleteEntry(idx);
+}
+
+function occupancyEditEntry(idx) {
+  const row = occupancyData[idx];
+  if (!row) return;
+
+  occupancyEditingIdx = idx;
+  occupancyEditingId = row.id || null;
+
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+  setVal("occupancy_date", row.log_date);
+  setVal("occupancy_io_number", row.io_number);
+  setVal("occupancy_inspectors", row.inspectors);
+  setVal("occupancy_remarks_signature", row.remarks_signature);
+
+  setText("occupancy-modal-title", "Edit Occupancy Record");
+  const btn = document.getElementById("occupancy-btn-save");
+  if (btn) btn.textContent = "Update Record";
+
+  const overlay = document.getElementById("occupancy-modal-overlay");
+  overlay?.classList.add("open");
+}
+
+function occupancyOpenModal() {
+  occupancyEditingIdx = null;
+  occupancyEditingId = null;
+
+  setText("occupancy-modal-title", "Add Occupancy Record");
+  const btn = document.getElementById("occupancy-btn-save");
+  if (btn) btn.textContent = "Save Record";
+
+  const date = document.getElementById("occupancy_date");
+  if (date) date.value = new Date().toISOString().slice(0, 10);
+  const io = document.getElementById("occupancy_io_number");
+  if (io) io.value = "";
+  const insp = document.getElementById("occupancy_inspectors");
+  if (insp) insp.value = "";
+  const rem = document.getElementById("occupancy_remarks_signature");
+  if (rem) rem.value = "";
+
+  const overlay = document.getElementById("occupancy-modal-overlay");
+  overlay?.classList.add("open");
+}
+
+function occupancyCloseModal() {
+  const overlay = document.getElementById("occupancy-modal-overlay");
+  overlay?.classList.remove("open");
+}
+
+function occupancyCloseOnOverlay(e) {
+  if (e?.target?.id === "occupancy-modal-overlay") occupancyCloseModal();
+}
+
+function occupancyDeleteEntry(idx) {
+  if (!confirm("Delete this record?")) return;
+
+  const row = occupancyData[idx];
+  if (!row) return;
+
+  // Optimistic local delete
+  occupancyData.splice(idx, 1);
+  occupancySaveToLocal();
+  occupancyRenderTable();
+  logbookShowToast("occupancy-toast", "Record deleted.");
+
+  if (!isSupabaseEnabled()) return;
+  if (!row.id) {
+    logbookShowToast("occupancy-toast", "⚠️ Cannot delete: missing record id.");
+    return;
+  }
+
+  (async () => {
+    try {
+      const { error } = await supabaseClient
+        .from("occupancy_logbook")
+        .delete()
+        .eq("id", row.id);
+      if (error) throw error;
+    } catch (err) {
+      logbookShowToast("occupancy-toast", "⚠️ Delete failed: " + (err?.message || err));
+    }
+  })();
+}
+
+function occupancySaveEntry(e) {
+  if (e?.preventDefault) e.preventDefault();
+
+  const entry = {
+    log_date: (document.getElementById("occupancy_date") || { value: "" }).value,
+    io_number: (document.getElementById("occupancy_io_number") || { value: "" }).value.trim(),
+    inspectors: (document.getElementById("occupancy_inspectors") || { value: "" }).value.trim(),
+    remarks_signature: (document.getElementById("occupancy_remarks_signature") || { value: "" }).value.trim(),
+    created_at: new Date().toISOString(),
+  };
+
+  if (!entry.log_date || !entry.io_number || !entry.inspectors) {
+    logbookShowToast("occupancy-toast", "⚠️ Please fill in Date, IO Number, and Inspectors.");
+    return;
+  }
+
+  const isOnline = isSupabaseEnabled();
+
+  if (occupancyEditingIdx !== null) {
+    const prev = occupancyData[occupancyEditingIdx] || {};
+    occupancyData[occupancyEditingIdx] = {
+      ...prev,
+      ...entry,
+      id: prev.id || null,
+      created_at: prev.created_at || entry.created_at,
+    };
+  } else {
+    occupancyData.push({ ...entry, id: null });
+  }
+
+  occupancySaveToLocal();
+  occupancyRenderTable();
+  occupancyCloseModal();
+  showSaveIndicator("Occupancy record saved");
+
+  if (!isOnline) {
+    logbookShowToast("occupancy-toast", "Saved on this device only (offline mode).");
+    return;
+  }
+
+  (async () => {
+    try {
+      const payload = {
+        log_date: entry.log_date,
+        io_number: entry.io_number,
+        inspectors: entry.inspectors,
+        remarks_signature: entry.remarks_signature,
+      };
+      const q = supabaseClient.from("occupancy_logbook");
+      const { error } = occupancyEditingId
+        ? await q.update(payload).eq("id", occupancyEditingId)
+        : await q.insert(payload);
+      if (error) throw error;
+      logbookShowToast("occupancy-toast", "Saved to database.");
+    } catch (err) {
+      const msg = err?.message || String(err);
+      const hint =
+        msg.includes("policy") || msg.includes("RLS") || err?.code === "42501"
+          ? " Check Supabase: add anon RLS policy (see fsis.logger.sql)."
+          : "";
+      logbookShowToast("occupancy-toast", "Save failed: " + msg + hint);
+    }
+  })();
+}
+
+async function occupancyLoadFromSupabase() {
+  const { data: rows, error } = await supabaseClient
+    .from("occupancy_logbook")
+    .select("id, log_date, io_number, inspectors, remarks_signature, created_at")
+    .order("created_at", { ascending: true })
+    .limit(2000);
+  if (error) throw error;
+  occupancyData = (rows || []).map((r) => ({
+    id: r.id,
+    log_date: r.log_date,
+    io_number: r.io_number,
+    inspectors: r.inspectors,
+    remarks_signature: r.remarks_signature,
+    created_at: r.created_at,
+  }));
+  occupancySaveToLocal();
+}
+
+async function occupancyInitData() {
+  if (occupancyDataLoaded) return;
+  occupancyDataLoaded = true;
+  try {
+    occupancyLoadFromLocal();
+    occupancyRenderTable();
+    if (isSupabaseEnabled()) {
+      await occupancyLoadFromSupabase();
+      occupancyRenderTable();
+    }
+  } catch (err) {
+    occupancyLoadFromLocal();
+    console.warn("Occupancy load failed, using local storage:", err);
+    logbookShowToast("occupancy-toast", "Using data stored on this device.");
+    occupancyRenderTable();
   }
 }
