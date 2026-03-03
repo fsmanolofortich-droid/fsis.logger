@@ -379,6 +379,7 @@ function init() {
   });
 
   initViewRouting();
+  initTableFilters();
   initInspectionPhotoExif();
   refreshStorageBadge();
 
@@ -468,6 +469,61 @@ function logbookShowToast(id, msg) {
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+function normalizeQuery(s) {
+  return String(s || "").toLowerCase().trim();
+}
+
+function inDateRange(dateStr, fromStr, toStr) {
+  if (!dateStr) return false;
+  const t = new Date(dateStr + "T00:00:00").getTime();
+  if (!isFinite(t)) return false;
+  if (fromStr) {
+    const f = new Date(fromStr + "T00:00:00").getTime();
+    if (isFinite(f) && t < f) return false;
+  }
+  if (toStr) {
+    const to = new Date(toStr + "T00:00:00").getTime();
+    if (isFinite(to) && t > to) return false;
+  }
+  return true;
+}
+
+function initTableFilters() {
+  const debounce = (fn, wait = 150) => {
+    let t = null;
+    return (...args) => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  };
+
+  const bind = (ids, onChange) => {
+    const run = debounce(onChange, 120);
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.addEventListener("input", run);
+      el.addEventListener("change", run);
+    }
+  };
+
+  bind(
+    ["inspection-filter-q", "inspection-filter-from", "inspection-filter-to"],
+    () => inspectionRenderTable()
+  );
+  bind(["fsec-filter-q", "fsec-filter-from", "fsec-filter-to"], () =>
+    fsecRenderTable()
+  );
+  bind(
+    ["conveyance-filter-q", "conveyance-filter-from", "conveyance-filter-to"],
+    () => conveyanceRenderTable()
+  );
+  bind(
+    ["occupancy-filter-q", "occupancy-filter-from", "occupancy-filter-to"],
+    () => occupancyRenderTable()
+  );
 }
 
 function showSaveIndicator(message) {
@@ -593,6 +649,30 @@ function inspectionRenderTable() {
   let withLocationCount = 0;
   let noLocationCount = 0;
 
+  const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
+  const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
+  const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
+
+  const filtered = inspectionData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.date_inspected, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery(
+        [
+          row.io_number,
+          row.insp_owner,
+          row.business_name,
+          inspectionFormatAddressDisplay(row),
+          row.fsic_number,
+          row.inspected_by,
+        ].join(" | ")
+      );
+      return hay.includes(q);
+    });
+
   if (inspectionData.length === 0) {
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
@@ -600,11 +680,11 @@ function inspectionRenderTable() {
     empty.style.display = "none";
     if (tableWrap) tableWrap.style.display = "";
 
-    inspectionData.forEach((row, i) => {
+    filtered.forEach(({ row, idx }, displayIdx) => {
       const hasLocation = row.lat != null && row.lng != null;
 
       const baseRowHtml = `
-        <td data-label="#">${i + 1}</td>
+        <td data-label="#">${displayIdx + 1}</td>
         <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
         <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
         <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
@@ -620,9 +700,9 @@ function inspectionRenderTable() {
         tr.innerHTML = `
           ${baseRowHtml}
           <td class="col-action" data-label="Action">
-            <select
+            <select class="action-select"
               aria-label="Row actions"
-              onchange="inspectionHandleAction(this.value, ${i}); this.selectedIndex = 0;"
+              onchange="inspectionHandleAction(this.value, ${idx}); this.selectedIndex = 0;"
             >
               <option value="">Actions…</option>
               <option value="edit">Edit</option>
@@ -640,9 +720,9 @@ function inspectionRenderTable() {
           tr2.innerHTML = `
             ${baseRowHtml}
             <td class="col-action" data-label="Action">
-              <select
+              <select class="action-select"
                 aria-label="Row actions"
-                onchange="inspectionHandleAction(this.value, ${i}); this.selectedIndex = 0;"
+                onchange="inspectionHandleAction(this.value, ${idx}); this.selectedIndex = 0;"
               >
                 <option value="">Actions…</option>
                 <option value="edit">Edit</option>
@@ -1136,6 +1216,16 @@ function inspectionSetPrintDate() {
     month: "long",
     day: "numeric",
   });
+}
+
+function inspectionClearFilters() {
+  const q = document.getElementById("inspection-filter-q");
+  const from = document.getElementById("inspection-filter-from");
+  const to = document.getElementById("inspection-filter-to");
+  if (q) q.value = "";
+  if (from) from.value = "";
+  if (to) to.value = "";
+  inspectionRenderTable();
 }
 
 function openInspectionDetailPanel(entry) {
@@ -1650,6 +1740,28 @@ function fsecRenderTable() {
   const tableWrap = document.getElementById("table-fsec")?.closest(".table-wrap");
   if (!tbody || !empty) return;
 
+  const q = normalizeQuery(document.getElementById("fsec-filter-q")?.value);
+  const from = (document.getElementById("fsec-filter-from")?.value || "").trim();
+  const to = (document.getElementById("fsec-filter-to")?.value || "").trim();
+
+  const filtered = fsecData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.fsec_date, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery(
+        [
+          row.fsec_owner,
+          row.proposed_project,
+          fsecFormatAddressDisplay(row),
+          row.contact_number,
+        ].join(" | ")
+      );
+      return hay.includes(q);
+    });
+
   tbody.innerHTML = "";
   if (fsecData.length === 0) {
     empty.style.display = "block";
@@ -1657,21 +1769,27 @@ function fsecRenderTable() {
     return;
   }
 
+  if (filtered.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+    return;
+  }
+
   empty.style.display = "none";
   if (tableWrap) tableWrap.style.display = "";
-  fsecData.forEach((row, i) => {
+  filtered.forEach(({ row, idx }, displayIdx) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td data-label="#">${i + 1}</td>
+      <td data-label="#">${displayIdx + 1}</td>
       <td data-label="Name of Owner">${logbookEsc(row.fsec_owner)}</td>
       <td data-label="Proposed Project"><strong>${logbookEsc(row.proposed_project)}</strong></td>
       <td data-label="Address">${logbookEsc(fsecFormatAddressDisplay(row))}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.fsec_date)}</td>
       <td data-label="Contact Number">${logbookEsc(row.contact_number)}</td>
       <td class="col-action" data-label="Action">
-        <select
+        <select class="action-select"
           aria-label="Row actions"
-          onchange="fsecHandleAction(this.value, ${i}); this.selectedIndex = 0;"
+          onchange="fsecHandleAction(this.value, ${idx}); this.selectedIndex = 0;"
         >
           <option value="">Actions…</option>
           <option value="edit">Edit</option>
@@ -1931,6 +2049,16 @@ function fsecPrintPanel() {
   }, 0);
 }
 
+function fsecClearFilters() {
+  const q = document.getElementById("fsec-filter-q");
+  const from = document.getElementById("fsec-filter-from");
+  const to = document.getElementById("fsec-filter-to");
+  if (q) q.value = "";
+  if (from) from.value = "";
+  if (to) to.value = "";
+  fsecRenderTable();
+}
+
 function conveyanceSetPrintDate() {
   const el = document.getElementById("conveyance-print-date");
   if (!el) return;
@@ -1954,6 +2082,16 @@ function conveyancePrintPanel() {
   }, 0);
 }
 
+function conveyanceClearFilters() {
+  const q = document.getElementById("conveyance-filter-q");
+  const from = document.getElementById("conveyance-filter-from");
+  const to = document.getElementById("conveyance-filter-to");
+  if (q) q.value = "";
+  if (from) from.value = "";
+  if (to) to.value = "";
+  conveyanceRenderTable();
+}
+
 function occupancySetPrintDate() {
   const el = document.getElementById("occupancy-print-date");
   if (!el) return;
@@ -1975,6 +2113,16 @@ function occupancyPrintPanel() {
       document.title = oldTitle;
     }, 500);
   }, 0);
+}
+
+function occupancyClearFilters() {
+  const q = document.getElementById("occupancy-filter-q");
+  const from = document.getElementById("occupancy-filter-from");
+  const to = document.getElementById("occupancy-filter-to");
+  if (q) q.value = "";
+  if (from) from.value = "";
+  if (to) to.value = "";
+  occupancyRenderTable();
 }
 
 async function fsecLoadFromSupabase() {
@@ -2041,8 +2189,29 @@ function conveyanceRenderTable() {
   const tableWrap = document.getElementById("table-conveyance")?.closest(".table-wrap");
   if (!tbody || !empty) return;
 
+  const q = normalizeQuery(document.getElementById("conveyance-filter-q")?.value);
+  const from = (document.getElementById("conveyance-filter-from")?.value || "").trim();
+  const to = (document.getElementById("conveyance-filter-to")?.value || "").trim();
+
+  const filtered = conveyanceData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.log_date, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery([row.io_number, row.inspectors, row.remarks_signature].join(" | "));
+      return hay.includes(q);
+    });
+
   tbody.innerHTML = "";
   if (conveyanceData.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+    return;
+  }
+
+  if (filtered.length === 0) {
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
@@ -2051,16 +2220,16 @@ function conveyanceRenderTable() {
   empty.style.display = "none";
   if (tableWrap) tableWrap.style.display = "";
 
-  conveyanceData.forEach((row, i) => {
+  filtered.forEach(({ row, idx }, displayIdx) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td data-label="#">${i + 1}</td>
+      <td data-label="#">${displayIdx + 1}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Inspectors"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
       <td data-label="Remarks / Signature"><div class="cell-pre">${logbookEsc(row.remarks_signature)}</div></td>
       <td class="col-action" data-label="Action">
-        <select aria-label="Row actions" onchange="conveyanceHandleAction(this.value, ${i}); this.selectedIndex = 0;">
+        <select class="action-select" aria-label="Row actions" onchange="conveyanceHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
           <option value="">Actions…</option>
           <option value="edit">Edit</option>
           <option value="delete">Delete</option>
@@ -2287,8 +2456,29 @@ function occupancyRenderTable() {
   const tableWrap = document.getElementById("table-occupancy")?.closest(".table-wrap");
   if (!tbody || !empty) return;
 
+  const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
+  const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
+  const to = (document.getElementById("occupancy-filter-to")?.value || "").trim();
+
+  const filtered = occupancyData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.log_date, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery([row.io_number, row.inspectors, row.remarks_signature].join(" | "));
+      return hay.includes(q);
+    });
+
   tbody.innerHTML = "";
   if (occupancyData.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+    return;
+  }
+
+  if (filtered.length === 0) {
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
@@ -2297,16 +2487,16 @@ function occupancyRenderTable() {
   empty.style.display = "none";
   if (tableWrap) tableWrap.style.display = "";
 
-  occupancyData.forEach((row, i) => {
+  filtered.forEach(({ row, idx }, displayIdx) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td data-label="#">${i + 1}</td>
+      <td data-label="#">${displayIdx + 1}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Inspectors"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
       <td data-label="Remarks / Signature"><div class="cell-pre">${logbookEsc(row.remarks_signature)}</div></td>
       <td class="col-action" data-label="Action">
-        <select aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${i}); this.selectedIndex = 0;">
+        <select class="action-select" aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
           <option value="">Actions…</option>
           <option value="edit">Edit</option>
           <option value="delete">Delete</option>

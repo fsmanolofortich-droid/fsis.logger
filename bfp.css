@@ -189,6 +189,96 @@ main {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Filter / search toolbar (screen only; print rules hide panel header anyway) */
+.table-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(250, 247, 242, 0.6);
+}
+
+.table-controls .control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+
+.table-controls .control label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light);
+  font-weight: 700;
+}
+
+.table-controls input[type="search"],
+.table-controls input[type="date"] {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(13, 27, 42, 0.14);
+  background: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.table-controls input[type="search"]:focus-visible,
+.table-controls input[type="date"]:focus-visible {
+  outline: 2px solid rgba(212, 168, 67, 0.8);
+  outline-offset: 2px;
+}
+
+.table-controls .spacer {
+  flex: 1;
+  min-width: 40px;
+}
+
+@media screen and (max-width: 640px) {
+  .table-controls { padding: 12px; }
+  .table-controls .control { min-width: 140px; flex: 1; }
+}
+
+/* Actions dropdown (row actions) */
+.action-select {
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--navy);
+  background: rgba(13, 27, 42, 0.04);
+  border: 1px solid rgba(13, 27, 42, 0.18);
+  border-radius: 10px;
+  padding: 8px 34px 8px 12px;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.05s ease;
+  /* chevron */
+  background-image: linear-gradient(45deg, transparent 50%, rgba(13, 27, 42, 0.75) 50%),
+    linear-gradient(135deg, rgba(13, 27, 42, 0.75) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.action-select:hover {
+  background: rgba(13, 27, 42, 0.07);
+  border-color: rgba(13, 27, 42, 0.28);
+}
+
+.action-select:active {
+  transform: translateY(0.5px);
+}
+
+.action-select:focus-visible {
+  outline: 2px solid rgba(212, 168, 67, 0.8);
+  outline-offset: 2px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -476,6 +566,8 @@ footer {
   .btn-edit,
   .btn-del,
   .tbl-actions,
+  .inspection-subnav,
+  .table-controls,
   footer {
     display: none !important;
   }
@@ -624,76 +716,33 @@ footer {
 @media screen and (max-width: 1024px) and (min-width: 641px) {
   #table-inspection,
   #table-fsec,
-  #table-inspection-nophoto {
+  #table-inspection-nophoto,
+  #table-conveyance,
+  #table-occupancy {
     min-width: 800px;
   }
 }
 
-/* Phone: card layout for inspection & FSEC tables (screen only; print keeps table layout) */
+/* Phone: keep tables as tables (screen-only) */
 @media screen and (max-width: 640px) {
-  #table-inspection thead,
-  #table-fsec thead,
-  #table-inspection-nophoto thead {
-    display: none;
-  }
+  .table-wrap { overflow-x: auto; }
 
-  #table-inspection tbody tr,
-  #table-fsec tbody tr,
-  #table-inspection-nophoto tbody tr {
-    display: block;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin-bottom: 12px;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  }
+  table { font-size: 0.78rem; }
+  th { padding: 10px 10px; font-size: 0.66rem; }
+  td { padding: 10px 10px; }
 
-  #table-inspection tbody tr:hover,
-  #table-fsec tbody tr:hover,
-  #table-inspection-nophoto tbody tr:hover {
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  #table-inspection tbody td,
-  #table-fsec tbody td,
-  #table-inspection-nophoto tbody td {
-    display: block;
-    padding: 6px 0;
-    border: none;
-    text-align: left;
-  }
-
-  #table-inspection tbody td::before,
-  #table-fsec tbody td::before,
-  #table-inspection-nophoto tbody td::before {
-    content: attr(data-label);
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-light);
-    margin-bottom: 2px;
-  }
-
-  #table-inspection tbody td.col-action::before,
-  #table-fsec tbody td.col-action::before,
-  #table-inspection-nophoto tbody td.col-action::before {
-    margin-bottom: 8px;
-  }
-
-  #table-inspection .table-wrap,
-  #table-fsec .table-wrap,
-  #table-inspection-nophoto .table-wrap {
-    overflow-x: visible;
-  }
-
+  /* Keep all logbook tables as actual tables; use horizontal scroll when needed */
   #table-inspection,
   #table-fsec,
-  #table-inspection-nophoto {
-    min-width: 0;
+  #table-inspection-nophoto,
+  #table-conveyance,
+  #table-occupancy {
+    min-width: 860px;
+  }
+
+  .action-select {
+    font-size: 0.78rem;
+    padding: 8px 32px 8px 10px;
   }
 }
 

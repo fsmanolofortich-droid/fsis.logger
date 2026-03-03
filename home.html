@@ -878,6 +878,22 @@
             <button class="btn btn-print" onclick="conveyancePrintPanel()">Print</button>
             <button class="btn btn-add" onclick="conveyanceOpenModal()">Add Entry</button>
           </div>
+          <div class="table-controls" aria-label="Conveyance filters">
+            <div class="control">
+              <label for="conveyance-filter-q">Search</label>
+              <input id="conveyance-filter-q" type="search" placeholder="Search IO, inspectors, remarks/signature">
+            </div>
+            <div class="control">
+              <label for="conveyance-filter-from">From</label>
+              <input id="conveyance-filter-from" type="date">
+            </div>
+            <div class="control">
+              <label for="conveyance-filter-to">To</label>
+              <input id="conveyance-filter-to" type="date">
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="btn btn-cancel" onclick="conveyanceClearFilters()">Clear</button>
+          </div>
           <div class="table-wrap">
             <table id="table-conveyance">
               <thead>
@@ -903,7 +919,7 @@
     </div>
 
     <footer>
-      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
     </footer>
 
     <div class="modal-overlay" id="conveyance-modal-overlay" onclick="conveyanceCloseOnOverlay(event)">
@@ -972,6 +988,22 @@
             <button class="btn btn-print" onclick="occupancyPrintPanel()">Print</button>
             <button class="btn btn-add" onclick="occupancyOpenModal()">Add Entry</button>
           </div>
+          <div class="table-controls" aria-label="Occupancy filters">
+            <div class="control">
+              <label for="occupancy-filter-q">Search</label>
+              <input id="occupancy-filter-q" type="search" placeholder="Search IO, inspectors, remarks/signature">
+            </div>
+            <div class="control">
+              <label for="occupancy-filter-from">From</label>
+              <input id="occupancy-filter-from" type="date">
+            </div>
+            <div class="control">
+              <label for="occupancy-filter-to">To</label>
+              <input id="occupancy-filter-to" type="date">
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="btn btn-cancel" onclick="occupancyClearFilters()">Clear</button>
+          </div>
           <div class="table-wrap">
             <table id="table-occupancy">
               <thead>
@@ -997,7 +1029,7 @@
     </div>
 
     <footer>
-      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
     </footer>
 
     <div class="modal-overlay" id="occupancy-modal-overlay" onclick="occupancyCloseOnOverlay(event)">
@@ -1086,6 +1118,22 @@
           </div>
           <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
         </div>
+        <div class="table-controls" aria-label="Inspection filters">
+          <div class="control">
+            <label for="inspection-filter-q">Search</label>
+            <input id="inspection-filter-q" type="search" placeholder="Search IO, owner, business, address, FSIC, inspector">
+          </div>
+          <div class="control">
+            <label for="inspection-filter-from">From</label>
+            <input id="inspection-filter-from" type="date">
+          </div>
+          <div class="control">
+            <label for="inspection-filter-to">To</label>
+            <input id="inspection-filter-to" type="date">
+          </div>
+          <div class="spacer"></div>
+          <button type="button" class="btn btn-cancel" onclick="inspectionClearFilters()">Clear</button>
+        </div>
         <div class="table-wrap">
           <table id="table-inspection">
             <thead>
@@ -1147,7 +1195,7 @@
     </div>
     
     <footer>
-      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
     </footer>
   </section>
 
@@ -1173,6 +1221,22 @@
           </div>
           <button class="btn btn-print" onclick="fsecPrintPanel()">Print</button>
           <button class="btn btn-add" onclick="fsecOpenModal()">Add Entry</button>
+        </div>
+        <div class="table-controls" aria-label="FSEC filters">
+          <div class="control">
+            <label for="fsec-filter-q">Search</label>
+            <input id="fsec-filter-q" type="search" placeholder="Search owner, project, address, contact">
+          </div>
+          <div class="control">
+            <label for="fsec-filter-from">From</label>
+            <input id="fsec-filter-from" type="date">
+          </div>
+          <div class="control">
+            <label for="fsec-filter-to">To</label>
+            <input id="fsec-filter-to" type="date">
+          </div>
+          <div class="spacer"></div>
+          <button type="button" class="btn btn-cancel" onclick="fsecClearFilters()">Clear</button>
         </div>
         <div class="table-wrap">
           <table id="table-fsec">
@@ -1200,7 +1264,7 @@
     </div>
 
     <footer>
-      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2025. All rights reserved.
+      Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
     </footer>
 
     <div class="modal-overlay" id="fsec-modal-overlay" onclick="fsecCloseOnOverlay(event)">
