@@ -35,7 +35,7 @@ app.post("/api/io/pdf", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 816, height: 1056, deviceScaleFactor: 1 });
+    await page.setViewport({ width: 794, height: 1122, deviceScaleFactor: 1 }); // ~A4 at 96dpi
     await page.emulateMediaType("print");
 
     // Inject entry data before any page scripts run.
@@ -56,7 +56,7 @@ app.post("/api/io/pdf", async (req, res) => {
     });
 
     const pdf = await page.pdf({
-      format: "letter",
+      format: "A4",
       printBackground: true,
       preferCSSPageSize: true,
       omitBackground: false,
