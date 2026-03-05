@@ -704,7 +704,6 @@ footer {
     border: none !important;
   }
 
-  /* Do not print the secondary inspection \"no photo\" panel */
   #panel-inspection-nophoto {
     display: none !important;
   }

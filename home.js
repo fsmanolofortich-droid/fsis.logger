@@ -156,6 +156,8 @@ function initLeafletMap() {
   setTimeout(() => {
     mapInstance.invalidateSize();
   }, 0);
+
+  initMapSearch();
 }
 
 function resetMapView() {
@@ -707,6 +709,7 @@ function inspectionRenderTable() {
               <option value="">Actions…</option>
               <option value="edit">Edit</option>
               <option value="open_io_html">Open IO (HTML)</option>
+              <option value="open_clearance_html">Release clearance (FSIC)</option>
               <option value="add_photo">Add photo</option>
               <option value="delete">Delete</option>
             </select>
@@ -727,6 +730,7 @@ function inspectionRenderTable() {
                 <option value="">Actions…</option>
                 <option value="edit">Edit</option>
                 <option value="open_io_html">Open IO (HTML)</option>
+                <option value="open_clearance_html">Release clearance (FSIC)</option>
                 <option value="add_photo">Add photo</option>
                 <option value="delete">Delete</option>
               </select>
@@ -816,6 +820,10 @@ function inspectionHandleAction(action, idx) {
     inspectionOpenIoHtml(idx);
     return;
   }
+   if (action === "open_clearance_html") {
+    inspectionOpenClearanceHtml(idx);
+    return;
+  }
   if (action === "add_photo") {
     inspectionAddPhoto(idx);
     return;
@@ -836,6 +844,103 @@ function inspectionOpenIoHtml(idx) {
   }
   window.open("./io_fsis.html", "_blank");
 }
+
+function inspectionOpenClearanceHtml(idx) {
+  const row = inspectionData[idx];
+  if (!row) return;
+  try {
+    sessionStorage.setItem("fsis.clearance.current", JSON.stringify(row));
+  } catch {
+    // If sessionStorage is unavailable, we still open the template.
+  }
+  window.open("./fsis_clearance.html", "_blank");
+}
+
+// Receive clearance edits from `fsis_clearance.html` and persist them.
+window.addEventListener("message", (ev) => {
+  const d = ev?.data;
+  if (!d || d.type !== "fsis_clearance_save") return;
+
+  const payload = d.payload || {};
+  const entryId = d.entryId || null;
+  const ioNumber = d.io_number || null;
+
+  function respond(ok, message) {
+    try {
+      ev.source?.postMessage({ type: "fsis_clearance_save_result", ok, message }, "*");
+    } catch {
+      // ignore
+    }
+  }
+
+  function normalizeDate(value) {
+    if (!value) return null;
+    const s = String(value).trim();
+    if (!s) return null;
+    // If already ISO date, keep it
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const dt = new Date(s);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt.toISOString().slice(0, 10);
+  }
+
+  function normalizeAmount(value) {
+    if (value == null || value === "") return null;
+    const n = typeof value === "number" ? value : Number(String(value).replace(/,/g, ""));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  const idx = Array.isArray(inspectionData)
+    ? inspectionData.findIndex((r) => (entryId && r?.id === entryId) || (ioNumber && r?.io_number === ioNumber))
+    : -1;
+
+  if (idx < 0) {
+    respond(false, "Cannot find matching inspection record.");
+    return;
+  }
+
+  const updates = {
+    fsic_number: (payload.fsic_number || "").toString().trim(),
+    fsic_purpose: payload.fsic_purpose || null,
+    fsic_permit_type: payload.fsic_permit_type || null,
+    fsic_valid_for: payload.fsic_valid_for || null,
+    fsic_valid_until: normalizeDate(payload.fsic_valid_until),
+    fsic_fee_amount: normalizeAmount(payload.fsic_fee_amount),
+    fsic_fee_or_number: payload.fsic_fee_or_number || null,
+    fsic_fee_date: normalizeDate(payload.fsic_fee_date),
+  };
+
+  // Update in-memory + local cache immediately for responsiveness
+  inspectionData[idx] = { ...inspectionData[idx], ...updates };
+  inspectionSaveToLocal();
+  inspectionRenderTable?.();
+
+  if (!isSupabaseEnabled()) {
+    logbookShowToast?.("inspection-toast", "Saved on this device only (offline mode).");
+    respond(true, "Saved locally (offline mode).");
+    return;
+  }
+
+  const row = inspectionData[idx];
+  if (!row?.id) {
+    logbookShowToast?.("inspection-toast", "⚠️ Save failed: missing record id.");
+    respond(false, "Missing record id.");
+    return;
+  }
+
+  (async () => {
+    try {
+      const { error } = await supabaseClient.from("inspection_logbook").update(updates).eq("id", row.id);
+      if (error) throw error;
+      logbookShowToast?.("inspection-toast", "Saved to database.");
+      respond(true, "");
+    } catch (err) {
+      const msg = err?.message || String(err);
+      logbookShowToast?.("inspection-toast", "Save failed: " + msg);
+      respond(false, msg);
+    }
+  })();
+});
 
 async function inspectionDownloadPdf(idx) {
   const row = inspectionData[idx];
@@ -1578,6 +1683,99 @@ function renderInspectionMarkersBatched() {
     if (i < withCoords.length) requestAnimationFrame(addBatch);
   }
   addBatch();
+}
+
+function getMarkedInspectionEntries() {
+  if (!Array.isArray(inspectionData)) return [];
+  return inspectionData.filter((row) => row.lat != null && row.lng != null);
+}
+
+function searchMapLocations(query) {
+  const q = normalizeQuery(query);
+  const marked = getMarkedInspectionEntries();
+  if (!q) return marked.slice(0, 20);
+  return marked.filter((row) => {
+    const hay = normalizeQuery(
+      [
+        row.io_number,
+        row.insp_owner,
+        row.business_name,
+        inspectionFormatAddressDisplay(row),
+        row.fsic_number,
+        row.inspected_by,
+      ].join(" | ")
+    );
+    return hay.includes(q);
+  }).slice(0, 20);
+}
+
+function initMapSearch() {
+  const input = document.getElementById("map-search-input");
+  const resultsEl = document.getElementById("map-search-results");
+  if (!input || !resultsEl) return;
+
+  let debounceTimer = null;
+  function runSearch() {
+    const query = (input.value || "").trim();
+    const entries = searchMapLocations(query);
+    resultsEl.hidden = false;
+    resultsEl.innerHTML = "";
+    if (entries.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "map-search-result-empty";
+      empty.textContent = query ? "No marked locations match." : "Type to search business, IO number, address, owner…";
+      resultsEl.appendChild(empty);
+      return;
+    }
+    entries.forEach((entry) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "map-search-result-item";
+      btn.setAttribute("role", "option");
+      const title = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
+      const sub = [entry.io_number, inspectionFormatAddressDisplay(entry)].filter(Boolean).join(" · ") || "—";
+      const strong = document.createElement("strong");
+      strong.textContent = title;
+      const span = document.createElement("span");
+      span.textContent = sub;
+      btn.appendChild(strong);
+      btn.appendChild(span);
+      btn.onclick = () => {
+        if (mapInstance && entry.lat != null && entry.lng != null) {
+          mapInstance.setView([entry.lat, entry.lng], 16);
+          openInspectionDetailPanel(entry);
+        }
+        input.value = "";
+        resultsEl.hidden = true;
+        resultsEl.innerHTML = "";
+        input.focus();
+      };
+      resultsEl.appendChild(btn);
+    });
+  }
+
+  input.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(runSearch, 180);
+  });
+  input.addEventListener("focus", () => {
+    runSearch();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      resultsEl.hidden = true;
+      resultsEl.innerHTML = "";
+      input.blur();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (resultsEl.hidden) return;
+    if (!input.contains(e.target) && !resultsEl.contains(e.target)) {
+      resultsEl.hidden = true;
+      resultsEl.innerHTML = "";
+    }
+  });
 }
 
 function inspectionPrintPanel() {

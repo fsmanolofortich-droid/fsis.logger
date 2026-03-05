@@ -25,6 +25,14 @@ CREATE TABLE IF NOT EXISTS inspection_logbook (
   duration_start              DATE,
   duration_end                DATE,
   remarks                     TEXT,
+  -- FSIC clearance / fees (filled when releasing clearance)
+  fsic_purpose                TEXT,      -- e.g. 'certificate_of_occupancy', 'business_permit', 'others'
+  fsic_permit_type            TEXT,      -- e.g. 'new', 'renewal' (for business permit)
+  fsic_valid_for              TEXT,
+  fsic_valid_until            DATE,
+  fsic_fee_amount             NUMERIC(12,2),
+  fsic_fee_or_number          VARCHAR(50),
+  fsic_fee_date               DATE,
   latitude                    DECIMAL(10,8) NULL,
   longitude                   DECIMAL(11,8) NULL,
   photo_url                   TEXT NULL,
@@ -54,6 +62,20 @@ ALTER TABLE inspection_logbook
   ADD COLUMN IF NOT EXISTS duration_end DATE;
 ALTER TABLE inspection_logbook
   ADD COLUMN IF NOT EXISTS remarks TEXT;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS fsic_purpose TEXT;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS fsic_permit_type TEXT;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS fsic_valid_for TEXT;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS fsic_valid_until DATE;
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS fsic_fee_amount NUMERIC(12,2);
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS fsic_fee_or_number VARCHAR(50);
+ALTER TABLE inspection_logbook
+  ADD COLUMN IF NOT EXISTS fsic_fee_date DATE;
 
 -- Auto-update updated_at on row change
 CREATE OR REPLACE FUNCTION update_updated_at()

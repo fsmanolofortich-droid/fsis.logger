@@ -447,6 +447,88 @@
       transform: translateY(-1px);
     }
 
+    /* Map search (marked locations) – aligned near Leaflet layers control */
+    .map-search-wrap {
+      position: fixed;
+      top: 64px;           /* sit just below the default top-right controls */
+      right: 16px;
+      width: 320px;
+      max-width: calc(100vw - 40px);
+      z-index: 200;
+      pointer-events: auto;
+    }
+    .map-search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(13, 27, 42, 0.2);
+      background: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      box-shadow: var(--shadow-lg);
+      outline: none;
+    }
+    .map-search-input::placeholder {
+      color: var(--text-light);
+    }
+    .map-search-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.25);
+    }
+    .map-search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 6px;
+      max-height: 280px;
+      overflow-y: auto;
+      background: var(--white);
+      border-radius: 12px;
+      border: 1px solid rgba(13, 27, 42, 0.12);
+      box-shadow: var(--shadow-lg);
+      z-index: 201;
+    }
+    .map-search-results:not([hidden]) {
+      display: block;
+    }
+    .map-search-result-item {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      text-align: left;
+      border: none;
+      background: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      color: var(--text);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(13, 27, 42, 0.06);
+      transition: background 0.15s;
+    }
+    .map-search-result-item:last-child {
+      border-bottom: none;
+    }
+    .map-search-result-item:hover,
+    .map-search-result-item:focus {
+      background: var(--cream-dark);
+    }
+    .map-search-result-item strong {
+      display: block;
+      color: var(--navy);
+      margin-bottom: 2px;
+    }
+    .map-search-result-item span {
+      font-size: 0.78rem;
+      color: var(--text-light);
+    }
+    .map-search-result-empty {
+      padding: 16px;
+      text-align: center;
+      color: var(--text-light);
+      font-size: 0.88rem;
+    }
+
     /* Logbook sections: listing, add entry, print layout */
     [data-view="inspection"],
     [data-view="fsec"],
@@ -786,6 +868,17 @@
     >
       +
     </button>
+    <div class="map-search-wrap">
+      <input
+        type="search"
+        id="map-search-input"
+        class="map-search-input"
+        placeholder="Search marked locations (business, IO, address, owner…)"
+        aria-label="Search marked locations"
+        autocomplete="off"
+      >
+      <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
+    </div>
     <div class="map-layout">
       <aside
         class="map-detail-panel"
