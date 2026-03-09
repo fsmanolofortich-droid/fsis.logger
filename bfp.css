@@ -456,6 +456,47 @@ tr:hover td { background: #FAFAF8; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group.full { grid-column: 1 / -1; }
 
+.photo-option-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  margin-bottom: 8px;
+}
+.photo-option-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.photo-option-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e0dc;
+  background: #fcfcfb;
+  color: var(--navy);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.photo-option-btn:hover {
+  border-color: var(--navy);
+  background: var(--white);
+  box-shadow: 0 0 0 2px rgba(13, 27, 42, 0.08);
+}
+.photo-option-btn input[type="file"] {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
 .modal .form-group label {
   font-size: 0.72rem;
   font-weight: 600;

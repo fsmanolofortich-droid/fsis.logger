@@ -1570,15 +1570,28 @@
               <div class="form-section-title">Location &amp; photo</div>
               <div class="form-grid">
                 <div class="form-group full">
-                  <label for="inspection_photo">
-                    Attach photo (uses GPS from EXIF if available)
-                  </label>
-                  <input
-                    type="file"
-                    id="inspection_photo"
-                    accept="image/*"
-                    capture="environment"
-                  >
+                  <p class="photo-option-label">Photo (GPS from EXIF if available)</p>
+                  <div class="photo-option-buttons">
+                    <label class="photo-option-btn">
+                      <input
+                        type="file"
+                        id="inspection_photo"
+                        accept="image/*"
+                        capture="environment"
+                        aria-label="Take photo with camera"
+                      >
+                      <span class="photo-option-text">Take photo</span>
+                    </label>
+                    <label class="photo-option-btn">
+                      <input
+                        type="file"
+                        id="inspection_photo_library"
+                        accept="image/*"
+                        aria-label="Choose photo from library"
+                      >
+                      <span class="photo-option-text">Choose from library</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
