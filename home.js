@@ -1039,10 +1039,11 @@ function inspectionOpenModal() {
   inspectionClearForm();
   const date = document.getElementById("inspection_date_inspected");
   if (date) date.value = new Date().toISOString().slice(0, 10);
-  
-  // Clear photo input
+
   const photoInput = document.getElementById("inspection_photo");
+  const photoLibraryInput = document.getElementById("inspection_photo_library");
   if (photoInput) photoInput.value = "";
+  if (photoLibraryInput) photoLibraryInput.value = "";
 }
 
 function inspectionCloseModal() {
@@ -1442,17 +1443,21 @@ function closeInspectionDetailPanel() {
 }
 
 function initInspectionPhotoExif() {
-  const input = document.getElementById("inspection_photo");
-  if (!input || !window.EXIF) return;
+  const inputCamera = document.getElementById("inspection_photo");
+  const inputLibrary = document.getElementById("inspection_photo_library");
+  if ((!inputCamera && !inputLibrary) || !window.EXIF) return;
 
-  input.addEventListener("change", () => {
+  function clearPhotoInputs() {
     currentExifLat = null;
     currentExifLng = null;
     currentExifPreviewUrl = null;
     currentExifTakenAt = null;
     currentExifFile = null;
+    if (inputCamera) inputCamera.value = "";
+    if (inputLibrary) inputLibrary.value = "";
+  }
 
-    const file = input.files && input.files[0];
+  function handlePhotoFile(file) {
     if (!file) return;
     currentExifFile = file;
 
@@ -1479,18 +1484,12 @@ function initInspectionPhotoExif() {
               currentExifTakenAt = takenAt;
             }
 
-            // Enforce "real camera photo with GPS EXIF" for inspection entries.
             if (!lat || !lng || !latRef || !lngRef || !make || !model) {
               logbookShowToast(
                 "inspection-toast",
-                "Photo must come from a camera with GPS enabled. Please capture a new photo."
+                "Photo must come from a camera with GPS enabled. Please use a photo that has location data."
               );
-              input.value = "";
-              currentExifLat = null;
-              currentExifLng = null;
-              currentExifPreviewUrl = null;
-              currentExifTakenAt = null;
-              currentExifFile = null;
+              clearPhotoInputs();
               return;
             }
 
@@ -1504,7 +1503,27 @@ function initInspectionPhotoExif() {
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
-  });
+  }
+
+  function onPhotoChange(sourceInput) {
+    const file = sourceInput.files && sourceInput.files[0];
+    if (!file) return;
+    currentExifLat = null;
+    currentExifLng = null;
+    currentExifPreviewUrl = null;
+    currentExifTakenAt = null;
+    currentExifFile = null;
+    if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
+    if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
+    handlePhotoFile(file);
+  }
+
+  if (inputCamera) {
+    inputCamera.addEventListener("change", () => onPhotoChange(inputCamera));
+  }
+  if (inputLibrary) {
+    inputLibrary.addEventListener("change", () => onPhotoChange(inputLibrary));
+  }
 }
 
 async function compressInspectionImage(file) {
