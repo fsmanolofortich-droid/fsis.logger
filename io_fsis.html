@@ -178,6 +178,9 @@
     .info-table .value em {
       color: #000;
     }
+    #io_address {
+      white-space: pre-line;
+    }
     .included {
       margin-top: 8px;
     }
@@ -461,6 +464,7 @@
     const includedPosition = entry.included_personnel_position || "";
     // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
     // Merged format: "Region X, Province, Municipal, Barangay Name, Street/Line"
+    let business_name = entry.business_name || "";
     let addrLine = entry.addr_line || "";
     let addrBarangay = entry.addr_barangay || "";
     const fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
@@ -497,7 +501,8 @@
     setText("io_to_position", toPosition ? "" + toPosition : "");
     setText("io_included_name", includedName);
     setText("io_included_position", includedPosition);
-    setText("io_address", address);
+    const proceedText = [business_name.trim(), address].filter(Boolean).join("\n");
+    setText("io_address", proceedText);
     setText("io_duration_start", formatDateISOToLong(durationStart));
     setText("io_duration_end", formatDateISOToLong(durationEnd));
     setText("io_remarks", remarks);
