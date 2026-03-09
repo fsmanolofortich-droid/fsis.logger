@@ -974,7 +974,7 @@
           <div class="table-controls" aria-label="Conveyance filters">
             <div class="control">
               <label for="conveyance-filter-q">Search</label>
-              <input id="conveyance-filter-q" type="search" placeholder="Search IO, inspectors, remarks/signature">
+              <input id="conveyance-filter-q" type="search" placeholder="Search IO, owner, inspectors, remarks/signature">
             </div>
             <div class="control">
               <label for="conveyance-filter-from">From</label>
@@ -994,6 +994,7 @@
                   <th>#</th>
                   <th class="th-date">Date</th>
                   <th>IO Number</th>
+                  <th>Name of Owner</th>
                   <th>Name of Inspectors</th>
                   <th>Remarks / Signature</th>
                   <th class="col-action">Action</th>
@@ -1036,6 +1037,10 @@
                 <div class="form-group">
                   <label for="conveyance_io_number">IO Number</label>
                   <input type="text" id="conveyance_io_number" placeholder="e.g. IO-2026-001">
+                </div>
+                <div class="form-group">
+                  <label for="conveyance_owner_name">Name of Owner</label>
+                  <input type="text" id="conveyance_owner_name" placeholder="Full name of owner">
                 </div>
                 <div class="form-group full">
                   <label for="conveyance_inspectors">Name of Inspectors (2 or more)</label>
@@ -1084,7 +1089,7 @@
           <div class="table-controls" aria-label="Occupancy filters">
             <div class="control">
               <label for="occupancy-filter-q">Search</label>
-              <input id="occupancy-filter-q" type="search" placeholder="Search IO, inspectors, remarks/signature">
+              <input id="occupancy-filter-q" type="search" placeholder="Search IO, owner, inspectors, remarks/signature">
             </div>
             <div class="control">
               <label for="occupancy-filter-from">From</label>
@@ -1104,6 +1109,7 @@
                   <th>#</th>
                   <th class="th-date">Date</th>
                   <th>IO Number</th>
+                  <th>Name of Owner</th>
                   <th>Name of Inspectors</th>
                   <th>Remarks / Signature</th>
                   <th class="col-action">Action</th>
@@ -1146,6 +1152,10 @@
                 <div class="form-group">
                   <label for="occupancy_io_number">IO Number</label>
                   <input type="text" id="occupancy_io_number" placeholder="e.g. IO-2026-001">
+                </div>
+                <div class="form-group">
+                  <label for="occupancy_owner_name">Name of Owner</label>
+                  <input type="text" id="occupancy_owner_name" placeholder="Full name of owner">
                 </div>
                 <div class="form-group full">
                   <label for="occupancy_inspectors">Name of Inspectors (2 or more)</label>

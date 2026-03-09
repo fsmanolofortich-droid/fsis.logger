@@ -2398,7 +2398,9 @@ function conveyanceRenderTable() {
         if (!inDateRange(row.log_date, from, to)) return false;
       }
       if (!q) return true;
-      const hay = normalizeQuery([row.io_number, row.inspectors, row.remarks_signature].join(" | "));
+      const hay = normalizeQuery(
+        [row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | ")
+      );
       return hay.includes(q);
     });
 
@@ -2424,6 +2426,7 @@ function conveyanceRenderTable() {
       <td data-label="#">${displayIdx + 1}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
+      <td data-label="Name of Owner">${logbookEsc(row.owner_name)}</td>
       <td data-label="Name of Inspectors"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
       <td data-label="Remarks / Signature"><div class="cell-pre">${logbookEsc(row.remarks_signature)}</div></td>
       <td class="col-action" data-label="Action">
@@ -2457,6 +2460,7 @@ function conveyanceEditEntry(idx) {
   };
   setVal("conveyance_date", row.log_date);
   setVal("conveyance_io_number", row.io_number);
+  setVal("conveyance_owner_name", row.owner_name);
   setVal("conveyance_inspectors", row.inspectors);
   setVal("conveyance_remarks_signature", row.remarks_signature);
 
@@ -2480,6 +2484,8 @@ function conveyanceOpenModal() {
   if (date) date.value = new Date().toISOString().slice(0, 10);
   const io = document.getElementById("conveyance_io_number");
   if (io) io.value = "";
+  const owner = document.getElementById("conveyance_owner_name");
+  if (owner) owner.value = "";
   const insp = document.getElementById("conveyance_inspectors");
   if (insp) insp.value = "";
   const rem = document.getElementById("conveyance_remarks_signature");
@@ -2535,6 +2541,7 @@ function conveyanceSaveEntry(e) {
   const entry = {
     log_date: (document.getElementById("conveyance_date") || { value: "" }).value,
     io_number: (document.getElementById("conveyance_io_number") || { value: "" }).value.trim(),
+    owner_name: (document.getElementById("conveyance_owner_name") || { value: "" }).value.trim(),
     inspectors: (document.getElementById("conveyance_inspectors") || { value: "" }).value.trim(),
     remarks_signature: (document.getElementById("conveyance_remarks_signature") || { value: "" }).value.trim(),
     created_at: new Date().toISOString(),
@@ -2574,6 +2581,7 @@ function conveyanceSaveEntry(e) {
       const payload = {
         log_date: entry.log_date,
         io_number: entry.io_number,
+        owner_name: entry.owner_name || null,
         inspectors: entry.inspectors,
         remarks_signature: entry.remarks_signature,
       };
@@ -2597,7 +2605,7 @@ function conveyanceSaveEntry(e) {
 async function conveyanceLoadFromSupabase() {
   const { data: rows, error } = await supabaseClient
     .from("conveyance_logbook")
-    .select("id, log_date, io_number, inspectors, remarks_signature, created_at")
+    .select("id, log_date, io_number, owner_name, inspectors, remarks_signature, created_at")
     .order("created_at", { ascending: true })
     .limit(2000);
   if (error) throw error;
@@ -2605,6 +2613,7 @@ async function conveyanceLoadFromSupabase() {
     id: r.id,
     log_date: r.log_date,
     io_number: r.io_number,
+    owner_name: r.owner_name || "",
     inspectors: r.inspectors,
     remarks_signature: r.remarks_signature,
     created_at: r.created_at,
@@ -2665,7 +2674,7 @@ function occupancyRenderTable() {
         if (!inDateRange(row.log_date, from, to)) return false;
       }
       if (!q) return true;
-      const hay = normalizeQuery([row.io_number, row.inspectors, row.remarks_signature].join(" | "));
+      const hay = normalizeQuery([row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | "));
       return hay.includes(q);
     });
 
@@ -2691,6 +2700,7 @@ function occupancyRenderTable() {
       <td data-label="#">${displayIdx + 1}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
+      <td data-label="Name of Owner">${logbookEsc(row.owner_name)}</td>
       <td data-label="Name of Inspectors"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
       <td data-label="Remarks / Signature"><div class="cell-pre">${logbookEsc(row.remarks_signature)}</div></td>
       <td class="col-action" data-label="Action">
@@ -2724,6 +2734,7 @@ function occupancyEditEntry(idx) {
   };
   setVal("occupancy_date", row.log_date);
   setVal("occupancy_io_number", row.io_number);
+  setVal("occupancy_owner_name", row.owner_name);
   setVal("occupancy_inspectors", row.inspectors);
   setVal("occupancy_remarks_signature", row.remarks_signature);
 
@@ -2747,6 +2758,8 @@ function occupancyOpenModal() {
   if (date) date.value = new Date().toISOString().slice(0, 10);
   const io = document.getElementById("occupancy_io_number");
   if (io) io.value = "";
+  const owner = document.getElementById("occupancy_owner_name");
+  if (owner) owner.value = "";
   const insp = document.getElementById("occupancy_inspectors");
   if (insp) insp.value = "";
   const rem = document.getElementById("occupancy_remarks_signature");
@@ -2802,6 +2815,7 @@ function occupancySaveEntry(e) {
   const entry = {
     log_date: (document.getElementById("occupancy_date") || { value: "" }).value,
     io_number: (document.getElementById("occupancy_io_number") || { value: "" }).value.trim(),
+    owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
     inspectors: (document.getElementById("occupancy_inspectors") || { value: "" }).value.trim(),
     remarks_signature: (document.getElementById("occupancy_remarks_signature") || { value: "" }).value.trim(),
     created_at: new Date().toISOString(),
@@ -2841,6 +2855,7 @@ function occupancySaveEntry(e) {
       const payload = {
         log_date: entry.log_date,
         io_number: entry.io_number,
+        owner_name: entry.owner_name || null,
         inspectors: entry.inspectors,
         remarks_signature: entry.remarks_signature,
       };
@@ -2864,7 +2879,7 @@ function occupancySaveEntry(e) {
 async function occupancyLoadFromSupabase() {
   const { data: rows, error } = await supabaseClient
     .from("occupancy_logbook")
-    .select("id, log_date, io_number, inspectors, remarks_signature, created_at")
+    .select("id, log_date, io_number, owner_name, inspectors, remarks_signature, created_at")
     .order("created_at", { ascending: true })
     .limit(2000);
   if (error) throw error;
@@ -2872,6 +2887,7 @@ async function occupancyLoadFromSupabase() {
     id: r.id,
     log_date: r.log_date,
     io_number: r.io_number,
+    owner_name: r.owner_name || "",
     inspectors: r.inspectors,
     remarks_signature: r.remarks_signature,
     created_at: r.created_at,

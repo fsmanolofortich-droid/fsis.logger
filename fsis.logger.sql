@@ -125,11 +125,15 @@ CREATE TABLE IF NOT EXISTS conveyance_logbook (
   id                UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   log_date          DATE NOT NULL,        -- DATE
   io_number         VARCHAR(50) NOT NULL, -- IO number
+  owner_name        VARCHAR(255),         -- name of owner
   inspectors        TEXT NOT NULL,        -- one or more names (comma- or line-separated)
   remarks_signature TEXT,                 -- remarks and/or signature
   created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Alter schema: add owner_name for existing conveyance_logbook tables
+ALTER TABLE conveyance_logbook ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);
 
 DROP TRIGGER IF EXISTS trg_conveyance_updated_at ON conveyance_logbook;
 CREATE TRIGGER trg_conveyance_updated_at
@@ -143,11 +147,15 @@ CREATE TABLE IF NOT EXISTS occupancy_logbook (
   id                UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   log_date          DATE NOT NULL,        -- DATE
   io_number         VARCHAR(50) NOT NULL, -- IO number
+  owner_name        VARCHAR(255),         -- name of owner
   inspectors        TEXT NOT NULL,        -- one or more names (comma- or line-separated)
   remarks_signature TEXT,                 -- remarks and/or signature
   created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Alter schema: add owner_name for existing occupancy_logbook tables
+ALTER TABLE occupancy_logbook ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);
 
 DROP TRIGGER IF EXISTS trg_occupancy_updated_at ON occupancy_logbook;
 CREATE TRIGGER trg_occupancy_updated_at
