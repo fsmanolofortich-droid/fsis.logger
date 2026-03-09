@@ -178,6 +178,9 @@
     .info-table .value em {
       color: #000;
     }
+    #io_address {
+      white-space: pre-line;
+    }
     .included {
       margin-top: 8px;
     }
@@ -473,7 +476,6 @@
       }
     }
     const addressParts = [
-      business_name,
       addrLine,
       addrBarangay ? "Barangay " + addrBarangay : "",
       "Manolo Fortich",
@@ -499,7 +501,8 @@
     setText("io_to_position", toPosition ? "" + toPosition : "");
     setText("io_included_name", includedName);
     setText("io_included_position", includedPosition);
-    setText("io_address", address);
+    const proceedText = [business_name.trim(), address].filter(Boolean).join("\n");
+    setText("io_address", proceedText);
     setText("io_duration_start", formatDateISOToLong(durationStart));
     setText("io_duration_end", formatDateISOToLong(durationEnd));
     setText("io_remarks", remarks);
