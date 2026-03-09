@@ -461,6 +461,7 @@
     const includedPosition = entry.included_personnel_position || "";
     // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
     // Merged format: "Region X, Province, Municipal, Barangay Name, Street/Line"
+    let business_name = entry.business_name || "";
     let addrLine = entry.addr_line || "";
     let addrBarangay = entry.addr_barangay || "";
     const fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
@@ -472,6 +473,7 @@
       }
     }
     const addressParts = [
+      business_name,
       addrLine,
       addrBarangay ? "Barangay " + addrBarangay : "",
       "Manolo Fortich",
