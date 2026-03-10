@@ -844,7 +844,6 @@ function inspectionRenderTable() {
               onchange="inspectionHandleAction(this.value, ${idx}); this.selectedIndex = 0;"
             >
               <option value="">Actions…</option>
-              <option value="view_on_map">View on map</option>
               <option value="edit">Edit</option>
               <option value="open_io_html">Open IO (HTML)</option>
               <option value="open_clearance_html">Release clearance (FSIC)</option>
@@ -950,10 +949,6 @@ function inspectionAddPhoto(idx) {
 
 function inspectionHandleAction(action, idx) {
   if (!action) return;
-  if (action === "view_on_map") {
-    inspectionViewOnMap(idx);
-    return;
-  }
   if (action === "edit") {
     inspectionEditEntry(idx);
     return;
@@ -973,20 +968,6 @@ function inspectionHandleAction(action, idx) {
   if (action === "delete") {
     inspectionDeleteEntry(idx);
   }
-}
-
-function inspectionViewOnMap(idx) {
-  const row = inspectionData[idx];
-  if (!row || row.lat == null || row.lng == null) return;
-  showView("map");
-  window.location.hash = "map";
-  closeNavSidebar();
-  setTimeout(() => {
-    if (mapInstance) {
-      mapInstance.setView([row.lat, row.lng], 16);
-      openInspectionDetailPanel(row);
-    }
-  }, 100);
 }
 
 function inspectionOpenIoHtml(idx) {
@@ -1023,7 +1004,8 @@ let clearanceRequiredIdx = null;
 function getMissingClearanceFields(row) {
   const missing = [];
   const hasText = (v) => String(v || "").trim().length > 0;
-  if (!hasText(row.fsic_valid_for)) missing.push("fsic_valid_for");
+  if (!hasText(row.fsic_purpose)) missing.push("fsic_purpose");
+  if (!hasText(row.fsic_valid_from)) missing.push("fsic_valid_from");
   if (!hasText(row.fsic_valid_until)) missing.push("fsic_valid_until");
   if (row.fsic_fee_amount == null || row.fsic_fee_amount === "" || Number.isNaN(Number(row.fsic_fee_amount)))
     missing.push("fsic_fee_amount");
@@ -1041,7 +1023,8 @@ function openClearanceRequiredModal(idx) {
     if (el) el.value = value ?? "";
   };
 
-  setVal("clearance_fsic_valid_for", row.fsic_valid_for || "");
+  setVal("clearance_fsic_purpose", row.fsic_purpose || "");
+  setVal("clearance_fsic_valid_from", row.fsic_valid_from || "");
   setVal("clearance_fsic_valid_until", row.fsic_valid_until || "");
   setVal("clearance_fsic_fee_amount", row.fsic_fee_amount ?? "");
   setVal("clearance_fsic_fee_or_number", row.fsic_fee_or_number || "");
@@ -1070,20 +1053,22 @@ function clearanceRequiredSaveAndOpen(e) {
   const row = inspectionData[idx];
   if (!row) return;
 
-  const vFor = (document.getElementById("clearance_fsic_valid_for")?.value || "").trim();
+  const purpose = (document.getElementById("clearance_fsic_purpose")?.value || "").trim();
+  const vFrom = (document.getElementById("clearance_fsic_valid_from")?.value || "").trim();
   const vUntil = (document.getElementById("clearance_fsic_valid_until")?.value || "").trim();
   const feeAmtRaw = (document.getElementById("clearance_fsic_fee_amount")?.value || "").trim();
   const feeAmt = feeAmtRaw === "" ? null : Number(String(feeAmtRaw).replace(/,/g, ""));
   const orNo = (document.getElementById("clearance_fsic_fee_or_number")?.value || "").trim();
   const feeDate = (document.getElementById("clearance_fsic_fee_date")?.value || "").trim();
 
-  if (!vFor || !vUntil || !Number.isFinite(feeAmt) || !orNo || !feeDate) {
+  if (!purpose || !vFrom || !vUntil || !Number.isFinite(feeAmt) || !orNo || !feeDate) {
     logbookShowToast("inspection-toast", "⚠️ Please fill in all required clearance fields.");
     return;
   }
 
   const updates = {
-    fsic_valid_for: vFor,
+    fsic_purpose: purpose,
+    fsic_valid_from: vFrom,
     fsic_valid_until: vUntil,
     fsic_fee_amount: feeAmt,
     fsic_fee_or_number: orNo,
@@ -1098,11 +1083,18 @@ function clearanceRequiredSaveAndOpen(e) {
   if (isSupabaseEnabled() && row.id) {
     (async () => {
       try {
-        const { error } = await supabaseClient
-          .from("inspection_logbook")
-          .update(updates)
-          .eq("id", row.id);
-        if (error) throw error;
+        const q = supabaseClient.from("inspection_logbook");
+        const { error } = await q.update(updates).eq("id", row.id);
+        if (!error) return;
+
+        // Backward compatibility if DB doesn't have fsic_valid_from yet
+        const msg = (error?.message || String(error)).toLowerCase();
+        const missingCol = msg.includes("column") && msg.includes("fsic_valid_from");
+        if (!missingCol) throw error;
+
+        const { fsic_valid_from, ...withoutFrom } = updates;
+        const retry = await q.update(withoutFrom).eq("id", row.id);
+        if (retry.error) throw retry.error;
       } catch (err) {
         logbookShowToast("inspection-toast", "⚠️ Clearance saved locally; DB sync failed.");
       }
@@ -1166,7 +1158,7 @@ window.addEventListener("message", (ev) => {
     fsic_number: (payload.fsic_number || "").toString().trim(),
     fsic_purpose: payload.fsic_purpose || null,
     fsic_permit_type: payload.fsic_permit_type || null,
-    fsic_valid_for: payload.fsic_valid_for || null,
+    fsic_valid_from: normalizeDate(payload.fsic_valid_from),
     fsic_valid_until: normalizeDate(payload.fsic_valid_until),
     fsic_fee_amount: normalizeAmount(payload.fsic_fee_amount),
     fsic_fee_or_number: payload.fsic_fee_or_number || null,
@@ -1986,25 +1978,6 @@ function addInspectionMarkerFromEntry(entry) {
     inspectionMarkersLayer
   );
 
-  const tooltipText = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
-  marker.bindTooltip(tooltipText, {
-    permanent: false,
-    direction: "top",
-    offset: [0, -36],
-    opacity: 0.95,
-    className: "inspection-marker-tooltip",
-  });
-
-  marker.on("mouseover", () => {
-    marker.setZIndexOffset(1000);
-    const el = marker.getElement?.();
-    if (el) el.classList.add("is-hover");
-  });
-  marker.on("mouseout", () => {
-    marker.setZIndexOffset(0);
-    const el = marker.getElement?.();
-    if (el) el.classList.remove("is-hover");
-  });
   marker.on("click", () => {
     openInspectionDetailPanel(entry);
   });
