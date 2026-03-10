@@ -1902,9 +1902,13 @@ function addInspectionMarkerFromEntry(entry) {
 
   marker.on("mouseover", () => {
     marker.setZIndexOffset(1000);
+    const el = marker.getElement?.();
+    if (el) el.classList.add("is-hover");
   });
   marker.on("mouseout", () => {
     marker.setZIndexOffset(0);
+    const el = marker.getElement?.();
+    if (el) el.classList.remove("is-hover");
   });
   marker.on("click", () => {
     openInspectionDetailPanel(entry);
