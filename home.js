@@ -844,6 +844,7 @@ function inspectionRenderTable() {
               onchange="inspectionHandleAction(this.value, ${idx}); this.selectedIndex = 0;"
             >
               <option value="">Actions…</option>
+              <option value="view_on_map">View on map</option>
               <option value="edit">Edit</option>
               <option value="open_io_html">Open IO (HTML)</option>
               <option value="open_clearance_html">Release clearance (FSIC)</option>
@@ -949,6 +950,10 @@ function inspectionAddPhoto(idx) {
 
 function inspectionHandleAction(action, idx) {
   if (!action) return;
+  if (action === "view_on_map") {
+    inspectionViewOnMap(idx);
+    return;
+  }
   if (action === "edit") {
     inspectionEditEntry(idx);
     return;
@@ -968,6 +973,20 @@ function inspectionHandleAction(action, idx) {
   if (action === "delete") {
     inspectionDeleteEntry(idx);
   }
+}
+
+function inspectionViewOnMap(idx) {
+  const row = inspectionData[idx];
+  if (!row || row.lat == null || row.lng == null) return;
+  showView("map");
+  window.location.hash = "map";
+  closeNavSidebar();
+  setTimeout(() => {
+    if (mapInstance) {
+      mapInstance.setView([row.lat, row.lng], 16);
+      openInspectionDetailPanel(row);
+    }
+  }, 100);
 }
 
 function inspectionOpenIoHtml(idx) {
@@ -1967,6 +1986,25 @@ function addInspectionMarkerFromEntry(entry) {
     inspectionMarkersLayer
   );
 
+  const tooltipText = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
+  marker.bindTooltip(tooltipText, {
+    permanent: false,
+    direction: "top",
+    offset: [0, -36],
+    opacity: 0.95,
+    className: "inspection-marker-tooltip",
+  });
+
+  marker.on("mouseover", () => {
+    marker.setZIndexOffset(1000);
+    const el = marker.getElement?.();
+    if (el) el.classList.add("is-hover");
+  });
+  marker.on("mouseout", () => {
+    marker.setZIndexOffset(0);
+    const el = marker.getElement?.();
+    if (el) el.classList.remove("is-hover");
+  });
   marker.on("click", () => {
     openInspectionDetailPanel(entry);
   });
