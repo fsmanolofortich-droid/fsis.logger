@@ -985,12 +985,113 @@ function inspectionOpenIoHtml(idx) {
 function inspectionOpenClearanceHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
+  // If required clearance fields are missing, prompt first.
+  const missing = getMissingClearanceFields(row);
+  if (missing.length > 0) {
+    openClearanceRequiredModal(idx);
+    return;
+  }
   try {
     sessionStorage.setItem("fsis.clearance.current", JSON.stringify(row));
   } catch {
     // If sessionStorage is unavailable, we still open the template.
   }
   window.open("./fsis_clearance.html", "_blank");
+}
+
+let clearanceRequiredIdx = null;
+
+function getMissingClearanceFields(row) {
+  const missing = [];
+  const hasText = (v) => String(v || "").trim().length > 0;
+  if (!hasText(row.fsic_valid_for)) missing.push("fsic_valid_for");
+  if (!hasText(row.fsic_valid_until)) missing.push("fsic_valid_until");
+  if (row.fsic_fee_amount == null || row.fsic_fee_amount === "" || Number.isNaN(Number(row.fsic_fee_amount)))
+    missing.push("fsic_fee_amount");
+  if (!hasText(row.fsic_fee_or_number)) missing.push("fsic_fee_or_number");
+  if (!hasText(row.fsic_fee_date)) missing.push("fsic_fee_date");
+  return missing;
+}
+
+function openClearanceRequiredModal(idx) {
+  clearanceRequiredIdx = idx;
+  const row = inspectionData[idx] || {};
+
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value ?? "";
+  };
+
+  setVal("clearance_fsic_valid_for", row.fsic_valid_for || "");
+  setVal("clearance_fsic_valid_until", row.fsic_valid_until || "");
+  setVal("clearance_fsic_fee_amount", row.fsic_fee_amount ?? "");
+  setVal("clearance_fsic_fee_or_number", row.fsic_fee_or_number || "");
+  setVal("clearance_fsic_fee_date", row.fsic_fee_date || "");
+
+  const overlay = document.getElementById("clearance-required-modal-overlay");
+  if (overlay) overlay.classList.add("open");
+}
+
+function clearanceRequiredCloseModal() {
+  const overlay = document.getElementById("clearance-required-modal-overlay");
+  if (overlay) overlay.classList.remove("open");
+  clearanceRequiredIdx = null;
+}
+
+function clearanceRequiredCloseOnOverlay(e) {
+  const overlay = document.getElementById("clearance-required-modal-overlay");
+  if (e.target === overlay) clearanceRequiredCloseModal();
+}
+
+function clearanceRequiredSaveAndOpen(e) {
+  if (e?.preventDefault) e.preventDefault();
+  if (clearanceRequiredIdx == null) return;
+
+  const idx = clearanceRequiredIdx;
+  const row = inspectionData[idx];
+  if (!row) return;
+
+  const vFor = (document.getElementById("clearance_fsic_valid_for")?.value || "").trim();
+  const vUntil = (document.getElementById("clearance_fsic_valid_until")?.value || "").trim();
+  const feeAmtRaw = (document.getElementById("clearance_fsic_fee_amount")?.value || "").trim();
+  const feeAmt = feeAmtRaw === "" ? null : Number(String(feeAmtRaw).replace(/,/g, ""));
+  const orNo = (document.getElementById("clearance_fsic_fee_or_number")?.value || "").trim();
+  const feeDate = (document.getElementById("clearance_fsic_fee_date")?.value || "").trim();
+
+  if (!vFor || !vUntil || !Number.isFinite(feeAmt) || !orNo || !feeDate) {
+    logbookShowToast("inspection-toast", "⚠️ Please fill in all required clearance fields.");
+    return;
+  }
+
+  const updates = {
+    fsic_valid_for: vFor,
+    fsic_valid_until: vUntil,
+    fsic_fee_amount: feeAmt,
+    fsic_fee_or_number: orNo,
+    fsic_fee_date: feeDate,
+  };
+
+  inspectionData[idx] = { ...row, ...updates };
+  inspectionSaveToLocal();
+  inspectionRenderTable?.();
+
+  // Persist to DB if available
+  if (isSupabaseEnabled() && row.id) {
+    (async () => {
+      try {
+        const { error } = await supabaseClient
+          .from("inspection_logbook")
+          .update(updates)
+          .eq("id", row.id);
+        if (error) throw error;
+      } catch (err) {
+        logbookShowToast("inspection-toast", "⚠️ Clearance saved locally; DB sync failed.");
+      }
+    })();
+  }
+
+  clearanceRequiredCloseModal();
+  inspectionOpenClearanceHtml(idx);
 }
 
 // Receive clearance edits from `fsis_clearance.html` and persist them.
@@ -1316,13 +1417,7 @@ function inspectionSaveEntry(e) {
     created_at: new Date().toISOString(),
   };
 
-  // If the photo has no GPS EXIF, fall back to the user's current geolocation
-  if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
-    entry.lat = lastUserLatitude;
-    entry.lng = lastUserLongitude;
-  }
-
-  // If we still have no coordinates, treat this as \"no location yet\" and don't keep a photo reference
+  // If we have no coordinates from EXIF, treat this as "no location yet"
   if (entry.lat == null || entry.lng == null) {
     entry.photo_url = null;
     entry.photo_taken_at = null;
@@ -1690,7 +1785,7 @@ function initInspectionPhotoExif() {
             if (!lat || !lng || !latRef || !lngRef || !make || !model) {
               logbookShowToast(
                 "inspection-toast",
-                "Photo must come from a camera with GPS enabled. Please capture a new photo."
+                "Photo must come from a camera with GPS/location turned ON. On new phones, enable 'Save location' or 'GPS tagging' in your camera settings, then capture a new photo."
               );
               input.value = "";
               currentExifLat = null;

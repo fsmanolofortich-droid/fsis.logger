@@ -1631,6 +1631,57 @@
     </div>
   </div>
 
+  <!-- Clearance required fields modal -->
+  <div class="modal-overlay" id="clearance-required-modal-overlay" onclick="clearanceRequiredCloseOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <small>FSIC Clearance</small>
+          <h2>Complete required fields</h2>
+        </div>
+        <button class="btn-close" onclick="clearanceRequiredCloseModal()" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="clearance-required-form" onsubmit="clearanceRequiredSaveAndOpen(event)">
+          <div class="form-section">
+            <div class="form-section-title">Validity</div>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label for="clearance_fsic_valid_for">Valid for</label>
+                <input type="text" id="clearance_fsic_valid_for" placeholder="e.g. Business Permit (New/Renewal)">
+              </div>
+              <div class="form-group">
+                <label for="clearance_fsic_valid_until">Valid until</label>
+                <input type="date" id="clearance_fsic_valid_until">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Fees</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="clearance_fsic_fee_amount">Amount</label>
+                <input type="number" id="clearance_fsic_fee_amount" inputmode="decimal" placeholder="e.g. 500">
+              </div>
+              <div class="form-group">
+                <label for="clearance_fsic_fee_or_number">O.R. number</label>
+                <input type="text" id="clearance_fsic_fee_or_number" placeholder="Official receipt number">
+              </div>
+              <div class="form-group">
+                <label for="clearance_fsic_fee_date">Date</label>
+                <input type="date" id="clearance_fsic_fee_date">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-cancel" onclick="clearanceRequiredCloseModal()">Cancel</button>
+        <button type="submit" class="btn btn-save" form="clearance-required-form">Continue to Clearance</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="inspection-toast"></div>
   <div class="save-indicator" id="saveIndicator" aria-hidden="true">Record saved</div>
 
