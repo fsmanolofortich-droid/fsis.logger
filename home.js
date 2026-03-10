@@ -1891,6 +1891,21 @@ function addInspectionMarkerFromEntry(entry) {
     inspectionMarkersLayer
   );
 
+  const tooltipText = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
+  marker.bindTooltip(tooltipText, {
+    permanent: false,
+    direction: "top",
+    offset: [0, -36],
+    opacity: 0.95,
+    className: "inspection-marker-tooltip",
+  });
+
+  marker.on("mouseover", () => {
+    marker.setZIndexOffset(1000);
+  });
+  marker.on("mouseout", () => {
+    marker.setZIndexOffset(0);
+  });
   marker.on("click", () => {
     openInspectionDetailPanel(entry);
   });
