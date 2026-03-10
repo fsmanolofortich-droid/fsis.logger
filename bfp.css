@@ -456,6 +456,24 @@ tr:hover td { background: #FAFAF8; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group.full { grid-column: 1 / -1; }
 
+.form-row-with-add {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.form-row-with-add select { flex: 1; }
+.btn-add-inline {
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  background: var(--navy);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-add-inline:hover { background: var(--navy-mid); }
+
 .modal .form-group label {
   font-size: 0.72rem;
   font-weight: 600;
@@ -465,6 +483,7 @@ tr:hover td { background: #FAFAF8; }
 }
 
 .modal input,
+.modal select,
 .modal textarea {
   padding: 10px 12px;
   border: 1px solid #e2e0dc;
@@ -478,6 +497,7 @@ tr:hover td { background: #FAFAF8; }
 }
 
 .modal input:focus,
+.modal select:focus,
 .modal textarea:focus {
   outline: none;
   border-color: var(--navy);

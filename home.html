@@ -1044,6 +1044,12 @@
                 </div>
                 <div class="form-group full">
                   <label for="conveyance_inspectors">Name of Inspectors (2 or more)</label>
+                  <div class="form-row-with-add">
+                    <select id="conveyance_inspector_select" aria-label="Select inspector to add">
+                      <option value="">Select inspector</option>
+                    </select>
+                    <button type="button" class="btn btn-add-inline" onclick="conveyanceAddInspector()">Add</button>
+                  </div>
                   <textarea id="conveyance_inspectors" rows="2" placeholder="Enter names separated by commas or new lines"></textarea>
                 </div>
                 <div class="form-group full">
@@ -1159,6 +1165,12 @@
                 </div>
                 <div class="form-group full">
                   <label for="occupancy_inspectors">Name of Inspectors (2 or more)</label>
+                  <div class="form-row-with-add">
+                    <select id="occupancy_inspector_select" aria-label="Select inspector to add">
+                      <option value="">Select inspector</option>
+                    </select>
+                    <button type="button" class="btn btn-add-inline" onclick="occupancyAddInspector()">Add</button>
+                  </div>
                   <textarea id="occupancy_inspectors" rows="2" placeholder="Enter names separated by commas or new lines"></textarea>
                 </div>
                 <div class="form-group full">
@@ -1411,7 +1423,9 @@
                 </div>
                 <div class="form-group">
                   <label for="fsec_addr_barangay">Barangay</label>
-                  <input type="text" id="fsec_addr_barangay" placeholder="e.g. Tankulan">
+                  <select id="fsec_addr_barangay" aria-label="Select barangay">
+                    <option value="">Select barangay</option>
+                  </select>
                 </div>
                 <div class="form-group full">
                   <label for="fsec_addr_line">House no. / Street / Zone</label>
@@ -1494,7 +1508,9 @@
                 </div>
                 <div class="form-group">
                   <label for="inspection_addr_barangay">Barangay</label>
-                  <input type="text" id="inspection_addr_barangay" placeholder="e.g. Tankulan">
+                  <select id="inspection_addr_barangay" aria-label="Select barangay">
+                    <option value="">Select barangay</option>
+                  </select>
                 </div>
                 <div class="form-group full">
                   <label for="inspection_addr_line">House no. / Street / Zone</label>
@@ -1511,7 +1527,9 @@
                 </div>
                 <div class="form-group">
                   <label for="inspection_inspected_by">Inspected By</label>
-                  <input type="text" id="inspection_inspected_by" placeholder="Name of inspecting officer">
+                  <select id="inspection_inspected_by" aria-label="Select fire personnel">
+                    <option value="">Select inspector</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -1528,11 +1546,9 @@
                 </div>
                 <div class="form-group">
                   <label for="inspection_included_personnel_name">Included Personnel</label>
-                  <input
-                    type="text"
-                    id="inspection_included_personnel_name"
-                    placeholder="Name of additional inspector (optional)"
-                  >
+                  <select id="inspection_included_personnel_name" aria-label="Select additional personnel">
+                    <option value="">Select personnel (optional)</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label for="inspection_included_personnel_position">Included Position</label>

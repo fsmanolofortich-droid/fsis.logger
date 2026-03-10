@@ -32,6 +32,20 @@ function setText(id, value) {
   el.textContent = value;
 }
 
+function ensureSelectOption(id, value) {
+  if (!value) return;
+  const el = document.getElementById(id);
+  if (!el || el.tagName !== "SELECT") return;
+  const opts = Array.from(el.options).map((o) => o.value);
+  if (!opts.includes(value)) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = value;
+    el.appendChild(opt);
+  }
+  el.value = value;
+}
+
 function toFriendlyDate(isoString) {
   if (!isoString) return "—";
   const d = new Date(isoString);
@@ -51,6 +65,40 @@ function getCurrentView() {
     return hash;
   return "map";
 }
+
+const BARANGAYS = [
+  "Agusan Canyon", "Alae", "Dahilayan", "Dalirig", "Damilag", "Diclum",
+  "Guilang-guilang", "Kalugmanan", "Lindaban", "Lingion", "Lunocan", "Maluko",
+  "Mambatangan", "Mampayag", "Minsuro", "Mantibugao", "Tankulan (Poblacion)",
+  "San Miguel", "Sankanan", "Santiago", "Santo Niño", "Ticala",
+];
+
+const FIRE_PERSONNEL_META = [
+  { name: "SF03 Rafael I. Corona Jr", rank: "SF03", position: "Acting Municipal Fire Marshal" },
+  { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01", position: "OIC, Administrative Section / Building Inspector" },
+  { name: "SF01 Cedric B. Mamalao", rank: "SF01", position: "OIC, Fire Safety Enforcement Section" },
+  { name: "FO3 Rey Edward S. Descallar", rank: "FO3", position: "CRU Staff / EMS / Medical First Responder" },
+  { name: "FO3 Jun Ray D. Abarquez", rank: "FO3", position: "Building Inspector / Assessor / Plan Evaluator" },
+  { name: "FO3 Clyde Q. Rejas", rank: "FO3", position: "Building Inspector" },
+  { name: "FO3 Juan M. Derayunan II", rank: "FO3", position: "Building Inspector" },
+  { name: "FO3 Julious G. Cloma", rank: "FO3", position: "OIC, Operations Section / OIC, Intel & Investigation Unit" },
+  { name: "FO3 Luigi C. Cajes", rank: "FO3", position: "Building Inspector / Finance Unit, SDO" },
+  { name: "FO2 Michael S. Guyan", rank: "FO2", position: "Shift-B Commander / Logistics Unit / Building Inspector" },
+  { name: "FO2 Rhea Mae B. Lambago", rank: "FO2", position: "FSES Admin Clerk / Customer Relations Officer" },
+  { name: "FO1 John Ansel P. Labinay", rank: "FO1", position: "Shift-B FT Driver / Building Inspector / Fire Arson Investigator" },
+  { name: "FO1 Jessel Joy C. Paca", rank: "FO1", position: "CRU Staff / Collecting Officer / Fire Arson Investigator" },
+  { name: "FO1 Adoniram C. Nacilla", rank: "FO1", position: "Shift-A Nozzleman / Building Inspector" },
+  { name: "FO1 Johnremar B. Cinchez", rank: "FO1", position: "Shift-B Nozzleman / PIS Officer / Admin Clerk" },
+  { name: "FO1 Moctar M. Manarinta", rank: "FO1", position: "Shift-A Nozzleman / CRU Staff / Operations Section – Admin Clerk" },
+  { name: "FO1 Sairah Ville L. Sante", rank: "FO1", position: "CRU Staff / SPMS Action Officer / Morale & Welfare Unit" },
+  { name: "FO1 Lester V. Villarta", rank: "FO1", position: "Shift-B Nozzleman / Operations Section – Admin Clerk" },
+  { name: "Cherry Mae N. Lusno", rank: "Fire Aide", position: "Fire Aide" },
+];
+
+const FIRE_PERSONNEL = FIRE_PERSONNEL_META.map((p) => p.name);
+const FIRE_PERSONNEL_BY_NAME = Object.fromEntries(
+  FIRE_PERSONNEL_META.map((p) => [p.name, { rank: p.rank, position: p.position }])
+);
 
 const MAP_CENTER = [8.369, 124.864];
 const MAP_ZOOM = 12;
@@ -317,6 +365,75 @@ function toggleNavSidebar() {
   else openNavSidebar();
 }
 
+function populateModalDropdowns() {
+  function fillSelect(id, options, placeholder) {
+    const el = document.getElementById(id);
+    if (!el || !el.options) return;
+    el.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = placeholder;
+    el.appendChild(opt0);
+    for (const o of options) {
+      const opt = document.createElement("option");
+      opt.value = o;
+      opt.textContent = o;
+      el.appendChild(opt);
+    }
+  }
+  fillSelect("inspection_addr_barangay", BARANGAYS, "Select barangay");
+  fillSelect("fsec_addr_barangay", BARANGAYS, "Select barangay");
+  fillSelect("inspection_inspected_by", FIRE_PERSONNEL, "Select inspector");
+  fillSelect("inspection_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
+  fillSelect("conveyance_inspector_select", FIRE_PERSONNEL, "Select inspector");
+  fillSelect("occupancy_inspector_select", FIRE_PERSONNEL, "Select inspector");
+
+  // Auto-fill rank/position when fire personnel is selected
+  bindInspectionPersonnelAutoFill();
+}
+
+function getFirePersonnelRankPositionByName(name) {
+  if (!name || typeof name !== "string") return "";
+  const meta = FIRE_PERSONNEL_BY_NAME[name];
+  if (!meta) return "";
+  if (meta.rank && meta.position) return `${meta.rank} – ${meta.position}`;
+  return meta.position || meta.rank || "";
+}
+
+function bindInspectionPersonnelAutoFill() {
+  const inspectedBy = document.getElementById("inspection_inspected_by");
+  const inspectorPos = document.getElementById("inspection_inspector_position");
+  const includedPersonnel = document.getElementById("inspection_included_personnel_name");
+  const includedPos = document.getElementById("inspection_included_personnel_position");
+
+  inspectedBy?.addEventListener("change", () => {
+    if (inspectorPos) inspectorPos.value = getFirePersonnelRankPositionByName(inspectedBy.value);
+  });
+  includedPersonnel?.addEventListener("change", () => {
+    if (includedPos) includedPos.value = getFirePersonnelRankPositionByName(includedPersonnel.value);
+  });
+}
+
+function conveyanceAddInspector() {
+  const sel = document.getElementById("conveyance_inspector_select");
+  const ta = document.getElementById("conveyance_inspectors");
+  if (!sel || !ta || !sel.value) return;
+  const current = (ta.value || "").trim();
+  const sep = current ? "\n" : "";
+  ta.value = current + sep + sel.value;
+  sel.selectedIndex = 0;
+}
+
+function occupancyAddInspector() {
+  const sel = document.getElementById("occupancy_inspector_select");
+  const ta = document.getElementById("occupancy_inspectors");
+  if (!sel || !ta || !sel.value) return;
+  const current = (ta.value || "").trim();
+  const sep = current ? "\n" : "";
+  ta.value = current + sep + sel.value;
+  sel.selectedIndex = 0;
+}
+
 function initViewRouting() {
   const applyFromHash = () => showView(getCurrentView());
 
@@ -380,6 +497,7 @@ function init() {
     }
   });
 
+  populateModalDropdowns();
   initViewRouting();
   initTableFilters();
   initInspectionPhotoExif();
@@ -772,8 +890,6 @@ function inspectionEditEntry(idx) {
   setVal("inspection_owner", row.insp_owner);
   setVal("inspection_business_name", row.business_name);
   setVal("inspection_date_inspected", row.date_inspected);
-  setVal("inspection_inspected_by", row.inspected_by);
-
   // Optional IO-specific fields (may not exist on older records or in the DOM)
   setVal("inspection_inspector_position", row.inspector_position);
   setVal("inspection_included_personnel_name", row.included_personnel_name);
@@ -787,11 +903,12 @@ function inspectionEditEntry(idx) {
 
   const addr = (row.insp_address || "").toString();
   const brgyMatch = addr.match(/Barangay\s+([^,]+)/i);
-  setVal(
-    "inspection_addr_barangay",
-    row.addr_barangay || (brgyMatch ? brgyMatch[1].trim() : "")
-  );
+  const barangayVal = row.addr_barangay || (brgyMatch ? brgyMatch[1].trim() : "");
+  ensureSelectOption("inspection_addr_barangay", barangayVal);
   setVal("inspection_addr_line", row.addr_line || "");
+
+  ensureSelectOption("inspection_inspected_by", row.inspected_by);
+  ensureSelectOption("inspection_included_personnel_name", row.included_personnel_name);
 
   const overlay = document.getElementById("inspection-modal-overlay");
   if (overlay) overlay.classList.add("open");
@@ -900,6 +1017,12 @@ window.addEventListener("message", (ev) => {
   }
 
   const updates = {
+    // Core fields (allow editing on the clearance template)
+    business_name: (payload.business_name || "").toString().trim() || null,
+    owner_name: (payload.owner_name || "").toString().trim() || null,
+    address: (payload.address || "").toString().trim() || null,
+
+    // FSIC clearance / fees
     fsic_number: (payload.fsic_number || "").toString().trim(),
     fsic_purpose: payload.fsic_purpose || null,
     fsic_permit_type: payload.fsic_permit_type || null,
@@ -910,8 +1033,23 @@ window.addEventListener("message", (ev) => {
     fsic_fee_date: normalizeDate(payload.fsic_fee_date),
   };
 
+  // Don't overwrite core identity fields with null/empty strings.
+  if (!updates.business_name) delete updates.business_name;
+  if (!updates.owner_name) delete updates.owner_name;
+  if (!updates.address) delete updates.address;
+
   // Update in-memory + local cache immediately for responsiveness
-  inspectionData[idx] = { ...inspectionData[idx], ...updates };
+  // Update in-memory fields using app naming (insp_owner / insp_address).
+  const uiUpdates = { ...updates };
+  if (uiUpdates.owner_name != null) {
+    uiUpdates.insp_owner = uiUpdates.owner_name;
+    delete uiUpdates.owner_name;
+  }
+  if (uiUpdates.address != null) {
+    uiUpdates.insp_address = uiUpdates.address;
+    delete uiUpdates.address;
+  }
+  inspectionData[idx] = { ...inspectionData[idx], ...uiUpdates };
   inspectionSaveToLocal();
   inspectionRenderTable?.();
 
@@ -1095,7 +1233,15 @@ function inspectionSaveEntry(e) {
     document.getElementById("inspection_addr_line") || { value: "" }
   ).value.trim();
 
-  const mergedAddress = `Region ${region}, ${province}, ${municipal}, Barangay ${barangay}, ${line}`;
+  const mergedAddress = [
+    `Region ${region}`,
+    province,
+    municipal,
+    `Barangay ${barangay}`,
+    line,
+  ]
+    .filter((p) => String(p || "").trim())
+    .join(", ");
 
   const entry = {
     io_number: (
@@ -1162,10 +1308,10 @@ function inspectionSaveEntry(e) {
     entry.photo_taken_at = null;
   }
 
-  if (!entry.business_name || !barangay || !line || !entry.date_inspected) {
+  if (!entry.business_name || !barangay || !entry.date_inspected) {
     logbookShowToast(
       "inspection-toast",
-      "⚠️ Please fill in at least Business name, Barangay, House/Street, and Date inspected."
+      "⚠️ Please fill in at least Business name, Barangay, and Date inspected."
     );
     return;
   }
@@ -1792,9 +1938,9 @@ function inspectionPrintPanel() {
 
 async function inspectionLoadFromSupabase() {
   const selectWithGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, latitude, longitude, photo_url, photo_taken_at, created_at";
+    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, latitude, longitude, photo_url, photo_taken_at, created_at";
   const selectWithoutGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, created_at";
+    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, created_at";
 
   const INSPECTION_FETCH_LIMIT = 2000;
   const run = async (select) =>
@@ -1835,6 +1981,14 @@ async function inspectionLoadFromSupabase() {
     duration_start: r.duration_start || null,
     duration_end: r.duration_end || null,
     remarks: r.remarks || "",
+    // FSIC clearance / fees
+    fsic_purpose: r.fsic_purpose ?? null,
+    fsic_permit_type: r.fsic_permit_type ?? null,
+    fsic_valid_for: r.fsic_valid_for ?? null,
+    fsic_valid_until: r.fsic_valid_until ?? null,
+    fsic_fee_amount: r.fsic_fee_amount ?? null,
+    fsic_fee_or_number: r.fsic_fee_or_number ?? null,
+    fsic_fee_date: r.fsic_fee_date ?? null,
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
     photo_url:
@@ -2018,10 +2172,8 @@ function fsecEditEntry(idx) {
 
   const addr = (row.fsec_address || "").toString();
   const brgyMatch = addr.match(/Barangay\s+([^,]+)/i);
-  setVal(
-    "fsec_addr_barangay",
-    row.addr_barangay || (brgyMatch ? brgyMatch[1].trim() : "")
-  );
+  const barangayVal = row.addr_barangay || (brgyMatch ? brgyMatch[1].trim() : "");
+  ensureSelectOption("fsec_addr_barangay", barangayVal);
   setVal("fsec_addr_line", row.addr_line || "");
 
   const overlay = document.getElementById("fsec-modal-overlay");
@@ -2137,7 +2289,15 @@ function fsecSaveEntry(e) {
     document.getElementById("fsec_addr_line") || { value: "" }
   ).value.trim();
 
-  const mergedAddress = `Region ${region}, ${province}, ${municipal}, Barangay ${barangay}, ${line}`;
+  const mergedAddress = [
+    `Region ${region}`,
+    province,
+    municipal,
+    `Barangay ${barangay}`,
+    line,
+  ]
+    .filter((p) => String(p || "").trim())
+    .join(", ");
 
   const entry = {
     fsec_owner: (document.getElementById("fsec_owner") || { value: "" }).value.trim(),
@@ -2154,7 +2314,6 @@ function fsecSaveEntry(e) {
     !entry.fsec_owner ||
     !entry.proposed_project ||
     !barangay ||
-    !line ||
     !entry.fsec_date ||
     !entry.contact_number
   ) {

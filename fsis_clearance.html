@@ -338,6 +338,17 @@
 	font-family: "TVRJAF+Arial Italic";
 	color: #000000;
 }
+.fsis-field {
+	display: inline-block;
+	min-width: 10em;
+	text-align: center;
+}
+.fsis-sign-line {
+	display: inline-block;
+	width: 19em;
+	border-bottom: 1px solid #000;
+	height: 0.9em;
+}
 .pdf24_50 {
 	letter-spacing: 0.0014em;
 }
@@ -574,8 +585,11 @@
 					<div class="pdf24_01" style="left:18.16em;top:8.2281em;"><span class="pdf24_15 pdf24_08 pdf24_18" style="word-spacing:0.0008em;">MANOLO FORTICH FIRE STATION &nbsp;</span></div>
 					<div class="pdf24_01" style="left:18.3858em;top:9.4364em;"><span class="pdf24_15 pdf24_08 pdf24_19" style="word-spacing:-0.0055em;">Tankulan, Manolo Fortich, Bukidnon &nbsp;</span></div>
 					<div class="pdf24_01" style="left:10.6942em;top:10.6447em;"><span class="pdf24_15 pdf24_08 pdf24_20" style="word-spacing:-0.0042em;">Email: manolofortichfs_bfp10@yahoo.com/ Cellphone #: 09352307289 &nbsp;</span></div>
-					<div class="pdf24_01" style="left:2.3083em;top:12.978em;"><span class="pdf24_21 pdf24_08 pdf24_19" style="word-spacing:-0.0047em;">FSIC NO. &nbsp;</span></div>
-					<div class="pdf24_01" style="left:36.2567em;top:13.3797em;"><span class="pdf24_22 pdf24_23 pdf24_24" style="word-spacing:-0.0158em;">&lt;DATE Now()&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:2.3083em;top:12.978em;">
+						<span class="pdf24_21 pdf24_08 pdf24_19" style="word-spacing:-0.0047em;">FSIC NO. </span>
+						<span class="pdf24_21 pdf24_08 pdf24_19 fsis-field" data-fsis="fsic_number" contenteditable="true">&nbsp;</span>
+					</div>
+					<div class="pdf24_01" style="left:36.2567em;top:13.3797em;"><span class="pdf24_22 pdf24_23 pdf24_24 fsis-field" data-fsis="fsic_issue_date" style="word-spacing:-0.0158em;" contenteditable="true">&lt;DATE Now()&gt;</span></div>
 					<div class="pdf24_01" style="left:38.1808em;top:14.6047em;"><span class="pdf24_15 pdf24_08 pdf24_25">Date &nbsp;</span></div>
 					<div class="pdf24_01" style="left:8.2333em;top:16.8762em;"><span class="pdf24_26 pdf24_08 pdf24_27" style="word-spacing:0.0005em;">FIRE SAFETY INSPECTION CERTIFICATE &nbsp;</span></div>
 					<div class="pdf24_01" style="left:17.8108em;top:19.0722em;"><span class="pdf24_28 pdf24_08 pdf24_29" style="word-spacing:0.0082em;">FOR CERTIFICATE OF OCCUPANCY &nbsp;</span></div>
@@ -592,37 +606,39 @@
 					<div class="pdf24_01" style="left:26.7608em;top:27.1148em;"><span class="pdf24_44 pdf24_08 pdf24_16">INSPECTION &nbsp;</span></div>
 					<div class="pdf24_01" style="left:33.9608em;top:27.1148em;"><span class="pdf24_44 pdf24_08 pdf24_46">CERTIFICATE &nbsp;</span></div>
 					<div class="pdf24_01" style="left:41.5483em;top:27.1148em;"><span class="pdf24_33 pdf24_08 pdf24_47">of &nbsp;</span></div>
-					<div class="pdf24_01" style="left:19.5858em;top:28.0214em;"><span class="pdf24_22 pdf24_23 pdf24_48" style="word-spacing:-0.0052em;">&lt;Name of Establishment&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:19.5858em;top:28.0214em;"><span class="pdf24_22 pdf24_23 pdf24_48 fsis-field" data-fsis="business_name" style="word-spacing:-0.0052em;" contenteditable="true">&lt;Name of Establishment&gt;</span></div>
 					<div class="pdf24_01" style="left:20.5108em;top:29.4561em;"><span class="pdf24_49 pdf24_08 pdf24_17" style="word-spacing:0.0014em;">(Name of Establishment) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:17.9183em;top:30.2314em;z-index:1747;"><span class="pdf24_22 pdf24_23 pdf24_50" style="word-spacing:-0.0067em;">&lt;Name of Owner/ Representative&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:17.9183em;top:30.2314em;z-index:1747;"><span class="pdf24_22 pdf24_23 pdf24_50 fsis-field" data-fsis="insp_owner" style="word-spacing:-0.0067em;" contenteditable="true">&lt;Name of Owner/ Representative&gt;</span></div>
 					<div class="pdf24_01" style="left:17.785em;top:30.5148em;"><span class="pdf24_33 pdf24_08 pdf24_51">______________________________ &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.1467em;top:30.5148em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:-0.0007em;">owned and managed by &nbsp;</span></div>
 					<div class="pdf24_01" style="left:37.565em;top:30.5148em;"><span class="pdf24_33 pdf24_08 pdf24_53" style="word-spacing:0.0002em;">with postal address at &nbsp;</span></div>
 					<div class="pdf24_01" style="left:19.4442em;top:31.6169em;"><span class="pdf24_49 pdf24_08 pdf24_17" style="word-spacing:0.0003em;">(Name of Owner/Representative) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:22.3542em;top:32.498em;z-index:1756;"><span class="pdf24_22 pdf24_23 pdf24_36">&lt;Address&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:22.3542em;top:32.498em;z-index:1756;"><span class="pdf24_22 pdf24_23 pdf24_36 fsis-field" data-fsis="insp_address" contenteditable="true">&lt;Address&gt;</span></div>
 					<div class="pdf24_01" style="left:17.7025em;top:32.7081em;"><span class="pdf24_33 pdf24_08 pdf24_51">______________________________ &nbsp;</span></div>
 					<div class="pdf24_01" style="left:22.9125em;top:33.8835em;"><span class="pdf24_49 pdf24_08 pdf24_54">(Address) &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:35.0498em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2729em;">is hereby </span><span class="pdf24_44 pdf24_08 pdf24_55" style="word-spacing:0.2917em;">GRANTED </span><span class="pdf24_33 pdf24_08 pdf24_56" style="word-spacing:0.2755em;">after said building structure</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5594em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2729em;">or facility has been duly inspected</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5601em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5596em;">with the finding</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2758em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2775em;">that it &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:36.1831em;"><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5544em;">has fully complied with</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2828em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_57" style="word-spacing:0.2784em;">the fire safety</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5484em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_58" style="word-spacing:0.5612em;">and protection requirements of the</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2825em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_48" style="word-spacing:0.2831em;">Fire Code of the Philippines of &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:37.3164em;"><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5586em;">2008 and its Revised Implementing Rules and Regulations. &nbsp;</span></div>
-					<div class="pdf24_01" style="left:21.585em;top:39.3564em;"><span class="pdf24_22 pdf24_23 pdf24_59">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:21.585em;top:39.3564em;"><span class="pdf24_22 pdf24_23 pdf24_59 fsis-field" data-fsis="fsic_valid_for" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:17.7775em;top:40.7919em;"><span class="pdf24_49 pdf24_08 pdf24_35">(Description) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:37.6567em;top:39.423em;"><span class="pdf24_22 pdf24_23 pdf24_52">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:37.6567em;top:39.423em;"><span class="pdf24_22 pdf24_23 pdf24_52 fsis-field" data-fsis="fsic_valid_until" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:5.3833em;top:39.5831em;"><span class="pdf24_33 pdf24_08 pdf24_50" style="word-spacing:-0.0007em;">This certification is valid for &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:39.5831em;"><span class="pdf24_33 pdf24_08 pdf24_60" style="word-spacing:0.004em;">valid until &nbsp;</span></div>
 					<div class="pdf24_01" style="left:5.3833em;top:44.1164em;"><span class="pdf24_33 pdf24_08 pdf24_48" style="word-spacing:0.5641em;">Violation of Fire Code provisions shall cause this certificate </span><span class="pdf24_61 pdf24_08 pdf24_62" style="word-spacing:0.554em;">null and void</span><span class="pdf24_61 pdf24_08 pdf24_35" style="word-spacing:0.7498em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_62" style="word-spacing:0.5537em;">after appropriate &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.1467em;top:45.2498em;"><span class="pdf24_33 pdf24_08 pdf24_25" style="word-spacing:0.2782em;">proceeding and shall hold the owner liable to the penalties provided for by the said Fire Code. &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:47.4998em;"><span class="pdf24_44 pdf24_08 pdf24_53" style="word-spacing:0.0024em;">Fire Code Fees: &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.9858em;top:48.4914em;"><span class="pdf24_22 pdf24_23 pdf24_25">&lt;Amount&gt; &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.1858em;top:49.683em;"><span class="pdf24_22 pdf24_23 pdf24_63" style="word-spacing:-0.0089em;">&lt;OR Number&gt; &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.7192em;top:50.8755em;"><span class="pdf24_22 pdf24_23 pdf24_52">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:10em;top:48.4914em;"><span class="pdf24_22 pdf24_23 pdf24_25 fsis-field" data-fsis="fsic_fee_amount" contenteditable="true">&lt;Amount&gt;</span></div>
+					<div class="pdf24_01" style="left:10em;top:49.683em;"><span class="pdf24_22 pdf24_23 pdf24_63 fsis-field" data-fsis="fsic_fee_or_number" style="word-spacing:-0.0089em;" contenteditable="true">&lt;OR Number&gt;</span></div>
+					<div class="pdf24_01" style="left:10em;top:50.8755em;"><span class="pdf24_22 pdf24_23 pdf24_52 fsis-field" data-fsis="fsic_fee_date" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:48.6348em;"><span class="pdf24_44 pdf24_08 pdf24_64" style="word-spacing:0.0077em;">RECOMMEND APPROVAL: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:48.6514em;"><span class="pdf24_33 pdf24_08 pdf24_65" style="word-spacing:-0.0018em;">Amount Paid: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:49.7523em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:-0.0036em;">O.R. Number: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:50.8523em;"><span class="pdf24_33 pdf24_08 pdf24_50">Date: &nbsp;</span></div>
+					<div class="pdf24_01" style="left:30.1208em;top:51.55em;"><span class="fsis-sign-line">&nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:50.8523em;"><span class="pdf24_44 pdf24_08 pdf24_53" style="word-spacing:0.001em;">SFO1 Cedric B Gamolo, BFP &nbsp;</span></div>
 					<div class="pdf24_01" style="left:29.6175em;top:52.0514em;"><span class="pdf24_33 pdf24_08 pdf24_66" style="word-spacing:-0.0039em;">CHIEF, Fire Safety Enforcement Section &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:54.3014em;"><span class="pdf24_44 pdf24_08 pdf24_67">APPROVED: &nbsp;</span></div>
+					<div class="pdf24_01" style="left:30.1208em;top:57.22em;"><span class="fsis-sign-line">&nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:56.5181em;"><span class="pdf24_44 pdf24_08 pdf24_24" style="word-spacing:0.0015em;">SFO3 Rafael I Corona Jr, BFP &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.7458em;top:57.7189em;"><span class="pdf24_33 pdf24_08 pdf24_37" style="word-spacing:0.0025em;">OIC, MUNICIPAL FIRE MARSHAL &nbsp;</span></div>
 					<div class="pdf24_01" style="left:6.975em;top:59.9856em;"><span class="pdf24_68 pdf24_08 pdf24_19" style="word-spacing:0.0005em;">NOTE: “This Certificate does not take the place of any license required by law and is not &nbsp;</span></div>
@@ -650,8 +666,11 @@
 					<div class="pdf24_01" style="left:18.16em;top:8.3197em;"><span class="pdf24_15 pdf24_08 pdf24_18" style="word-spacing:0.0008em;">MANOLO FORTICH FIRE STATION &nbsp;</span></div>
 					<div class="pdf24_01" style="left:18.3858em;top:9.5281em;"><span class="pdf24_15 pdf24_08 pdf24_19" style="word-spacing:-0.0055em;">Tankulan, Manolo Fortich, Bukidnon &nbsp;</span></div>
 					<div class="pdf24_01" style="left:10.6942em;top:10.7364em;"><span class="pdf24_15 pdf24_08 pdf24_20" style="word-spacing:-0.0042em;">Email: manolofortichfs_bfp10@yahoo.com/ Cellphone #: 09352307289 &nbsp;</span></div>
-					<div class="pdf24_01" style="left:2.3083em;top:13.0705em;"><span class="pdf24_21 pdf24_08 pdf24_19" style="word-spacing:-0.0047em;">FSIC NO. &nbsp;</span></div>
-					<div class="pdf24_01" style="left:36.2567em;top:13.4705em;"><span class="pdf24_22 pdf24_23 pdf24_24" style="word-spacing:-0.0158em;">&lt;DATE Now()&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:2.3083em;top:13.0705em;">
+						<span class="pdf24_21 pdf24_08 pdf24_19" style="word-spacing:-0.0047em;">FSIC NO. </span>
+						<span class="pdf24_21 pdf24_08 pdf24_19 fsis-field" data-fsis="fsic_number" contenteditable="true">&nbsp;</span>
+					</div>
+					<div class="pdf24_01" style="left:36.2567em;top:13.4705em;"><span class="pdf24_22 pdf24_23 pdf24_24 fsis-field" data-fsis="fsic_issue_date" style="word-spacing:-0.0158em;" contenteditable="true">&lt;DATE Now()&gt;</span></div>
 					<div class="pdf24_01" style="left:38.1808em;top:14.6964em;"><span class="pdf24_15 pdf24_08 pdf24_25">Date &nbsp;</span></div>
 					<div class="pdf24_01" style="left:8.2333em;top:16.9687em;"><span class="pdf24_26 pdf24_08 pdf24_27" style="word-spacing:0.0005em;">FIRE SAFETY INSPECTION CERTIFICATE &nbsp;</span></div>
 					<div class="pdf24_01" style="left:17.8108em;top:19.1639em;"><span class="pdf24_28 pdf24_08 pdf24_29" style="word-spacing:0.0082em;">FOR CERTIFICATE OF OCCUPANCY &nbsp;</span></div>
@@ -668,37 +687,39 @@
 					<div class="pdf24_01" style="left:26.7608em;top:27.2064em;"><span class="pdf24_44 pdf24_08 pdf24_16">INSPECTION &nbsp;</span></div>
 					<div class="pdf24_01" style="left:33.9608em;top:27.2064em;"><span class="pdf24_44 pdf24_08 pdf24_46">CERTIFICATE &nbsp;</span></div>
 					<div class="pdf24_01" style="left:41.5483em;top:27.2064em;"><span class="pdf24_33 pdf24_08 pdf24_47">of &nbsp;</span></div>
-					<div class="pdf24_01" style="left:19.5858em;top:28.113em;"><span class="pdf24_22 pdf24_23 pdf24_48" style="word-spacing:-0.0052em;">&lt;Name of Establishment&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:19.5858em;top:28.113em;"><span class="pdf24_22 pdf24_23 pdf24_48 fsis-field" data-fsis="business_name" style="word-spacing:-0.0052em;" contenteditable="true">&lt;Name of Establishment&gt;</span></div>
 					<div class="pdf24_01" style="left:20.5108em;top:29.5486em;"><span class="pdf24_49 pdf24_08 pdf24_17" style="word-spacing:0.0014em;">(Name of Establishment) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:17.9183em;top:30.323em;z-index:1684;"><span class="pdf24_22 pdf24_23 pdf24_50" style="word-spacing:-0.0067em;">&lt;Name of Owner/ Representative&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:17.9183em;top:30.323em;z-index:1684;"><span class="pdf24_22 pdf24_23 pdf24_50 fsis-field" data-fsis="insp_owner" style="word-spacing:-0.0067em;" contenteditable="true">&lt;Name of Owner/ Representative&gt;</span></div>
 					<div class="pdf24_01" style="left:17.785em;top:30.6064em;"><span class="pdf24_33 pdf24_08 pdf24_51">______________________________ &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.1467em;top:30.6064em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:-0.0007em;">owned and managed by &nbsp;</span></div>
 					<div class="pdf24_01" style="left:37.565em;top:30.6064em;"><span class="pdf24_33 pdf24_08 pdf24_53" style="word-spacing:0.0002em;">with postal address at &nbsp;</span></div>
 					<div class="pdf24_01" style="left:19.4442em;top:31.7085em;"><span class="pdf24_49 pdf24_08 pdf24_17" style="word-spacing:0.0003em;">(Name of Owner/Representative) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:22.3542em;top:32.5897em;z-index:1693;"><span class="pdf24_22 pdf24_23 pdf24_36">&lt;Address&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:22.3542em;top:32.5897em;z-index:1693;"><span class="pdf24_22 pdf24_23 pdf24_36 fsis-field" data-fsis="insp_address" contenteditable="true">&lt;Address&gt;</span></div>
 					<div class="pdf24_01" style="left:17.7025em;top:32.7998em;"><span class="pdf24_33 pdf24_08 pdf24_51">______________________________ &nbsp;</span></div>
 					<div class="pdf24_01" style="left:22.9125em;top:33.9752em;"><span class="pdf24_49 pdf24_08 pdf24_54">(Address) &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:35.1414em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2729em;">is hereby </span><span class="pdf24_44 pdf24_08 pdf24_55" style="word-spacing:0.2917em;">GRANTED </span><span class="pdf24_33 pdf24_08 pdf24_56" style="word-spacing:0.2755em;">after said building structure</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5594em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2729em;">or facility has been duly inspected</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5601em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5596em;">with the finding</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2758em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2775em;">that it &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:36.2748em;"><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5544em;">has fully complied with</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2828em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_57" style="word-spacing:0.2784em;">the fire safety</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5484em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_58" style="word-spacing:0.5612em;">and protection requirements of the</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2825em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_48" style="word-spacing:0.2831em;">Fire Code of the Philippines of &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:37.4081em;"><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5586em;">2008 and its Revised Implementing Rules and Regulations. &nbsp;</span></div>
-					<div class="pdf24_01" style="left:21.585em;top:39.448em;"><span class="pdf24_22 pdf24_23 pdf24_59">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:21.585em;top:39.448em;"><span class="pdf24_22 pdf24_23 pdf24_59 fsis-field" data-fsis="fsic_valid_for" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:17.7775em;top:40.8835em;"><span class="pdf24_49 pdf24_08 pdf24_35">(Description) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:37.6567em;top:39.5147em;"><span class="pdf24_22 pdf24_23 pdf24_52">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:37.6567em;top:39.5147em;"><span class="pdf24_22 pdf24_23 pdf24_52 fsis-field" data-fsis="fsic_valid_until" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:5.3833em;top:39.6748em;"><span class="pdf24_33 pdf24_08 pdf24_50" style="word-spacing:-0.0007em;">This certification is valid for &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:39.6748em;"><span class="pdf24_33 pdf24_08 pdf24_60" style="word-spacing:0.004em;">valid until &nbsp;</span></div>
 					<div class="pdf24_01" style="left:5.3833em;top:44.2081em;"><span class="pdf24_33 pdf24_08 pdf24_48" style="word-spacing:0.5641em;">Violation of Fire Code provisions shall cause this certificate </span><span class="pdf24_61 pdf24_08 pdf24_62" style="word-spacing:0.554em;">null and void</span><span class="pdf24_61 pdf24_08 pdf24_35" style="word-spacing:0.7498em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_62" style="word-spacing:0.5537em;">after appropriate &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.1467em;top:45.3414em;"><span class="pdf24_33 pdf24_08 pdf24_25" style="word-spacing:0.2782em;">proceeding and shall hold the owner liable to the penalties provided for by the said Fire Code. &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:47.5914em;"><span class="pdf24_44 pdf24_08 pdf24_53" style="word-spacing:0.0024em;">Fire Code Fees: &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.9858em;top:48.5839em;"><span class="pdf24_22 pdf24_23 pdf24_25">&lt;Amount&gt; &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.1858em;top:49.7755em;"><span class="pdf24_22 pdf24_23 pdf24_63" style="word-spacing:-0.0089em;">&lt;OR Number&gt; &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.7192em;top:50.9672em;"><span class="pdf24_22 pdf24_23 pdf24_52">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:10em;top:48.5839em;"><span class="pdf24_22 pdf24_23 pdf24_25 fsis-field" data-fsis="fsic_fee_amount" contenteditable="true">&lt;Amount&gt;</span></div>
+					<div class="pdf24_01" style="left:10em;top:49.7755em;"><span class="pdf24_22 pdf24_23 pdf24_63 fsis-field" data-fsis="fsic_fee_or_number" style="word-spacing:-0.0089em;" contenteditable="true">&lt;OR Number&gt;</span></div>
+					<div class="pdf24_01" style="left:10em;top:50.9672em;"><span class="pdf24_22 pdf24_23 pdf24_52 fsis-field" data-fsis="fsic_fee_date" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:48.7273em;"><span class="pdf24_44 pdf24_08 pdf24_64" style="word-spacing:0.0077em;">RECOMMEND APPROVAL: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:48.7439em;"><span class="pdf24_33 pdf24_08 pdf24_65" style="word-spacing:-0.0018em;">Amount Paid: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:49.8439em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:-0.0036em;">O.R. Number: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:50.9439em;"><span class="pdf24_33 pdf24_08 pdf24_50">Date: &nbsp;</span></div>
+					<div class="pdf24_01" style="left:30.1208em;top:51.65em;"><span class="fsis-sign-line">&nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:50.9439em;"><span class="pdf24_44 pdf24_08 pdf24_53" style="word-spacing:0.001em;">SFO1 Cedric B Gamolo, BFP &nbsp;</span></div>
 					<div class="pdf24_01" style="left:29.6175em;top:52.1439em;"><span class="pdf24_33 pdf24_08 pdf24_66" style="word-spacing:-0.0039em;">CHIEF, Fire Safety Enforcement Section &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:54.3939em;"><span class="pdf24_44 pdf24_08 pdf24_67">APPROVED: &nbsp;</span></div>
+					<div class="pdf24_01" style="left:30.1208em;top:57.32em;"><span class="fsis-sign-line">&nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:56.6098em;"><span class="pdf24_44 pdf24_08 pdf24_24" style="word-spacing:0.0015em;">SFO3 Rafael I Corona Jr, BFP &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.7458em;top:57.8106em;"><span class="pdf24_33 pdf24_08 pdf24_37" style="word-spacing:0.0025em;">OIC, MUNICIPAL FIRE MARSHAL &nbsp;</span></div>
 					<div class="pdf24_01" style="left:5.2667em;top:60.3273em;"><span class="pdf24_69 pdf24_08 pdf24_48" style="word-spacing:0.0009em;">transferable. Any change in the use of occupancy of the premises shall require a new certificate." &nbsp;</span></div>
@@ -725,8 +746,11 @@
 					<div class="pdf24_01" style="left:18.16em;top:8.3197em;"><span class="pdf24_15 pdf24_08 pdf24_18" style="word-spacing:0.0008em;">MANOLO FORTICH FIRE STATION &nbsp;</span></div>
 					<div class="pdf24_01" style="left:18.3858em;top:9.5281em;"><span class="pdf24_15 pdf24_08 pdf24_19" style="word-spacing:-0.0055em;">Tankulan, Manolo Fortich, Bukidnon &nbsp;</span></div>
 					<div class="pdf24_01" style="left:10.6942em;top:10.7364em;"><span class="pdf24_15 pdf24_08 pdf24_20" style="word-spacing:-0.0042em;">Email: manolofortichfs_bfp10@yahoo.com/ Cellphone #: 09352307289 &nbsp;</span></div>
-					<div class="pdf24_01" style="left:2.3083em;top:13.0705em;"><span class="pdf24_21 pdf24_08 pdf24_19" style="word-spacing:-0.0047em;">FSIC NO. &nbsp;</span></div>
-					<div class="pdf24_01" style="left:36.2567em;top:13.4705em;"><span class="pdf24_22 pdf24_23 pdf24_24" style="word-spacing:-0.0158em;">&lt;DATE Now()&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:2.3083em;top:13.0705em;">
+						<span class="pdf24_21 pdf24_08 pdf24_19" style="word-spacing:-0.0047em;">FSIC NO. </span>
+						<span class="pdf24_21 pdf24_08 pdf24_19 fsis-field" data-fsis="fsic_number" contenteditable="true">&nbsp;</span>
+					</div>
+					<div class="pdf24_01" style="left:36.2567em;top:13.4705em;"><span class="pdf24_22 pdf24_23 pdf24_24 fsis-field" data-fsis="fsic_issue_date" style="word-spacing:-0.0158em;" contenteditable="true">&lt;DATE Now()&gt;</span></div>
 					<div class="pdf24_01" style="left:38.1808em;top:14.6964em;"><span class="pdf24_15 pdf24_08 pdf24_25">Date &nbsp;</span></div>
 					<div class="pdf24_01" style="left:8.2333em;top:16.9687em;"><span class="pdf24_26 pdf24_08 pdf24_27" style="word-spacing:0.0005em;">FIRE SAFETY INSPECTION CERTIFICATE &nbsp;</span></div>
 					<div class="pdf24_01" style="left:17.8108em;top:19.1639em;"><span class="pdf24_28 pdf24_08 pdf24_29" style="word-spacing:0.0082em;">FOR CERTIFICATE OF OCCUPANCY &nbsp;</span></div>
@@ -743,37 +767,39 @@
 					<div class="pdf24_01" style="left:26.7608em;top:27.2064em;"><span class="pdf24_44 pdf24_08 pdf24_16">INSPECTION &nbsp;</span></div>
 					<div class="pdf24_01" style="left:33.9608em;top:27.2064em;"><span class="pdf24_44 pdf24_08 pdf24_46">CERTIFICATE &nbsp;</span></div>
 					<div class="pdf24_01" style="left:41.5483em;top:27.2064em;"><span class="pdf24_33 pdf24_08 pdf24_47">of &nbsp;</span></div>
-					<div class="pdf24_01" style="left:19.5858em;top:28.113em;"><span class="pdf24_22 pdf24_23 pdf24_48" style="word-spacing:-0.0052em;">&lt;Name of Establishment&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:19.5858em;top:28.113em;"><span class="pdf24_22 pdf24_23 pdf24_48 fsis-field" data-fsis="business_name" style="word-spacing:-0.0052em;" contenteditable="true">&lt;Name of Establishment&gt;</span></div>
 					<div class="pdf24_01" style="left:20.5108em;top:29.5486em;"><span class="pdf24_49 pdf24_08 pdf24_17" style="word-spacing:0.0014em;">(Name of Establishment) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:17.9183em;top:30.323em;z-index:1683;"><span class="pdf24_22 pdf24_23 pdf24_50" style="word-spacing:-0.0067em;">&lt;Name of Owner/ Representative&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:17.9183em;top:30.323em;z-index:1683;"><span class="pdf24_22 pdf24_23 pdf24_50 fsis-field" data-fsis="insp_owner" style="word-spacing:-0.0067em;" contenteditable="true">&lt;Name of Owner/ Representative&gt;</span></div>
 					<div class="pdf24_01" style="left:17.785em;top:30.6064em;"><span class="pdf24_33 pdf24_08 pdf24_51">______________________________ &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.1467em;top:30.6064em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:-0.0007em;">owned and managed by &nbsp;</span></div>
 					<div class="pdf24_01" style="left:37.565em;top:30.6064em;"><span class="pdf24_33 pdf24_08 pdf24_53" style="word-spacing:0.0002em;">with postal address at &nbsp;</span></div>
 					<div class="pdf24_01" style="left:19.4442em;top:31.7085em;"><span class="pdf24_49 pdf24_08 pdf24_17" style="word-spacing:0.0003em;">(Name of Owner/Representative) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:22.3542em;top:32.5897em;z-index:1692;"><span class="pdf24_22 pdf24_23 pdf24_36">&lt;Address&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:22.3542em;top:32.5897em;z-index:1692;"><span class="pdf24_22 pdf24_23 pdf24_36 fsis-field" data-fsis="insp_address" contenteditable="true">&lt;Address&gt;</span></div>
 					<div class="pdf24_01" style="left:17.7025em;top:32.7998em;"><span class="pdf24_33 pdf24_08 pdf24_51">______________________________ &nbsp;</span></div>
 					<div class="pdf24_01" style="left:22.9125em;top:33.9752em;"><span class="pdf24_49 pdf24_08 pdf24_54">(Address) &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:35.1414em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2729em;">is hereby </span><span class="pdf24_44 pdf24_08 pdf24_55" style="word-spacing:0.2917em;">GRANTED </span><span class="pdf24_33 pdf24_08 pdf24_56" style="word-spacing:0.2755em;">after said building structure</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5594em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2729em;">or facility has been duly inspected</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5601em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5596em;">with the finding</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2758em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:0.2775em;">that it &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:36.2748em;"><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5544em;">has fully complied with</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2828em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_57" style="word-spacing:0.2784em;">the fire safety</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.5484em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_58" style="word-spacing:0.5612em;">and protection requirements of the</span><span class="pdf24_33 pdf24_08 pdf24_35" style="word-spacing:0.2825em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_48" style="word-spacing:0.2831em;">Fire Code of the Philippines of &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:37.4081em;"><span class="pdf24_33 pdf24_08 pdf24_16" style="word-spacing:0.5586em;">2008 and its Revised Implementing Rules and Regulations. &nbsp;</span></div>
-					<div class="pdf24_01" style="left:21.585em;top:39.448em;"><span class="pdf24_22 pdf24_23 pdf24_59">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:21.585em;top:39.448em;"><span class="pdf24_22 pdf24_23 pdf24_59 fsis-field" data-fsis="fsic_valid_for" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:17.7775em;top:40.8835em;"><span class="pdf24_49 pdf24_08 pdf24_35">(Description) &nbsp;</span></div>
-					<div class="pdf24_01" style="left:37.6567em;top:39.5147em;"><span class="pdf24_22 pdf24_23 pdf24_52">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:37.6567em;top:39.5147em;"><span class="pdf24_22 pdf24_23 pdf24_52 fsis-field" data-fsis="fsic_valid_until" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:5.3833em;top:39.6748em;"><span class="pdf24_33 pdf24_08 pdf24_50" style="word-spacing:-0.0007em;">This certification is valid for &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:39.6748em;"><span class="pdf24_33 pdf24_08 pdf24_60" style="word-spacing:0.004em;">valid until &nbsp;</span></div>
 					<div class="pdf24_01" style="left:5.3833em;top:44.2081em;"><span class="pdf24_33 pdf24_08 pdf24_48" style="word-spacing:0.5641em;">Violation of Fire Code provisions shall cause this certificate </span><span class="pdf24_61 pdf24_08 pdf24_62" style="word-spacing:0.554em;">null and void</span><span class="pdf24_61 pdf24_08 pdf24_35" style="word-spacing:0.7498em;">&nbsp;</span><span class="pdf24_33 pdf24_08 pdf24_62" style="word-spacing:0.5537em;">after appropriate &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.1467em;top:45.3414em;"><span class="pdf24_33 pdf24_08 pdf24_25" style="word-spacing:0.2782em;">proceeding and shall hold the owner liable to the penalties provided for by the said Fire Code. &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:47.5914em;"><span class="pdf24_44 pdf24_08 pdf24_53" style="word-spacing:0.0024em;">Fire Code Fees: &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.9858em;top:48.5839em;"><span class="pdf24_22 pdf24_23 pdf24_25">&lt;Amount&gt; &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.1858em;top:49.7755em;"><span class="pdf24_22 pdf24_23 pdf24_63" style="word-spacing:-0.0089em;">&lt;OR Number&gt; &nbsp;</span></div>
-					<div class="pdf24_01" style="left:11.7192em;top:50.9672em;"><span class="pdf24_22 pdf24_23 pdf24_52">&lt;DATE&gt; &nbsp;</span></div>
+					<div class="pdf24_01" style="left:10em;top:48.5839em;"><span class="pdf24_22 pdf24_23 pdf24_25 fsis-field" data-fsis="fsic_fee_amount" contenteditable="true">&lt;Amount&gt;</span></div>
+					<div class="pdf24_01" style="left:10em;top:49.7755em;"><span class="pdf24_22 pdf24_23 pdf24_63 fsis-field" data-fsis="fsic_fee_or_number" style="word-spacing:-0.0089em;" contenteditable="true">&lt;OR Number&gt;</span></div>
+					<div class="pdf24_01" style="left:10em;top:50.9672em;"><span class="pdf24_22 pdf24_23 pdf24_52 fsis-field" data-fsis="fsic_fee_date" contenteditable="true">&lt;DATE&gt;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:48.7273em;"><span class="pdf24_44 pdf24_08 pdf24_64" style="word-spacing:0.0077em;">RECOMMEND APPROVAL: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:48.7439em;"><span class="pdf24_33 pdf24_08 pdf24_65" style="word-spacing:-0.0018em;">Amount Paid: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:49.8439em;"><span class="pdf24_33 pdf24_08 pdf24_52" style="word-spacing:-0.0036em;">O.R. Number: &nbsp;</span></div>
 					<div class="pdf24_01" style="left:2.2333em;top:50.9439em;"><span class="pdf24_33 pdf24_08 pdf24_50">Date: &nbsp;</span></div>
+					<div class="pdf24_01" style="left:30.1208em;top:51.65em;"><span class="fsis-sign-line">&nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:50.9439em;"><span class="pdf24_44 pdf24_08 pdf24_53" style="word-spacing:0.001em;">SFO1 Cedric B Gamolo, BFP &nbsp;</span></div>
 					<div class="pdf24_01" style="left:29.6175em;top:52.1439em;"><span class="pdf24_33 pdf24_08 pdf24_66" style="word-spacing:-0.0039em;">CHIEF, Fire Safety Enforcement Section &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:54.3939em;"><span class="pdf24_44 pdf24_08 pdf24_67">APPROVED: &nbsp;</span></div>
+					<div class="pdf24_01" style="left:30.1208em;top:57.32em;"><span class="fsis-sign-line">&nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.1208em;top:56.6098em;"><span class="pdf24_44 pdf24_08 pdf24_24" style="word-spacing:0.0015em;">SFO3 Rafael I Corona Jr, BFP &nbsp;</span></div>
 					<div class="pdf24_01" style="left:30.7458em;top:57.8106em;"><span class="pdf24_33 pdf24_08 pdf24_37" style="word-spacing:0.0025em;">OIC, MUNICIPAL FIRE MARSHAL &nbsp;</span></div>
 					<div class="pdf24_01" style="left:5.2667em;top:60.3273em;"><span class="pdf24_69 pdf24_08 pdf24_48" style="word-spacing:0.0009em;">transferable. Any change in the use of occupancy of the premises shall require a new certificate." &nbsp;</span></div>
@@ -786,5 +812,357 @@
 				</div>
 			</div>
 		</div>
+	<script>
+		// Fill the <...> placeholders with real data from the selected inspection record.
+		(function () {
+			function safeParse(json) {
+				try {
+					return JSON.parse(json);
+				} catch {
+					return null;
+				}
+			}
+
+			// The main app sets this before opening the clearance window.
+			var entry = safeParse(sessionStorage.getItem("fsis.clearance.current") || "");
+			if (!entry) return;
+
+			function setTextOnAllMatching(predicate, value) {
+				var spans = document.querySelectorAll("span");
+				for (var i = 0; i < spans.length; i++) {
+					var s = spans[i];
+					if (!predicate(s)) continue;
+					s.textContent = value || "";
+				}
+			}
+
+			function setTextOnAllFields(fieldName, value) {
+				var els = document.querySelectorAll('[data-fsis="' + fieldName + '"]');
+				for (var i = 0; i < els.length; i++) {
+					els[i].textContent = value || "";
+				}
+			}
+
+			function formatDateISOToLong(iso) {
+				if (!iso) return "";
+				var s = String(iso).trim();
+				if (!s) return "";
+				// Already YYYY-MM-DD
+				if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+					try {
+						return new Date(s + "T00:00:00").toLocaleDateString("en-PH", {
+							year: "numeric",
+							month: "long",
+							day: "numeric",
+						});
+					} catch {
+						return s;
+					}
+				}
+				var d = new Date(s);
+				if (isNaN(d.getTime())) return s;
+				return d.toLocaleDateString("en-PH", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+				});
+			}
+
+			function buildDisplayAddress(entry) {
+				var addrLine = entry.addr_line || "";
+				var addrBarangay = entry.addr_barangay || "";
+				var fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
+
+				if ((!addrLine || !addrBarangay) && fullAddr) {
+					var parts = fullAddr.split(/,\s*/);
+					if (parts.length >= 5) {
+						addrLine = addrLine || parts[4].trim();
+						addrBarangay =
+							addrBarangay ||
+							(parts[3] || "")
+								.replace(/^Barangay\s+/i, "")
+								.trim();
+					}
+				}
+
+				var addressParts = [
+					addrLine,
+					addrBarangay ? "Barangay " + addrBarangay : "",
+					"Manolo Fortich",
+					"Bukidnon",
+					"Region X",
+				].filter(Boolean);
+
+				return addressParts.length ? addressParts.join(", ") : fullAddr;
+			}
+
+			var businessName = (entry.business_name || "").toString().trim();
+			var ownerName = (entry.insp_owner || "").toString().trim();
+			var address = buildDisplayAddress(entry || {});
+
+			var nowString = new Date().toLocaleDateString("en-PH", {
+				year: "numeric",
+				month: "long",
+				day: "numeric",
+			});
+
+			// Prefer explicit data-bound fields (data-fsis="...") so edits map to DB columns.
+			setTextOnAllFields("fsic_number", (entry.fsic_number || "").toString().trim());
+			setTextOnAllFields("fsic_issue_date", nowString);
+			setTextOnAllFields("business_name", businessName);
+			setTextOnAllFields("insp_owner", ownerName);
+			setTextOnAllFields("insp_address", address);
+
+			// All "<DATE Now()>" placeholders: use today's date (issuance date).
+			setTextOnAllMatching(
+				function (s) {
+					return (s.textContent || "").indexOf("<DATE Now()>") !== -1;
+				},
+				nowString
+			);
+
+			// Establishment name (fallback for older templates).
+			setTextOnAllMatching(
+				function (s) {
+					return (s.textContent || "").indexOf("<Name of Establishment>") !== -1;
+				},
+				businessName
+			);
+
+			// Owner / representative (fallback for older templates).
+			setTextOnAllMatching(
+				function (s) {
+					return (s.textContent || "").indexOf("<Name of Owner/ Representative>") !== -1;
+				},
+				ownerName
+			);
+
+			// Postal address (fallback for older templates).
+			setTextOnAllMatching(
+				function (s) {
+					return (s.textContent || "").indexOf("<Address>") !== -1;
+				},
+				address
+			);
+
+			// Validity period and dates.
+			var validFor = (entry.fsic_valid_for || "").toString().trim();
+			var validUntil = formatDateISOToLong(entry.fsic_valid_until || "");
+			setTextOnAllFields("fsic_valid_for", validFor);
+			setTextOnAllFields("fsic_valid_until", validUntil);
+
+			// First "<DATE>" next to "This certification is valid for" – show the period text.
+			var seenValidFor = false;
+			setTextOnAllMatching(
+				function (s) {
+					var t = s.textContent || "";
+					if (t.indexOf("<DATE>") === -1) return false;
+					if (seenValidFor) return false;
+					seenValidFor = true;
+					return true;
+				},
+				validFor
+			);
+
+			// Second "<DATE>" next to "valid until" – show the end date.
+			var seenValidUntil = false;
+			setTextOnAllMatching(
+				function (s) {
+					var t = s.textContent || "";
+					if (t.indexOf("<DATE>") === -1) return false;
+					// Skip the first "<DATE>" we already used for "valid for".
+					if (!seenValidUntil) {
+						if (seenValidFor) {
+							seenValidUntil = true;
+							return true;
+						}
+						return false;
+					}
+					return false;
+				},
+				validUntil
+			);
+
+			// Remaining "<DATE>"s (by the Fire Code fee section) – use the OR date, if provided.
+			var orDate = formatDateISOToLong(entry.fsic_fee_date || "");
+			setTextOnAllFields("fsic_fee_date", orDate);
+			setTextOnAllMatching(
+				function (s) {
+					var t = s.textContent || "";
+					if (t.indexOf("<DATE>") === -1) return false;
+					// We've already consumed two for "valid for" and "valid until".
+					if (!seenValidFor || !seenValidUntil) return false;
+					return true;
+				},
+				orDate
+			);
+
+			// Fire Code fee amount.
+			var amountText = "";
+			if (entry.fsic_fee_amount != null && entry.fsic_fee_amount !== "") {
+				var n = Number(
+					typeof entry.fsic_fee_amount === "number"
+						? entry.fsic_fee_amount
+						: String(entry.fsic_fee_amount).replace(/,/g, "")
+				);
+				if (isFinite(n)) {
+					amountText =
+						"₱ " +
+						n.toLocaleString("en-PH", {
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2,
+						});
+				}
+			}
+			setTextOnAllMatching(
+				function (s) {
+					return (s.textContent || "").indexOf("<Amount>") !== -1;
+				},
+				amountText
+			);
+			setTextOnAllFields("fsic_fee_amount", amountText);
+
+			// OR number.
+			setTextOnAllMatching(
+				function (s) {
+					return (s.textContent || "").indexOf("<OR Number>") !== -1;
+				},
+				(entry.fsic_fee_or_number || "").toString().trim()
+			);
+			setTextOnAllFields(
+				"fsic_fee_or_number",
+				(entry.fsic_fee_or_number || "").toString().trim()
+			);
+		})();
+	</script>
+	<script>
+		// Replace the embedded base64 background images on all pages.
+		(function () {
+			var imgs = document.querySelectorAll('.pdf24_03 > img');
+			for (var i = 0; i < imgs.length; i++) {
+				imgs[i].src = 'fire_clearance_bg.png';
+			}
+		})();
+	</script>
+	<script>
+		// Save edited clearance fields back to the logbook (and DB via home.js).
+		(function () {
+			function safeParse(json) {
+				try {
+					return JSON.parse(json);
+				} catch {
+					return null;
+				}
+			}
+
+			var entry = safeParse(sessionStorage.getItem("fsis.clearance.current") || "");
+			if (!entry) return;
+
+			function normalizeText(s) {
+				return String(s || "").replace(/\u00A0/g, " ").trim();
+			}
+
+			function getByField(name) {
+				var el = document.querySelector('[data-fsis="' + name + '"]');
+				return el ? normalizeText(el.textContent) : "";
+			}
+
+			function showInlineNotice(msg) {
+				var el = document.getElementById("fsisSaveStatus");
+				if (!el) return;
+				el.textContent = msg;
+				el.style.display = msg ? "block" : "none";
+			}
+
+			function sendSave() {
+				var payload = {
+					// Core inspection fields (keep consistent with the record)
+					business_name: getByField("business_name"),
+					owner_name: getByField("insp_owner"),
+					address: getByField("insp_address"),
+
+					// Keep these synced with columns in inspection_logbook
+					fsic_number: getByField("fsic_number"),
+					fsic_valid_for: getByField("fsic_valid_for"),
+					fsic_valid_until: getByField("fsic_valid_until"),
+					fsic_fee_amount: getByField("fsic_fee_amount"),
+					fsic_fee_or_number: getByField("fsic_fee_or_number"),
+					fsic_fee_date: getByField("fsic_fee_date"),
+					// optional (not currently rendered as explicit fields on the template)
+					fsic_purpose: entry.fsic_purpose || null,
+					fsic_permit_type: entry.fsic_permit_type || null,
+				};
+
+				try {
+					window.opener?.postMessage(
+						{
+							type: "fsis_clearance_save",
+							entryId: entry.id || null,
+							io_number: entry.io_number || null,
+							payload: payload,
+						},
+						"*"
+					);
+					showInlineNotice("Saving…");
+				} catch (err) {
+					showInlineNotice("Save failed: " + (err?.message || err));
+				}
+			}
+
+			// Add a small fixed save button (print-safe).
+			var btn = document.createElement("button");
+			btn.type = "button";
+			btn.id = "fsisSaveBtn";
+			btn.textContent = "Save";
+			btn.style.position = "fixed";
+			btn.style.right = "16px";
+			btn.style.bottom = "16px";
+			btn.style.zIndex = "9999";
+			btn.style.padding = "10px 14px";
+			btn.style.borderRadius = "10px";
+			btn.style.border = "1px solid rgba(0,0,0,0.25)";
+			btn.style.background = "#0D1B2A";
+			btn.style.color = "#fff";
+			btn.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+			btn.style.fontSize = "14px";
+			btn.style.cursor = "pointer";
+			btn.onclick = sendSave;
+
+			var status = document.createElement("div");
+			status.id = "fsisSaveStatus";
+			status.style.position = "fixed";
+			status.style.right = "16px";
+			status.style.bottom = "58px";
+			status.style.zIndex = "9999";
+			status.style.maxWidth = "280px";
+			status.style.padding = "8px 10px";
+			status.style.borderRadius = "10px";
+			status.style.border = "1px solid rgba(0,0,0,0.12)";
+			status.style.background = "rgba(255,255,255,0.95)";
+			status.style.color = "#111827";
+			status.style.fontFamily = btn.style.fontFamily;
+			status.style.fontSize = "12px";
+			status.style.display = "none";
+
+			document.body.appendChild(btn);
+			document.body.appendChild(status);
+
+			window.addEventListener("message", function (ev) {
+				var d = ev?.data;
+				if (!d || d.type !== "fsis_clearance_save_result") return;
+				if (d.ok) showInlineNotice("Saved.");
+				else showInlineNotice("Save failed: " + (d.message || ""));
+				setTimeout(function () {
+					showInlineNotice("");
+				}, 2000);
+			});
+
+			// Hide controls in print.
+			var style = document.createElement("style");
+			style.textContent =
+				"@media print { #fsisSaveBtn, #fsisSaveStatus { display: none !important; } }";
+			document.head.appendChild(style);
+		})();
+	</script>
 	</body>
 </html>
