@@ -940,6 +940,16 @@
                   Open in Google Maps
                 </a>
               </dd>
+              <dt>Logbook</dt>
+              <dd>
+                <button
+                  type="button"
+                  id="map-detail-view-logbook"
+                  class="map-detail-action-btn"
+                >
+                  View in Inspection logbook
+                </button>
+              </dd>
             </dl>
           </div>
         </div>
@@ -1217,6 +1227,34 @@
     </div>
     <div class="home-embed">
       <div id="inspection_list">
+      <div class="table-controls" aria-label="Inspection filters">
+        <div class="control">
+          <label for="inspection-filter-q">Search</label>
+          <input id="inspection-filter-q" type="search" placeholder="Search IO, owner, business, address, FSIC, inspector">
+        </div>
+        <div class="control">
+          <label for="inspection-filter-barangay">Barangay</label>
+          <select id="inspection-filter-barangay" aria-label="Filter by barangay">
+            <option value="">All barangays</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="inspection-filter-personnel">Personnel</label>
+          <select id="inspection-filter-personnel" aria-label="Filter by personnel">
+            <option value="">All personnel</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="inspection-filter-from">From</label>
+          <input id="inspection-filter-from" type="date">
+        </div>
+        <div class="control">
+          <label for="inspection-filter-to">To</label>
+          <input id="inspection-filter-to" type="date">
+        </div>
+        <div class="spacer"></div>
+        <button type="button" class="btn btn-cancel" onclick="inspectionClearFilters()">Clear</button>
+      </div>
       <!-- Inspection Logbook Panel -->
       <div class="logbook-panel visible" id="panel-inspection">
         <div class="print-header">
@@ -1232,22 +1270,6 @@
             Inspection Logbook
           </div>
           <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
-        </div>
-        <div class="table-controls" aria-label="Inspection filters">
-          <div class="control">
-            <label for="inspection-filter-q">Search</label>
-            <input id="inspection-filter-q" type="search" placeholder="Search IO, owner, business, address, FSIC, inspector">
-          </div>
-          <div class="control">
-            <label for="inspection-filter-from">From</label>
-            <input id="inspection-filter-from" type="date">
-          </div>
-          <div class="control">
-            <label for="inspection-filter-to">To</label>
-            <input id="inspection-filter-to" type="date">
-          </div>
-          <div class="spacer"></div>
-          <button type="button" class="btn btn-cancel" onclick="inspectionClearFilters()">Clear</button>
         </div>
         <div class="table-wrap">
           <table id="table-inspection">
@@ -1281,6 +1303,7 @@
             <span>Pending photos</span>
             Inspected buildings without photo
           </div>
+          <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
         </div>
         <div class="table-wrap">
           <table id="table-inspection-nophoto">

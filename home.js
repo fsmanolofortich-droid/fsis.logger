@@ -76,7 +76,7 @@ const BARANGAYS = [
 const FIRE_PERSONNEL_META = [
   { name: "SF03 Rafael I. Corona Jr", rank: "SF03", position: "Acting Municipal Fire Marshal" },
   { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01", position: "OIC, Administrative Section / Building Inspector" },
-  { name: "SF01 Cedric B. Mamalao", rank: "SF01", position: "OIC, Fire Safety Enforcement Section" },
+  { name: "SF01 Cedric B. Gamolo", rank: "SF01", position: "OIC, Fire Safety Enforcement Section" },
   { name: "FO3 Rey Edward S. Descallar", rank: "FO3", position: "CRU Staff / EMS / Medical First Responder" },
   { name: "FO3 Jun Ray D. Abarquez", rank: "FO3", position: "Building Inspector / Assessor / Plan Evaluator" },
   { name: "FO3 Clyde Q. Rejas", rank: "FO3", position: "Building Inspector" },
@@ -387,6 +387,8 @@ function populateModalDropdowns() {
   fillSelect("inspection_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
   fillSelect("conveyance_inspector_select", FIRE_PERSONNEL, "Select inspector");
   fillSelect("occupancy_inspector_select", FIRE_PERSONNEL, "Select inspector");
+  fillSelect("inspection-filter-barangay", BARANGAYS, "All barangays");
+  fillSelect("inspection-filter-personnel", FIRE_PERSONNEL, "All personnel");
 
   // Auto-fill rank/position when fire personnel is selected
   bindInspectionPersonnelAutoFill();
@@ -630,7 +632,13 @@ function initTableFilters() {
   };
 
   bind(
-    ["inspection-filter-q", "inspection-filter-from", "inspection-filter-to"],
+    [
+      "inspection-filter-q",
+      "inspection-filter-barangay",
+      "inspection-filter-personnel",
+      "inspection-filter-from",
+      "inspection-filter-to",
+    ],
     () => inspectionRenderTable()
   );
   bind(["fsec-filter-q", "fsec-filter-from", "fsec-filter-to"], () =>
@@ -770,6 +778,8 @@ function inspectionRenderTable() {
   let noLocationCount = 0;
 
   const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
+  const brgy = (document.getElementById("inspection-filter-barangay")?.value || "").trim();
+  const personnel = (document.getElementById("inspection-filter-personnel")?.value || "").trim();
   const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
   const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
 
@@ -778,6 +788,14 @@ function inspectionRenderTable() {
     .filter(({ row }) => {
       if (from || to) {
         if (!inDateRange(row.date_inspected, from, to)) return false;
+      }
+      if (brgy) {
+        const rowBrgy = (row.addr_barangay || "").toString().trim();
+        if (rowBrgy !== brgy) return false;
+      }
+      if (personnel) {
+        const rowP = (row.inspected_by || "").toString().trim();
+        if (rowP !== personnel) return false;
       }
       if (!q) return true;
       const hay = normalizeQuery(
@@ -817,6 +835,7 @@ function inspectionRenderTable() {
       if (hasLocation) {
         withLocationCount++;
         const tr = document.createElement("tr");
+        tr.id = `inspection-row-${idx}`;
         tr.innerHTML = `
           ${baseRowHtml}
           <td class="col-action" data-label="Action">
@@ -838,6 +857,7 @@ function inspectionRenderTable() {
         noLocationCount++;
         if (tbodyNoPhoto) {
           const tr2 = document.createElement("tr");
+          tr2.id = `inspection-row-${idx}`;
           tr2.innerHTML = `
             ${baseRowHtml}
             <td class="col-action" data-label="Action">
@@ -1471,9 +1491,13 @@ function inspectionSetPrintDate() {
 
 function inspectionClearFilters() {
   const q = document.getElementById("inspection-filter-q");
+  const brgy = document.getElementById("inspection-filter-barangay");
+  const personnel = document.getElementById("inspection-filter-personnel");
   const from = document.getElementById("inspection-filter-from");
   const to = document.getElementById("inspection-filter-to");
   if (q) q.value = "";
+  if (brgy) brgy.value = "";
+  if (personnel) personnel.value = "";
   if (from) from.value = "";
   if (to) to.value = "";
   inspectionRenderTable();
@@ -1493,6 +1517,7 @@ function openInspectionDetailPanel(entry) {
   const photoImg = document.getElementById("map-detail-photo");
   const directionsLink = document.getElementById("map-detail-directions");
   const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
+  const viewBtn = document.getElementById("map-detail-view-logbook");
 
   if (businessEl) {
     businessEl.textContent =
@@ -1564,6 +1589,10 @@ function openInspectionDetailPanel(entry) {
     }
   }
 
+  if (viewBtn) {
+    viewBtn.onclick = () => viewInspectionInLogbook(entry);
+  }
+
   if (photoWrap && photoImg) {
     if (entry.photo_url) {
       photoImg.src = entry.photo_url;
@@ -1578,6 +1607,38 @@ function openInspectionDetailPanel(entry) {
 
   panel.classList.add("is-open");
   panel.setAttribute("aria-hidden", "false");
+}
+
+function viewInspectionInLogbook(entry) {
+  // Go to Inspection view and focus the matching entry.
+  showView("inspection");
+  if (getCurrentView() !== "inspection") window.location.hash = "inspection";
+
+  // Prefill filters to narrow results to the selected entry.
+  const qEl = document.getElementById("inspection-filter-q");
+  if (qEl) qEl.value = (entry.io_number || entry.business_name || "").trim();
+
+  const brgyEl = document.getElementById("inspection-filter-barangay");
+  if (brgyEl) brgyEl.value = (entry.addr_barangay || "").trim();
+
+  const pEl = document.getElementById("inspection-filter-personnel");
+  if (pEl) pEl.value = (entry.inspected_by || "").trim();
+
+  setInspectionTab(entry.lat != null && entry.lng != null ? "with-location" : "no-location");
+  inspectionRenderTable();
+
+  const idx = inspectionData.findIndex((r) => {
+    if (entry.id && r.id) return r.id === entry.id;
+    if (entry.io_number && r.io_number) return r.io_number === entry.io_number;
+    return false;
+  });
+  if (idx < 0) return;
+
+  const rowEl = document.getElementById(`inspection-row-${idx}`);
+  if (!rowEl) return;
+  rowEl.classList.add("row-highlight");
+  rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
 }
 
 function closeInspectionDetailPanel() {

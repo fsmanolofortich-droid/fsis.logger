@@ -216,7 +216,10 @@ main {
 }
 
 .table-controls input[type="search"],
-.table-controls input[type="date"] {
+.table-controls input[type="date"],
+.table-controls select {
+  -webkit-appearance: none;
+  appearance: none;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid rgba(13, 27, 42, 0.14);
@@ -227,9 +230,20 @@ main {
 }
 
 .table-controls input[type="search"]:focus-visible,
-.table-controls input[type="date"]:focus-visible {
+.table-controls input[type="date"]:focus-visible,
+.table-controls select:focus-visible {
   outline: 2px solid rgba(212, 168, 67, 0.8);
   outline-offset: 2px;
+}
+
+.table-controls select {
+  cursor: pointer;
+  padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, rgba(13, 27, 42, 0.65) 50%),
+    linear-gradient(135deg, rgba(13, 27, 42, 0.65) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .table-controls .spacer {
@@ -473,6 +487,12 @@ tr:hover td { background: #FAFAF8; }
   white-space: nowrap;
 }
 .btn-add-inline:hover { background: var(--navy-mid); }
+
+.row-highlight {
+  outline: 2px solid rgba(13, 27, 42, 0.35);
+  outline-offset: -2px;
+  background: rgba(13, 27, 42, 0.06);
+}
 
 .modal .form-group label {
   font-size: 0.72rem;
