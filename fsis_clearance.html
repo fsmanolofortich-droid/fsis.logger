@@ -1625,54 +1625,23 @@
 			}
 
 			function sendSave() {
-				// Only send fields that actually changed from the original `entry`.
-				// This prevents unrelated columns from being overwritten in the DB.
-				function normalizeDate(value) {
-					var s = normalizeText(value);
-					if (!s) return "";
-					// If already ISO date, keep it
-					if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-					var dt = new Date(s);
-					if (isNaN(dt.getTime())) return s; // fallback: compare raw
-					return dt.toISOString().slice(0, 10);
-				}
+				var payload = {
+					// Core inspection fields (keep consistent with the record)
+					business_name: getByField("business_name"),
+					owner_name: getByField("insp_owner"),
+					address: getByField("insp_address"),
 
-				function normalizeAmount(value) {
-					var s = normalizeText(value);
-					if (!s) return "";
-					s = s.replace(/,/g, "");
-					var n = Number(s);
-					return isFinite(n) ? String(n) : s; // fallback: compare raw
-				}
-
-				function setIfChanged(outKey, newVal, oldVal, normalizer) {
-					var norm = normalizer || function (v) { return normalizeText(v); };
-					var a = norm(newVal);
-					var b = norm(oldVal);
-					if (a !== b) payload[outKey] = newVal;
-				}
-
-				var payload = {};
-
-				// Core inspection fields (keep consistent with the record)
-				setIfChanged("business_name", getByField("business_name"), entry.business_name);
-				// Template uses insp_owner/insp_address display fields; DB columns are owner_name/address.
-				setIfChanged("owner_name", getByField("insp_owner"), entry.insp_owner);
-				setIfChanged("address", getByField("insp_address"), entry.insp_address);
-
-				// Keep these synced with columns in inspection_logbook
-				setIfChanged("fsic_number", getByField("fsic_number"), entry.fsic_number);
-				setIfChanged("fsic_valid_from", getByField("fsic_valid_from"), entry.fsic_valid_from, normalizeDate);
-				setIfChanged("fsic_valid_until", getByField("fsic_valid_until"), entry.fsic_valid_until, normalizeDate);
-				setIfChanged("fsic_fee_amount", getByField("fsic_fee_amount"), entry.fsic_fee_amount, normalizeAmount);
-				setIfChanged("fsic_fee_or_number", getByField("fsic_fee_or_number"), entry.fsic_fee_or_number);
-				setIfChanged("fsic_fee_date", getByField("fsic_fee_date"), entry.fsic_fee_date, normalizeDate);
-
-				// If nothing changed, just exit quietly.
-				if (!Object.keys(payload).length) {
-					showInlineNotice("No changes to save.");
-					return;
-				}
+					// Keep these synced with columns in inspection_logbook
+					fsic_number: getByField("fsic_number"),
+					fsic_valid_from: getByField("fsic_valid_from"),
+					fsic_valid_until: getByField("fsic_valid_until"),
+					fsic_fee_amount: getByField("fsic_fee_amount"),
+					fsic_fee_or_number: getByField("fsic_fee_or_number"),
+					fsic_fee_date: getByField("fsic_fee_date"),
+					// optional (not currently rendered as explicit fields on the template)
+					fsic_purpose: entry.fsic_purpose || null,
+					fsic_permit_type: entry.fsic_permit_type || null,
+				};
 
 				try {
 					window.opener?.postMessage(
