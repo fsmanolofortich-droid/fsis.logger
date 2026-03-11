@@ -533,38 +533,6 @@ tr:hover td { background: #FAFAF8; }
 
 .modal textarea { resize: vertical; min-height: 72px; }
 
-.input-prefix {
-  display: flex;
-  align-items: stretch;
-}
-.input-prefix-label {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 12px;
-  border: 1px solid #e2e0dc;
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  background: #f5f4f2;
-  color: var(--text-mid);
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  font-size: 0.85rem;
-}
-.modal .input-prefix input {
-  border-radius: 0 8px 8px 0;
-}
-.modal .input-prefix input:focus {
-  box-shadow: none;
-}
-.modal .input-prefix:has(input:focus) .input-prefix-label {
-  border-color: var(--navy);
-}
-.modal .input-prefix:has(input:focus) input {
-  border-color: var(--navy);
-  box-shadow: 0 0 0 3px rgba(13, 27, 42, 0.06);
-  background: var(--white);
-}
-
 .modal-footer {
   padding: 16px 28px 24px;
   display: flex;
