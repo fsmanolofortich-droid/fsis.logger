@@ -1693,59 +1693,109 @@ function closeInspectionDetailPanel() {
 }
 
 function initInspectionPhotoExif() {
-  const input = document.getElementById("inspection_photo");
-  if (!input || !window.EXIF) return;
+  const inputCamera = document.getElementById("inspection_photo");
+  const inputLibrary = document.getElementById("inspection_photo_library");
+  if (!inputCamera && !inputLibrary) return;
 
-  input.addEventListener("change", () => {
+  async function readGpsFromFile(file) {
+    // Prefer exifr (reads EXIF directly from File; works better on iPhone/HEIC).
+    const exifr = window.exifr;
+    if (exifr?.gps) {
+      try {
+        const gps = await exifr.gps(file);
+        if (gps?.latitude != null && gps?.longitude != null) {
+          return { lat: gps.latitude, lng: gps.longitude };
+        }
+      } catch (e) {
+        console.warn("exifr gps read failed:", e);
+      }
+    }
+
+    // Fallback to exif-js using an Image element (works for many JPEGs).
+    if (window.EXIF && window.FileReader) {
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = () => reject(new Error("FileReader failed"));
+          r.readAsDataURL(file);
+        });
+
+        if (typeof dataUrl !== "string") return null;
+        const img = new Image();
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+          img.src = dataUrl;
+        });
+
+        return await new Promise((resolve) => {
+          try {
+            window.EXIF.getData(img, function () {
+              const lat = window.EXIF.getTag(this, "GPSLatitude");
+              const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
+              const lng = window.EXIF.getTag(this, "GPSLongitude");
+              const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
+              if (lat && lng && latRef && lngRef) {
+                resolve({ lat: dmsToDecimal(lat, latRef), lng: dmsToDecimal(lng, lngRef) });
+              } else {
+                resolve(null);
+              }
+            });
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      } catch (e) {
+        console.warn("exif-js gps read failed:", e);
+      }
+    }
+
+    return null;
+  }
+
+  async function onPhotoChange(sourceInput) {
+    const file = sourceInput?.files?.[0];
+    if (!file) return;
+
+    // Reset extracted photo/exif state.
     currentExifLat = null;
     currentExifLng = null;
     currentExifPreviewUrl = null;
     currentExifTakenAt = null;
-    currentExifFile = null;
-
-    const file = input.files && input.files[0];
-    if (!file) return;
     currentExifFile = file;
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const dataUrl = e.target?.result;
-      if (typeof dataUrl === "string") {
-        currentExifPreviewUrl = dataUrl;
+    // Clear the other input so only one is active.
+    if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
+    if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
+
+    // Set preview URL (for immediate UI feedback); upload uses the File.
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = () => reject(new Error("FileReader failed"));
+        r.readAsDataURL(file);
+      });
+      if (typeof dataUrl === "string") currentExifPreviewUrl = dataUrl;
+    } catch (e) {
+      console.warn("Preview read failed:", e);
+    }
+
+    // Read GPS from EXIF if present.
+    try {
+      const gps = await readGpsFromFile(file);
+      if (gps) {
+        currentExifLat = gps.lat;
+        currentExifLng = gps.lng;
       }
+    } catch (e) {
+      console.warn("GPS read failed:", e);
+    }
+  }
 
-      const img = new Image();
-      img.onload = function () {
-        try {
-          window.EXIF.getData(img, function () {
-            const lat = window.EXIF.getTag(this, "GPSLatitude");
-            const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
-            const lng = window.EXIF.getTag(this, "GPSLongitude");
-            const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
-            const takenAt = window.EXIF.getTag(this, "DateTimeOriginal");
-            // Note: iPhone gallery photos (or shared photos) may not include GPS EXIF.
-
-            if (takenAt) {
-              currentExifTakenAt = takenAt;
-            }
-
-            if (lat && lng && latRef && lngRef) {
-              currentExifLat = dmsToDecimal(lat, latRef);
-              currentExifLng = dmsToDecimal(lng, lngRef);
-            } else {
-              currentExifLat = null;
-              currentExifLng = null;
-              // We'll fall back to device geolocation when saving if available.
-            }
-          });
-        } catch (err) {
-          console.error("Failed to read EXIF data", err);
-        }
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
-  });
+  inputCamera?.addEventListener("change", () => void onPhotoChange(inputCamera));
+  inputLibrary?.addEventListener("change", () => void onPhotoChange(inputLibrary));
 }
 
 async function compressInspectionImage(file) {
