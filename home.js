@@ -844,6 +844,7 @@ function inspectionRenderTable() {
               onchange="inspectionHandleAction(this.value, ${idx}); this.selectedIndex = 0;"
             >
               <option value="">Actions…</option>
+              <option value="view_on_map">View on map</option>
               <option value="edit">Edit</option>
               <option value="open_io_html">Open IO (HTML)</option>
               <option value="open_clearance_html">Release clearance (FSIC)</option>
@@ -900,15 +901,6 @@ function inspectionEditEntry(idx) {
   inspectionEditingIdx = idx;
   inspectionEditingId = row.id || null;
 
-  // Preserve existing location/photo for edits.
-  // Otherwise, saving an edit could accidentally use the editor's current
-  // EXIF/location state (from a previous add/photo action).
-  currentExifLat = row.lat ?? null;
-  currentExifLng = row.lng ?? null;
-  currentExifPreviewUrl = row.photo_url ?? null;
-  currentExifTakenAt = row.photo_taken_at ?? null;
-  currentExifFile = null;
-
   const setVal = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.value = value || "";
@@ -958,6 +950,10 @@ function inspectionAddPhoto(idx) {
 
 function inspectionHandleAction(action, idx) {
   if (!action) return;
+  if (action === "view_on_map") {
+    inspectionViewOnMap(idx);
+    return;
+  }
   if (action === "edit") {
     inspectionEditEntry(idx);
     return;
@@ -979,6 +975,20 @@ function inspectionHandleAction(action, idx) {
   }
 }
 
+function inspectionViewOnMap(idx) {
+  const row = inspectionData[idx];
+  if (!row || row.lat == null || row.lng == null) return;
+  showView("map");
+  window.location.hash = "map";
+  closeNavSidebar();
+  setTimeout(() => {
+    if (mapInstance) {
+      mapInstance.setView([row.lat, row.lng], 16);
+      openInspectionDetailPanel(row);
+    }
+  }, 100);
+}
+
 function inspectionOpenIoHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
@@ -994,124 +1004,12 @@ function inspectionOpenIoHtml(idx) {
 function inspectionOpenClearanceHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
-  // If required clearance fields are missing, prompt first.
-  const missing = getMissingClearanceFields(row);
-  if (missing.length > 0) {
-    openClearanceRequiredModal(idx);
-    return;
-  }
   try {
     sessionStorage.setItem("fsis.clearance.current", JSON.stringify(row));
   } catch {
     // If sessionStorage is unavailable, we still open the template.
   }
   window.open("./fsis_clearance.html", "_blank");
-}
-
-let clearanceRequiredIdx = null;
-
-function getMissingClearanceFields(row) {
-  const missing = [];
-  const hasText = (v) => String(v || "").trim().length > 0;
-  if (!hasText(row.fsic_purpose)) missing.push("fsic_purpose");
-  if (!hasText(row.fsic_valid_from)) missing.push("fsic_valid_from");
-  if (!hasText(row.fsic_valid_until)) missing.push("fsic_valid_until");
-  if (row.fsic_fee_amount == null || row.fsic_fee_amount === "" || Number.isNaN(Number(row.fsic_fee_amount)))
-    missing.push("fsic_fee_amount");
-  if (!hasText(row.fsic_fee_or_number)) missing.push("fsic_fee_or_number");
-  if (!hasText(row.fsic_fee_date)) missing.push("fsic_fee_date");
-  return missing;
-}
-
-function openClearanceRequiredModal(idx) {
-  clearanceRequiredIdx = idx;
-  const row = inspectionData[idx] || {};
-
-  const setVal = (id, value) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value ?? "";
-  };
-
-  setVal("clearance_fsic_purpose", row.fsic_purpose || "");
-  setVal("clearance_fsic_valid_from", row.fsic_valid_from || "");
-  setVal("clearance_fsic_valid_until", row.fsic_valid_until || "");
-  setVal("clearance_fsic_fee_amount", row.fsic_fee_amount ?? "");
-  setVal("clearance_fsic_fee_or_number", row.fsic_fee_or_number || "");
-  setVal("clearance_fsic_fee_date", row.fsic_fee_date || "");
-
-  const overlay = document.getElementById("clearance-required-modal-overlay");
-  if (overlay) overlay.classList.add("open");
-}
-
-function clearanceRequiredCloseModal() {
-  const overlay = document.getElementById("clearance-required-modal-overlay");
-  if (overlay) overlay.classList.remove("open");
-  clearanceRequiredIdx = null;
-}
-
-function clearanceRequiredCloseOnOverlay(e) {
-  const overlay = document.getElementById("clearance-required-modal-overlay");
-  if (e.target === overlay) clearanceRequiredCloseModal();
-}
-
-function clearanceRequiredSaveAndOpen(e) {
-  if (e?.preventDefault) e.preventDefault();
-  if (clearanceRequiredIdx == null) return;
-
-  const idx = clearanceRequiredIdx;
-  const row = inspectionData[idx];
-  if (!row) return;
-
-  const purpose = (document.getElementById("clearance_fsic_purpose")?.value || "").trim();
-  const vFrom = (document.getElementById("clearance_fsic_valid_from")?.value || "").trim();
-  const vUntil = (document.getElementById("clearance_fsic_valid_until")?.value || "").trim();
-  const feeAmtRaw = (document.getElementById("clearance_fsic_fee_amount")?.value || "").trim();
-  const feeAmt = feeAmtRaw === "" ? null : Number(String(feeAmtRaw).replace(/,/g, ""));
-  const orNo = (document.getElementById("clearance_fsic_fee_or_number")?.value || "").trim();
-  const feeDate = (document.getElementById("clearance_fsic_fee_date")?.value || "").trim();
-
-  if (!purpose || !vFrom || !vUntil || !Number.isFinite(feeAmt) || !orNo || !feeDate) {
-    logbookShowToast("inspection-toast", "⚠️ Please fill in all required clearance fields.");
-    return;
-  }
-
-  const updates = {
-    fsic_purpose: purpose,
-    fsic_valid_from: vFrom,
-    fsic_valid_until: vUntil,
-    fsic_fee_amount: feeAmt,
-    fsic_fee_or_number: orNo,
-    fsic_fee_date: feeDate,
-  };
-
-  inspectionData[idx] = { ...row, ...updates };
-  inspectionSaveToLocal();
-  inspectionRenderTable?.();
-
-  // Persist to DB if available
-  if (isSupabaseEnabled() && row.id) {
-    (async () => {
-      try {
-        const q = supabaseClient.from("inspection_logbook");
-        const { error } = await q.update(updates).eq("id", row.id);
-        if (!error) return;
-
-        // Backward compatibility if DB doesn't have fsic_valid_from yet
-        const msg = (error?.message || String(error)).toLowerCase();
-        const missingCol = msg.includes("column") && msg.includes("fsic_valid_from");
-        if (!missingCol) throw error;
-
-        const { fsic_valid_from, ...withoutFrom } = updates;
-        const retry = await q.update(withoutFrom).eq("id", row.id);
-        if (retry.error) throw retry.error;
-      } catch (err) {
-        logbookShowToast("inspection-toast", "⚠️ Clearance saved locally; DB sync failed.");
-      }
-    })();
-  }
-
-  clearanceRequiredCloseModal();
-  inspectionOpenClearanceHtml(idx);
 }
 
 // Receive clearance edits from `fsis_clearance.html` and persist them.
@@ -1157,27 +1055,36 @@ window.addEventListener("message", (ev) => {
     return;
   }
 
-  const updates = {
-    // Core fields (allow editing on the clearance template)
-    business_name: (payload.business_name || "").toString().trim() || null,
-    owner_name: (payload.owner_name || "").toString().trim() || null,
-    address: (payload.address || "").toString().trim() || null,
+  // Build a *partial* update payload: only fields actually included in the
+  // incoming message are allowed to update the record. This prevents
+  // unrelated fields from being overwritten to null/empty when the UI only
+  // edits a subset of fields.
+  const updates = {};
+  const has = (k) => Object.prototype.hasOwnProperty.call(payload, k);
 
-    // FSIC clearance / fees
-    fsic_number: (payload.fsic_number || "").toString().trim(),
-    fsic_purpose: payload.fsic_purpose || null,
-    fsic_permit_type: payload.fsic_permit_type || null,
-    fsic_valid_from: normalizeDate(payload.fsic_valid_from),
-    fsic_valid_until: normalizeDate(payload.fsic_valid_until),
-    fsic_fee_amount: normalizeAmount(payload.fsic_fee_amount),
-    fsic_fee_or_number: payload.fsic_fee_or_number || null,
-    fsic_fee_date: normalizeDate(payload.fsic_fee_date),
-  };
+  // Core fields (allow editing on the clearance template)
+  if (has("business_name")) {
+    const v = (payload.business_name || "").toString().trim();
+    if (v) updates.business_name = v;
+  }
+  if (has("owner_name")) {
+    const v = (payload.owner_name || "").toString().trim();
+    if (v) updates.owner_name = v;
+  }
+  if (has("address")) {
+    const v = (payload.address || "").toString().trim();
+    if (v) updates.address = v;
+  }
 
-  // Don't overwrite core identity fields with null/empty strings.
-  if (!updates.business_name) delete updates.business_name;
-  if (!updates.owner_name) delete updates.owner_name;
-  if (!updates.address) delete updates.address;
+  // FSIC clearance / fees
+  if (has("fsic_number")) updates.fsic_number = (payload.fsic_number || "").toString().trim();
+  if (has("fsic_purpose")) updates.fsic_purpose = payload.fsic_purpose || null;
+  if (has("fsic_permit_type")) updates.fsic_permit_type = payload.fsic_permit_type || null;
+  if (has("fsic_valid_from")) updates.fsic_valid_from = normalizeDate(payload.fsic_valid_from);
+  if (has("fsic_valid_until")) updates.fsic_valid_until = normalizeDate(payload.fsic_valid_until);
+  if (has("fsic_fee_amount")) updates.fsic_fee_amount = normalizeAmount(payload.fsic_fee_amount);
+  if (has("fsic_fee_or_number")) updates.fsic_fee_or_number = payload.fsic_fee_or_number || null;
+  if (has("fsic_fee_date")) updates.fsic_fee_date = normalizeDate(payload.fsic_fee_date);
 
   // Update in-memory + local cache immediately for responsiveness
   // Update in-memory fields using app naming (insp_owner / insp_address).
@@ -1437,11 +1344,14 @@ function inspectionSaveEntry(e) {
     created_at: new Date().toISOString(),
   };
 
-  // If we have no coordinates from EXIF, treat this as "no location yet"
-  if (entry.lat == null || entry.lng == null) {
-    entry.photo_url = null;
-    entry.photo_taken_at = null;
+  // If the photo has no GPS EXIF, fall back to the user's current geolocation
+  if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
+    entry.lat = lastUserLatitude;
+    entry.lng = lastUserLongitude;
   }
+
+  // Keep the attached photo even if coordinates are missing.
+  // (Coordinates may come from the device location or be added later.)
 
   if (!entry.business_name || !barangay || !entry.date_inspected) {
     logbookShowToast(
@@ -1545,6 +1455,25 @@ function inspectionSaveEntry(e) {
         photo_url: entry.photo_url ?? null,
         photo_taken_at: entry.photo_taken_at ?? null,
       };
+
+      // On UPDATE, don't send empty/null optional fields — otherwise Supabase will
+      // overwrite existing DB values to null when the user didn't intend to edit them.
+      if (inspectionEditingId) {
+        const requiredKeys = new Set([
+          "io_number",
+          "owner_name",
+          "business_name",
+          "address",
+          "date_inspected",
+          "fsic_number",
+        ]);
+        Object.keys(payload).forEach((k) => {
+          if (requiredKeys.has(k)) return;
+          const v = payload[k];
+          if (v == null) delete payload[k];
+          else if (typeof v === "string" && v.trim() === "") delete payload[k];
+        });
+      }
       const q = supabaseClient.from("inspection_logbook");
 
       const runWrite = async (data) =>
@@ -1840,50 +1769,6 @@ function initInspectionPhotoExif() {
     if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
     if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
 
-
-      const img = new Image();
-      img.onload = function () {
-        try {
-          window.EXIF.getData(img, function () {
-            const lat = window.EXIF.getTag(this, "GPSLatitude");
-            const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
-            const lng = window.EXIF.getTag(this, "GPSLongitude");
-            const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
-            const takenAt = window.EXIF.getTag(this, "DateTimeOriginal");
-            const make = window.EXIF.getTag(this, "Make");
-            const model = window.EXIF.getTag(this, "Model");
-
-            if (takenAt) {
-              currentExifTakenAt = takenAt;
-            }
-
-            // Enforce "real camera photo with GPS EXIF" for inspection entries.
-            if (!lat || !lng || !latRef || !lngRef || !make || !model) {
-              logbookShowToast(
-                "inspection-toast",
-                "Photo must come from a camera with GPS/location turned ON. On new phones, enable 'Save location' or 'GPS tagging' in your camera settings, then capture a new photo."
-              );
-              input.value = "";
-              currentExifLat = null;
-              currentExifLng = null;
-              currentExifPreviewUrl = null;
-              currentExifTakenAt = null;
-              currentExifFile = null;
-              return;
-            }
-
-            currentExifLat = dmsToDecimal(lat, latRef);
-            currentExifLng = dmsToDecimal(lng, lngRef);
-          });
-        } catch (err) {
-          console.error("Failed to read EXIF data", err);
-        }
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
-  });
-
     // Set preview URL (for immediate UI feedback); upload uses the File.
     try {
       const dataUrl = await new Promise((resolve, reject) => {
@@ -1911,7 +1796,6 @@ function initInspectionPhotoExif() {
 
   inputCamera?.addEventListener("change", () => void onPhotoChange(inputCamera));
   inputLibrary?.addEventListener("change", () => void onPhotoChange(inputLibrary));
-
 }
 
 async function compressInspectionImage(file) {
@@ -2072,6 +1956,25 @@ function addInspectionMarkerFromEntry(entry) {
     inspectionMarkersLayer
   );
 
+  const tooltipText = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
+  marker.bindTooltip(tooltipText, {
+    permanent: false,
+    direction: "top",
+    offset: [0, -36],
+    opacity: 0.95,
+    className: "inspection-marker-tooltip",
+  });
+
+  marker.on("mouseover", () => {
+    marker.setZIndexOffset(1000);
+    const el = marker.getElement?.();
+    if (el) el.classList.add("is-hover");
+  });
+  marker.on("mouseout", () => {
+    marker.setZIndexOffset(0);
+    const el = marker.getElement?.();
+    if (el) el.classList.remove("is-hover");
+  });
   marker.on("click", () => {
     openInspectionDetailPanel(entry);
   });
@@ -2252,10 +2155,8 @@ async function inspectionLoadFromSupabase() {
     fsic_fee_date: r.fsic_fee_date ?? null,
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
-    photo_url:
-      r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
-    photo_taken_at:
-      r.latitude != null && r.longitude != null ? r.photo_taken_at ?? null : null,
+    photo_url: r.photo_url ?? null,
+    photo_taken_at: r.photo_taken_at ?? null,
     created_at: r.created_at,
   }));
 }
@@ -3005,6 +2906,10 @@ function conveyanceSaveEntry(e) {
         inspectors: entry.inspectors,
         remarks_signature: entry.remarks_signature,
       };
+      // On UPDATE, don't overwrite optional owner_name with null/blank.
+      if (conveyanceEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
+        delete payload.owner_name;
+      }
       const q = supabaseClient.from("conveyance_logbook");
       const { error } = conveyanceEditingId
         ? await q.update(payload).eq("id", conveyanceEditingId)
@@ -3279,6 +3184,10 @@ function occupancySaveEntry(e) {
         inspectors: entry.inspectors,
         remarks_signature: entry.remarks_signature,
       };
+      // On UPDATE, don't overwrite optional owner_name with null/blank.
+      if (occupancyEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
+        delete payload.owner_name;
+      }
       const q = supabaseClient.from("occupancy_logbook");
       const { error } = occupancyEditingId
         ? await q.update(payload).eq("id", occupancyEditingId)
