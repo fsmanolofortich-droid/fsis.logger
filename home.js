@@ -1341,11 +1341,8 @@ function inspectionSaveEntry(e) {
     entry.lng = lastUserLongitude;
   }
 
-  // If we still have no coordinates, treat this as \"no location yet\" and don't keep a photo reference
-  if (entry.lat == null || entry.lng == null) {
-    entry.photo_url = null;
-    entry.photo_taken_at = null;
-  }
+  // Keep the attached photo even if coordinates are missing.
+  // (Coordinates may come from the device location or be added later.)
 
   if (!entry.business_name || !barangay || !entry.date_inspected) {
     logbookShowToast(
@@ -1698,30 +1695,20 @@ function initInspectionPhotoExif() {
             const lng = window.EXIF.getTag(this, "GPSLongitude");
             const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
             const takenAt = window.EXIF.getTag(this, "DateTimeOriginal");
-            const make = window.EXIF.getTag(this, "Make");
-            const model = window.EXIF.getTag(this, "Model");
+            // Note: iPhone gallery photos (or shared photos) may not include GPS EXIF.
 
             if (takenAt) {
               currentExifTakenAt = takenAt;
             }
 
-            // Enforce "real camera photo with GPS EXIF" for inspection entries.
-            if (!lat || !lng || !latRef || !lngRef || !make || !model) {
-              logbookShowToast(
-                "inspection-toast",
-                "Photo must come from a camera with GPS enabled. Please capture a new photo."
-              );
-              input.value = "";
+            if (lat && lng && latRef && lngRef) {
+              currentExifLat = dmsToDecimal(lat, latRef);
+              currentExifLng = dmsToDecimal(lng, lngRef);
+            } else {
               currentExifLat = null;
               currentExifLng = null;
-              currentExifPreviewUrl = null;
-              currentExifTakenAt = null;
-              currentExifFile = null;
-              return;
+              // We'll fall back to device geolocation when saving if available.
             }
-
-            currentExifLat = dmsToDecimal(lat, latRef);
-            currentExifLng = dmsToDecimal(lng, lngRef);
           });
         } catch (err) {
           console.error("Failed to read EXIF data", err);
@@ -2090,10 +2077,8 @@ async function inspectionLoadFromSupabase() {
     fsic_fee_date: r.fsic_fee_date ?? null,
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
-    photo_url:
-      r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
-    photo_taken_at:
-      r.latitude != null && r.longitude != null ? r.photo_taken_at ?? null : null,
+    photo_url: r.photo_url ?? null,
+    photo_taken_at: r.photo_taken_at ?? null,
     created_at: r.created_at,
   }));
 }
