@@ -802,6 +802,7 @@ function inspectionRenderTable() {
         [
           row.io_number,
           row.insp_owner,
+          row.insp_owner_phone,
           row.business_name,
           inspectionFormatAddressDisplay(row),
           row.fsic_number,
@@ -825,6 +826,7 @@ function inspectionRenderTable() {
         <td data-label="#">${displayIdx + 1}</td>
         <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
         <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
+        <td data-label="Owner phone">${logbookEsc(row.insp_owner_phone)}</td>
         <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
         <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
         <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
@@ -917,6 +919,7 @@ function inspectionEditEntry(idx) {
   setVal("inspection_io_number", row.io_number);
   setVal("inspection_fsic_number", row.fsic_number);
   setVal("inspection_owner", row.insp_owner);
+  setVal("inspection_owner_phone", row.insp_owner_phone);
   setVal("inspection_business_name", row.business_name);
   setVal("inspection_date_inspected", row.date_inspected);
   // Optional IO-specific fields (may not exist on older records or in the DOM)
@@ -1339,6 +1342,7 @@ function inspectionClearForm() {
     "inspection_io_number",
     "inspection_fsic_number",
     "inspection_owner",
+    "inspection_owner_phone",
     "inspection_business_name",
     "inspection_addr_barangay",
     "inspection_addr_line",
@@ -1393,6 +1397,9 @@ function inspectionSaveEntry(e) {
     ).value.trim(),
     insp_owner: (
       document.getElementById("inspection_owner") || { value: "" }
+    ).value.trim(),
+    insp_owner_phone: (
+      document.getElementById("inspection_owner_phone") || { value: "" }
     ).value.trim(),
     business_name: (
       document.getElementById("inspection_business_name") || { value: "" }
@@ -1529,6 +1536,7 @@ function inspectionSaveEntry(e) {
       const payload = {
         io_number: entry.io_number,
         owner_name: entry.insp_owner,
+        owner_phone: entry.insp_owner_phone || null,
         business_name: entry.business_name,
         address: entry.insp_address,
         date_inspected: entry.date_inspected,
@@ -1560,6 +1568,7 @@ function inspectionSaveEntry(e) {
           const payloadNoGeo = {
             io_number: entry.io_number,
             owner_name: entry.insp_owner,
+            owner_phone: entry.insp_owner_phone || null,
             business_name: entry.business_name,
             address: entry.insp_address,
             date_inspected: entry.date_inspected,
@@ -2155,9 +2164,9 @@ function inspectionPrintPanel() {
 
 async function inspectionLoadFromSupabase() {
   const selectWithGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, latitude, longitude, photo_url, photo_taken_at, created_at";
+    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, latitude, longitude, photo_url, photo_taken_at, created_at";
   const selectWithoutGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, created_at";
+    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, created_at";
 
   const INSPECTION_FETCH_LIMIT = 2000;
   const run = async (select) =>
@@ -2188,6 +2197,7 @@ async function inspectionLoadFromSupabase() {
     io_number: r.io_number,
     fsic_number: r.fsic_number,
     insp_owner: r.owner_name,
+    insp_owner_phone: r.owner_phone ?? "",
     business_name: r.business_name,
     insp_address: r.address,
     date_inspected: r.date_inspected,
