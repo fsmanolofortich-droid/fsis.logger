@@ -1148,27 +1148,36 @@ window.addEventListener("message", (ev) => {
     return;
   }
 
-  const updates = {
-    // Core fields (allow editing on the clearance template)
-    business_name: (payload.business_name || "").toString().trim() || null,
-    owner_name: (payload.owner_name || "").toString().trim() || null,
-    address: (payload.address || "").toString().trim() || null,
+  // Build a *partial* update payload: only fields actually included in the
+  // incoming message are allowed to update the record. This prevents
+  // unrelated fields from being overwritten to null/empty when the UI only
+  // edits a subset of fields.
+  const updates = {};
+  const has = (k) => Object.prototype.hasOwnProperty.call(payload, k);
 
-    // FSIC clearance / fees
-    fsic_number: (payload.fsic_number || "").toString().trim(),
-    fsic_purpose: payload.fsic_purpose || null,
-    fsic_permit_type: payload.fsic_permit_type || null,
-    fsic_valid_from: normalizeDate(payload.fsic_valid_from),
-    fsic_valid_until: normalizeDate(payload.fsic_valid_until),
-    fsic_fee_amount: normalizeAmount(payload.fsic_fee_amount),
-    fsic_fee_or_number: payload.fsic_fee_or_number || null,
-    fsic_fee_date: normalizeDate(payload.fsic_fee_date),
-  };
+  // Core fields (allow editing on the clearance template)
+  if (has("business_name")) {
+    const v = (payload.business_name || "").toString().trim();
+    if (v) updates.business_name = v;
+  }
+  if (has("owner_name")) {
+    const v = (payload.owner_name || "").toString().trim();
+    if (v) updates.owner_name = v;
+  }
+  if (has("address")) {
+    const v = (payload.address || "").toString().trim();
+    if (v) updates.address = v;
+  }
 
-  // Don't overwrite core identity fields with null/empty strings.
-  if (!updates.business_name) delete updates.business_name;
-  if (!updates.owner_name) delete updates.owner_name;
-  if (!updates.address) delete updates.address;
+  // FSIC clearance / fees
+  if (has("fsic_number")) updates.fsic_number = (payload.fsic_number || "").toString().trim();
+  if (has("fsic_purpose")) updates.fsic_purpose = payload.fsic_purpose || null;
+  if (has("fsic_permit_type")) updates.fsic_permit_type = payload.fsic_permit_type || null;
+  if (has("fsic_valid_from")) updates.fsic_valid_from = normalizeDate(payload.fsic_valid_from);
+  if (has("fsic_valid_until")) updates.fsic_valid_until = normalizeDate(payload.fsic_valid_until);
+  if (has("fsic_fee_amount")) updates.fsic_fee_amount = normalizeAmount(payload.fsic_fee_amount);
+  if (has("fsic_fee_or_number")) updates.fsic_fee_or_number = payload.fsic_fee_or_number || null;
+  if (has("fsic_fee_date")) updates.fsic_fee_date = normalizeDate(payload.fsic_fee_date);
 
   // Update in-memory + local cache immediately for responsiveness
   // Update in-memory fields using app naming (insp_owner / insp_address).
@@ -1536,6 +1545,25 @@ function inspectionSaveEntry(e) {
         photo_url: entry.photo_url ?? null,
         photo_taken_at: entry.photo_taken_at ?? null,
       };
+
+      // On UPDATE, don't send empty/null optional fields — otherwise Supabase will
+      // overwrite existing DB values to null when the user didn't intend to edit them.
+      if (inspectionEditingId) {
+        const requiredKeys = new Set([
+          "io_number",
+          "owner_name",
+          "business_name",
+          "address",
+          "date_inspected",
+          "fsic_number",
+        ]);
+        Object.keys(payload).forEach((k) => {
+          if (requiredKeys.has(k)) return;
+          const v = payload[k];
+          if (v == null) delete payload[k];
+          else if (typeof v === "string" && v.trim() === "") delete payload[k];
+        });
+      }
       const q = supabaseClient.from("inspection_logbook");
 
       const runWrite = async (data) =>
@@ -2911,6 +2939,10 @@ function conveyanceSaveEntry(e) {
         inspectors: entry.inspectors,
         remarks_signature: entry.remarks_signature,
       };
+      // On UPDATE, don't overwrite optional owner_name with null/blank.
+      if (conveyanceEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
+        delete payload.owner_name;
+      }
       const q = supabaseClient.from("conveyance_logbook");
       const { error } = conveyanceEditingId
         ? await q.update(payload).eq("id", conveyanceEditingId)
@@ -3185,6 +3217,10 @@ function occupancySaveEntry(e) {
         inspectors: entry.inspectors,
         remarks_signature: entry.remarks_signature,
       };
+      // On UPDATE, don't overwrite optional owner_name with null/blank.
+      if (occupancyEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
+        delete payload.owner_name;
+      }
       const q = supabaseClient.from("occupancy_logbook");
       const { error } = occupancyEditingId
         ? await q.update(payload).eq("id", occupancyEditingId)
