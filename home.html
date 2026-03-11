@@ -757,6 +757,7 @@
       background-position: center;
       background-color: #111827;
       position: relative;
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
     }
 
     .inspection-marker-thumb::after {
@@ -779,6 +780,7 @@
       background: #dc2626;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
       position: relative;
+      transition: transform 160ms ease, box-shadow 160ms ease;
     }
 
     .inspection-marker-pin::after {
@@ -792,6 +794,46 @@
       border-radius: 2px;
       transform: translateX(-50%) rotate(45deg);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .inspection-marker-tooltip {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 6px 10px;
+      background: rgba(13, 27, 42, 0.95);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+      transform: translateY(4px);
+    }
+
+    /* Smooth expand on hover */
+    .inspection-marker.is-hover .inspection-marker-thumb {
+      transform: scale(1.22);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
+      border-color: #fde68a;
+    }
+    .inspection-marker.is-hover .inspection-marker-pin {
+      transform: scale(1.35);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    /* When Leaflet fades tooltip in, also slide it smoothly */
+    .leaflet-tooltip.inspection-marker-tooltip {
+      will-change: opacity, transform;
+    }
+    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-right,
+    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-left,
+    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-top,
+    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-bottom {
+      transform: translateY(0);
     }
 
     @media (max-width: 900px) {
@@ -1609,15 +1651,28 @@
               <div class="form-section-title">Location &amp; photo</div>
               <div class="form-grid">
                 <div class="form-group full">
-                  <label for="inspection_photo">
-                    Attach photo (uses GPS from EXIF if available)
-                  </label>
-                  <input
-                    type="file"
-                    id="inspection_photo"
-                    accept="image/*"
-                    capture="environment"
-                  >
+                  <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
+                  <div class="photo-option-buttons">
+                    <label class="photo-option-btn">
+                      <input
+                        type="file"
+                        id="inspection_photo"
+                        accept="image/*"
+                        capture="environment"
+                        aria-label="Take photo with camera"
+                      >
+                      <span class="photo-option-text">Take photo</span>
+                    </label>
+                    <label class="photo-option-btn">
+                      <input
+                        type="file"
+                        id="inspection_photo_library"
+                        accept="image/*"
+                        aria-label="Choose photo from gallery"
+                      >
+                      <span class="photo-option-text">Choose from gallery</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1627,74 +1682,6 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
         <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save Record</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Clearance required fields modal -->
-  <div class="modal-overlay" id="clearance-required-modal-overlay" onclick="clearanceRequiredCloseOnOverlay(event)">
-    <div class="modal">
-      <div class="modal-header">
-        <div>
-          <small>FSIC Clearance</small>
-          <h2>Complete required fields</h2>
-        </div>
-        <button class="btn-close" onclick="clearanceRequiredCloseModal()" aria-label="Close">×</button>
-      </div>
-      <div class="modal-body">
-        <form id="clearance-required-form" onsubmit="clearanceRequiredSaveAndOpen(event)">
-          <div class="form-section">
-            <div class="form-section-title">Purpose</div>
-            <div class="form-grid">
-              <div class="form-group full">
-                <label for="clearance_fsic_purpose">FSIC purpose</label>
-                <select id="clearance_fsic_purpose" aria-label="Select FSIC purpose">
-                  <option value="">Select purpose</option>
-                  <option value="FOR CERTIFICATE OF OCCUPANCY">FOR CERTIFICATE OF OCCUPANCY</option>
-                  <option value="FOR BUSINESS PERMIT (NEW/RENEWAL)">FOR BUSINESS PERMIT (NEW/RENEWAL)</option>
-                  <option value="OTHERS">OTHERS</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div class="form-section">
-            <div class="form-section-title">Validity</div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="clearance_fsic_valid_from">Valid from</label>
-                <input type="date" id="clearance_fsic_valid_from">
-              </div>
-              <div class="form-group">
-                <label for="clearance_fsic_valid_until">Valid until</label>
-                <input type="date" id="clearance_fsic_valid_until">
-              </div>
-            </div>
-          </div>
-          <div class="form-section">
-            <div class="form-section-title">Fees</div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="clearance_fsic_fee_amount">Amount</label>
-                <div class="input-prefix">
-                  <span class="input-prefix-label">PHP</span>
-                  <input type="number" id="clearance_fsic_fee_amount" inputmode="decimal" placeholder="e.g. 500">
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="clearance_fsic_fee_or_number">O.R. number</label>
-                <input type="text" id="clearance_fsic_fee_or_number" placeholder="Official receipt number">
-              </div>
-              <div class="form-group">
-                <label for="clearance_fsic_fee_date">Date</label>
-                <input type="date" id="clearance_fsic_fee_date">
-              </div>
-            </div>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-cancel" onclick="clearanceRequiredCloseModal()">Cancel</button>
-        <button type="submit" class="btn btn-save" form="clearance-required-form">Continue to Clearance</button>
       </div>
     </div>
   </div>
