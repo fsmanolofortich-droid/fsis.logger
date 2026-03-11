@@ -1829,7 +1829,7 @@ function initInspectionPhotoExif() {
     const file = sourceInput?.files?.[0];
     if (!file) return;
 
-    // Reset extracted photo/exif state.
+    // Reset extracted photo/EXIF state.
     currentExifLat = null;
     currentExifLng = null;
     currentExifPreviewUrl = null;
@@ -1839,50 +1839,6 @@ function initInspectionPhotoExif() {
     // Clear the other input so only one is active.
     if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
     if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
-
-
-      const img = new Image();
-      img.onload = function () {
-        try {
-          window.EXIF.getData(img, function () {
-            const lat = window.EXIF.getTag(this, "GPSLatitude");
-            const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
-            const lng = window.EXIF.getTag(this, "GPSLongitude");
-            const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
-            const takenAt = window.EXIF.getTag(this, "DateTimeOriginal");
-            const make = window.EXIF.getTag(this, "Make");
-            const model = window.EXIF.getTag(this, "Model");
-
-            if (takenAt) {
-              currentExifTakenAt = takenAt;
-            }
-
-            // Enforce "real camera photo with GPS EXIF" for inspection entries.
-            if (!lat || !lng || !latRef || !lngRef || !make || !model) {
-              logbookShowToast(
-                "inspection-toast",
-                "Photo must come from a camera with GPS/location turned ON. On new phones, enable 'Save location' or 'GPS tagging' in your camera settings, then capture a new photo."
-              );
-              input.value = "";
-              currentExifLat = null;
-              currentExifLng = null;
-              currentExifPreviewUrl = null;
-              currentExifTakenAt = null;
-              currentExifFile = null;
-              return;
-            }
-
-            currentExifLat = dmsToDecimal(lat, latRef);
-            currentExifLng = dmsToDecimal(lng, lngRef);
-          });
-        } catch (err) {
-          console.error("Failed to read EXIF data", err);
-        }
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
-  });
 
     // Set preview URL (for immediate UI feedback); upload uses the File.
     try {
@@ -1897,7 +1853,7 @@ function initInspectionPhotoExif() {
       console.warn("Preview read failed:", e);
     }
 
-    // Read GPS from EXIF if present.
+    // Read GPS from EXIF if present (via helper that uses exifr/exif-js).
     try {
       const gps = await readGpsFromFile(file);
       if (gps) {
