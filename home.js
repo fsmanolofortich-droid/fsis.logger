@@ -119,6 +119,7 @@ let currentExifFile = null;
 let inspectionMarkersLayer = null;
 let inspectionDataLoaded = false;
 let inspectionActiveTab = "with-location";
+let inspectionFocusMapAfterSave = false;
 
 function resizeMapLayout() {
   const mapSection = document.querySelector('[data-view="map"]');
@@ -940,6 +941,7 @@ function inspectionEditEntry(idx) {
 }
 
 function inspectionAddPhoto(idx) {
+  inspectionFocusMapAfterSave = true;
   inspectionEditEntry(idx);
   const photoInput = document.getElementById("inspection_photo");
   if (photoInput) {
@@ -1207,6 +1209,7 @@ function inspectionDeleteEntry(idx) {
 function inspectionOpenModal() {
   inspectionEditingIdx = null;
   inspectionEditingId = null;
+  inspectionFocusMapAfterSave = false;
 
   // Reset any previously extracted EXIF coordinates and photo data
   currentExifLat = null;
@@ -1344,6 +1347,22 @@ function inspectionSaveEntry(e) {
     created_at: new Date().toISOString(),
   };
 
+  // When editing:
+  // - If user didn't pick a new photo, keep existing photo URL/meta.
+  // - If user didn't pick new coordinates (EXIF), keep existing lat/lng (avoid overwriting).
+  if (inspectionEditingIdx !== null) {
+    const prev = inspectionData[inspectionEditingIdx] || {};
+    const hasNewPhoto = !!currentExifFile;
+    if (!hasNewPhoto) {
+      entry.photo_url = prev.photo_url ?? null;
+      entry.photo_taken_at = prev.photo_taken_at ?? null;
+    }
+    if (entry.lat == null || entry.lng == null) {
+      entry.lat = prev.lat ?? null;
+      entry.lng = prev.lng ?? null;
+    }
+  }
+
   // If the photo has no GPS EXIF, fall back to the user's current geolocation
   if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
     entry.lat = lastUserLatitude;
@@ -1389,6 +1408,18 @@ function inspectionSaveEntry(e) {
       "inspection-toast",
       "Saved on this device only (offline mode)."
     );
+    if (inspectionFocusMapAfterSave && entry.lat != null && entry.lng != null) {
+      inspectionFocusMapAfterSave = false;
+      showView("map");
+      window.location.hash = "map";
+      closeNavSidebar();
+      setTimeout(() => {
+        if (mapInstance) {
+          mapInstance.setView([entry.lat, entry.lng], 16);
+          openInspectionDetailPanel(entry);
+        }
+      }, 100);
+    }
     return;
   }
 
@@ -1507,6 +1538,20 @@ function inspectionSaveEntry(e) {
       addInspectionMarkerFromEntry(entry);
       inspectionCloseModal();
       logbookShowToast("inspection-toast", "Saved to database.");
+
+      // If user used "Add photo", jump to the photo's GPS location (or existing location).
+      if (inspectionFocusMapAfterSave && entry.lat != null && entry.lng != null) {
+        inspectionFocusMapAfterSave = false;
+        showView("map");
+        window.location.hash = "map";
+        closeNavSidebar();
+        setTimeout(() => {
+          if (mapInstance) {
+            mapInstance.setView([entry.lat, entry.lng], 16);
+            openInspectionDetailPanel(entry);
+          }
+        }, 100);
+      }
     } catch (err) {
       const msg = err?.message || String(err);
       const hint =
