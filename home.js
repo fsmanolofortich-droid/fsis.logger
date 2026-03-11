@@ -844,6 +844,7 @@ function inspectionRenderTable() {
               onchange="inspectionHandleAction(this.value, ${idx}); this.selectedIndex = 0;"
             >
               <option value="">Actions…</option>
+              <option value="view_on_map">View on map</option>
               <option value="edit">Edit</option>
               <option value="open_io_html">Open IO (HTML)</option>
               <option value="open_clearance_html">Release clearance (FSIC)</option>
@@ -949,6 +950,10 @@ function inspectionAddPhoto(idx) {
 
 function inspectionHandleAction(action, idx) {
   if (!action) return;
+  if (action === "view_on_map") {
+    inspectionViewOnMap(idx);
+    return;
+  }
   if (action === "edit") {
     inspectionEditEntry(idx);
     return;
@@ -970,6 +975,20 @@ function inspectionHandleAction(action, idx) {
   }
 }
 
+function inspectionViewOnMap(idx) {
+  const row = inspectionData[idx];
+  if (!row || row.lat == null || row.lng == null) return;
+  showView("map");
+  window.location.hash = "map";
+  closeNavSidebar();
+  setTimeout(() => {
+    if (mapInstance) {
+      mapInstance.setView([row.lat, row.lng], 16);
+      openInspectionDetailPanel(row);
+    }
+  }, 100);
+}
+
 function inspectionOpenIoHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
@@ -985,124 +1004,12 @@ function inspectionOpenIoHtml(idx) {
 function inspectionOpenClearanceHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
-  // If required clearance fields are missing, prompt first.
-  const missing = getMissingClearanceFields(row);
-  if (missing.length > 0) {
-    openClearanceRequiredModal(idx);
-    return;
-  }
   try {
     sessionStorage.setItem("fsis.clearance.current", JSON.stringify(row));
   } catch {
     // If sessionStorage is unavailable, we still open the template.
   }
   window.open("./fsis_clearance.html", "_blank");
-}
-
-let clearanceRequiredIdx = null;
-
-function getMissingClearanceFields(row) {
-  const missing = [];
-  const hasText = (v) => String(v || "").trim().length > 0;
-  if (!hasText(row.fsic_purpose)) missing.push("fsic_purpose");
-  if (!hasText(row.fsic_valid_from)) missing.push("fsic_valid_from");
-  if (!hasText(row.fsic_valid_until)) missing.push("fsic_valid_until");
-  if (row.fsic_fee_amount == null || row.fsic_fee_amount === "" || Number.isNaN(Number(row.fsic_fee_amount)))
-    missing.push("fsic_fee_amount");
-  if (!hasText(row.fsic_fee_or_number)) missing.push("fsic_fee_or_number");
-  if (!hasText(row.fsic_fee_date)) missing.push("fsic_fee_date");
-  return missing;
-}
-
-function openClearanceRequiredModal(idx) {
-  clearanceRequiredIdx = idx;
-  const row = inspectionData[idx] || {};
-
-  const setVal = (id, value) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value ?? "";
-  };
-
-  setVal("clearance_fsic_purpose", row.fsic_purpose || "");
-  setVal("clearance_fsic_valid_from", row.fsic_valid_from || "");
-  setVal("clearance_fsic_valid_until", row.fsic_valid_until || "");
-  setVal("clearance_fsic_fee_amount", row.fsic_fee_amount ?? "");
-  setVal("clearance_fsic_fee_or_number", row.fsic_fee_or_number || "");
-  setVal("clearance_fsic_fee_date", row.fsic_fee_date || "");
-
-  const overlay = document.getElementById("clearance-required-modal-overlay");
-  if (overlay) overlay.classList.add("open");
-}
-
-function clearanceRequiredCloseModal() {
-  const overlay = document.getElementById("clearance-required-modal-overlay");
-  if (overlay) overlay.classList.remove("open");
-  clearanceRequiredIdx = null;
-}
-
-function clearanceRequiredCloseOnOverlay(e) {
-  const overlay = document.getElementById("clearance-required-modal-overlay");
-  if (e.target === overlay) clearanceRequiredCloseModal();
-}
-
-function clearanceRequiredSaveAndOpen(e) {
-  if (e?.preventDefault) e.preventDefault();
-  if (clearanceRequiredIdx == null) return;
-
-  const idx = clearanceRequiredIdx;
-  const row = inspectionData[idx];
-  if (!row) return;
-
-  const purpose = (document.getElementById("clearance_fsic_purpose")?.value || "").trim();
-  const vFrom = (document.getElementById("clearance_fsic_valid_from")?.value || "").trim();
-  const vUntil = (document.getElementById("clearance_fsic_valid_until")?.value || "").trim();
-  const feeAmtRaw = (document.getElementById("clearance_fsic_fee_amount")?.value || "").trim();
-  const feeAmt = feeAmtRaw === "" ? null : Number(String(feeAmtRaw).replace(/,/g, ""));
-  const orNo = (document.getElementById("clearance_fsic_fee_or_number")?.value || "").trim();
-  const feeDate = (document.getElementById("clearance_fsic_fee_date")?.value || "").trim();
-
-  if (!purpose || !vFrom || !vUntil || !Number.isFinite(feeAmt) || !orNo || !feeDate) {
-    logbookShowToast("inspection-toast", "⚠️ Please fill in all required clearance fields.");
-    return;
-  }
-
-  const updates = {
-    fsic_purpose: purpose,
-    fsic_valid_from: vFrom,
-    fsic_valid_until: vUntil,
-    fsic_fee_amount: feeAmt,
-    fsic_fee_or_number: orNo,
-    fsic_fee_date: feeDate,
-  };
-
-  inspectionData[idx] = { ...row, ...updates };
-  inspectionSaveToLocal();
-  inspectionRenderTable?.();
-
-  // Persist to DB if available
-  if (isSupabaseEnabled() && row.id) {
-    (async () => {
-      try {
-        const q = supabaseClient.from("inspection_logbook");
-        const { error } = await q.update(updates).eq("id", row.id);
-        if (!error) return;
-
-        // Backward compatibility if DB doesn't have fsic_valid_from yet
-        const msg = (error?.message || String(error)).toLowerCase();
-        const missingCol = msg.includes("column") && msg.includes("fsic_valid_from");
-        if (!missingCol) throw error;
-
-        const { fsic_valid_from, ...withoutFrom } = updates;
-        const retry = await q.update(withoutFrom).eq("id", row.id);
-        if (retry.error) throw retry.error;
-      } catch (err) {
-        logbookShowToast("inspection-toast", "⚠️ Clearance saved locally; DB sync failed.");
-      }
-    })();
-  }
-
-  clearanceRequiredCloseModal();
-  inspectionOpenClearanceHtml(idx);
 }
 
 // Receive clearance edits from `fsis_clearance.html` and persist them.
@@ -1158,7 +1065,7 @@ window.addEventListener("message", (ev) => {
     fsic_number: (payload.fsic_number || "").toString().trim(),
     fsic_purpose: payload.fsic_purpose || null,
     fsic_permit_type: payload.fsic_permit_type || null,
-    fsic_valid_from: normalizeDate(payload.fsic_valid_from),
+    fsic_valid_for: payload.fsic_valid_for || null,
     fsic_valid_until: normalizeDate(payload.fsic_valid_until),
     fsic_fee_amount: normalizeAmount(payload.fsic_fee_amount),
     fsic_fee_or_number: payload.fsic_fee_or_number || null,
@@ -1428,7 +1335,6 @@ function inspectionSaveEntry(e) {
     created_at: new Date().toISOString(),
   };
 
-<<<<<<< HEAD
   // If the photo has no GPS EXIF, fall back to the user's current geolocation
   if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
     entry.lat = lastUserLatitude;
@@ -1437,13 +1343,6 @@ function inspectionSaveEntry(e) {
 
   // Keep the attached photo even if coordinates are missing.
   // (Coordinates may come from the device location or be added later.)
-=======
-  // If we have no coordinates from EXIF, treat this as "no location yet"
-  if (entry.lat == null || entry.lng == null) {
-    entry.photo_url = null;
-    entry.photo_taken_at = null;
-  }
->>>>>>> efaabe710d776f3bcbeed2aa95a3ba0cf3304458
 
   if (!entry.business_name || !barangay || !entry.date_inspected) {
     logbookShowToast(
@@ -1802,20 +1701,10 @@ function initInspectionPhotoExif() {
               currentExifTakenAt = takenAt;
             }
 
-<<<<<<< HEAD
             if (lat && lng && latRef && lngRef) {
               currentExifLat = dmsToDecimal(lat, latRef);
               currentExifLng = dmsToDecimal(lng, lngRef);
             } else {
-=======
-            // Enforce "real camera photo with GPS EXIF" for inspection entries.
-            if (!lat || !lng || !latRef || !lngRef || !make || !model) {
-              logbookShowToast(
-                "inspection-toast",
-                "Photo must come from a camera with GPS/location turned ON. On new phones, enable 'Save location' or 'GPS tagging' in your camera settings, then capture a new photo."
-              );
-              input.value = "";
->>>>>>> efaabe710d776f3bcbeed2aa95a3ba0cf3304458
               currentExifLat = null;
               currentExifLng = null;
               // We'll fall back to device geolocation when saving if available.
@@ -1989,6 +1878,25 @@ function addInspectionMarkerFromEntry(entry) {
     inspectionMarkersLayer
   );
 
+  const tooltipText = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
+  marker.bindTooltip(tooltipText, {
+    permanent: false,
+    direction: "top",
+    offset: [0, -36],
+    opacity: 0.95,
+    className: "inspection-marker-tooltip",
+  });
+
+  marker.on("mouseover", () => {
+    marker.setZIndexOffset(1000);
+    const el = marker.getElement?.();
+    if (el) el.classList.add("is-hover");
+  });
+  marker.on("mouseout", () => {
+    marker.setZIndexOffset(0);
+    const el = marker.getElement?.();
+    if (el) el.classList.remove("is-hover");
+  });
   marker.on("click", () => {
     openInspectionDetailPanel(entry);
   });
