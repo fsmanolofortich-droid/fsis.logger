@@ -447,24 +447,32 @@
       transform: translateY(-1px);
     }
 
-    /* Map search (marked locations) – aligned near Leaflet layers control */
+    /* Map search and filters — compact, touch-friendly, responsive */
     .map-search-wrap {
       position: fixed;
-      top: 64px;           /* sit just below the default top-right controls */
+      top: 64px;
       right: 16px;
-      width: 320px;
-      max-width: calc(100vw - 40px);
+      left: 16px;
+      max-width: 420px;
+      margin-left: auto;
       z-index: 200;
       pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    @media (min-width: 540px) {
+      .map-search-wrap { left: auto; }
     }
     .map-search-input {
-      width: 100%;
+      flex: 1;
+      min-width: 0;
       padding: 12px 16px;
       border-radius: 12px;
       border: 1px solid rgba(13, 27, 42, 0.2);
       background: var(--white);
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       box-shadow: var(--shadow-lg);
       outline: none;
     }
@@ -475,13 +483,46 @@
       border-color: var(--gold);
       box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.25);
     }
+    .map-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 0 0;
+    }
+    .map-filter-btn {
+      appearance: none;
+      border: 1px solid rgba(13, 27, 42, 0.2);
+      background: var(--white);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .map-filter-btn:hover {
+      background: var(--cream-dark);
+      border-color: rgba(13, 27, 42, 0.3);
+    }
+    .map-filter-btn.is-active {
+      background: var(--navy);
+      color: var(--white);
+      border-color: var(--navy);
+    }
+    .map-filter-btn:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
+    }
     .map-search-results {
       position: absolute;
       top: 100%;
       left: 0;
       right: 0;
-      margin-top: 6px;
-      max-height: 280px;
+      margin-top: 8px;
+      max-height: min(280px, 50vh);
       overflow-y: auto;
       background: var(--white);
       border-radius: 12px;
@@ -825,6 +866,57 @@
       box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
     }
 
+    /* Occupancy markers (blue) */
+    .occupancy-marker {
+      border: none;
+      background: none;
+    }
+    .occupancy-marker-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 3px solid #60a5fa;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+      background-size: cover;
+      background-position: center;
+      background-color: #111827;
+      position: relative;
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+    .occupancy-marker-thumb::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -6px;
+      width: 12px;
+      height: 12px;
+      background: #60a5fa;
+      border-radius: 2px;
+      transform: translateX(-50%) rotate(45deg);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+    .occupancy-marker-pin {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #2563eb;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+      position: relative;
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+    .occupancy-marker-pin::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -6px;
+      width: 10px;
+      height: 10px;
+      background: #1d4ed8;
+      border-radius: 2px;
+      transform: translateX(-50%) rotate(45deg);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
     /* When Leaflet fades tooltip in, also slide it smoothly */
     .leaflet-tooltip.inspection-marker-tooltip {
       will-change: opacity, transform;
@@ -920,6 +1012,11 @@
         autocomplete="off"
       >
       <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
+      <div class="map-filter" role="group" aria-label="Map markers filter">
+        <button type="button" class="map-filter-btn is-active" data-map-filter="all">All</button>
+        <button type="button" class="map-filter-btn" data-map-filter="businesses">Businesses</button>
+        <button type="button" class="map-filter-btn" data-map-filter="residential">Residential</button>
+      </div>
     </div>
     <div class="map-layout">
       <aside
@@ -1229,6 +1326,15 @@
                   <label for="occupancy_remarks_signature">Remarks / Signature</label>
                   <textarea id="occupancy_remarks_signature" rows="2" placeholder="Remarks and/or signature"></textarea>
                 </div>
+                <div class="form-group full">
+                  <label for="occupancy_photo">Attach photo (uses GPS from EXIF if available)</label>
+                  <input
+                    type="file"
+                    id="occupancy_photo"
+                    accept="image/*"
+                    capture="environment"
+                  >
+                </div>
               </div>
             </div>
           </form>
@@ -1320,6 +1426,7 @@
                 <th>#</th>
                 <th>IO Number</th>
                 <th>Name of Owner</th>
+                <th>Owner phone</th>
                 <th>Business / Establishment</th>
                 <th>Address</th>
                 <th class="th-date">Date Inspected</th>
@@ -1354,6 +1461,7 @@
                 <th>#</th>
                 <th>IO Number</th>
                 <th>Name of Owner</th>
+                <th>Owner phone</th>
                 <th>Business / Establishment</th>
                 <th>Address</th>
                 <th class="th-date">Date Inspected</th>
@@ -1549,6 +1657,10 @@
                 <div class="form-group full">
                   <label for="inspection_owner">Name of Owner</label>
                   <input type="text" id="inspection_owner" placeholder="Full name of owner">
+                </div>
+                <div class="form-group full">
+                  <label for="inspection_owner_phone">Owner phone number</label>
+                  <input type="tel" id="inspection_owner_phone" placeholder="e.g. 09XXXXXXXXX">
                 </div>
                 <div class="form-group full">
                   <label for="inspection_business_name">Business / Establishment</label>

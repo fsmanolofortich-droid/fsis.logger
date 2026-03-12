@@ -150,12 +150,24 @@ CREATE TABLE IF NOT EXISTS occupancy_logbook (
   owner_name        VARCHAR(255),         -- name of owner
   inspectors        TEXT NOT NULL,        -- one or more names (comma- or line-separated)
   remarks_signature TEXT,                 -- remarks and/or signature
+  latitude          DECIMAL(10,8) NULL,   -- from photo EXIF
+  longitude         DECIMAL(11,8) NULL,
+  photo_url         TEXT NULL,            -- public URL after upload to storage
+  photo_taken_at    TEXT NULL,            -- EXIF DateTimeOriginal
   created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- Alter schema: add owner_name for existing occupancy_logbook tables
 ALTER TABLE occupancy_logbook ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);
+-- Alter schema: add photo/geo columns for occupancy (EXIF + map markers)
+ALTER TABLE occupancy_logbook ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,8) NULL;
+ALTER TABLE occupancy_logbook ADD COLUMN IF NOT EXISTS longitude DECIMAL(11,8) NULL;
+ALTER TABLE occupancy_logbook ADD COLUMN IF NOT EXISTS photo_url TEXT NULL;
+ALTER TABLE occupancy_logbook ADD COLUMN IF NOT EXISTS photo_taken_at TEXT NULL;
+
+-- Index for map/geospatial queries on occupancy (latitude, longitude)
+CREATE INDEX IF NOT EXISTS idx_occupancy_lat_long ON occupancy_logbook (latitude, longitude);
 
 DROP TRIGGER IF EXISTS trg_occupancy_updated_at ON occupancy_logbook;
 CREATE TRIGGER trg_occupancy_updated_at

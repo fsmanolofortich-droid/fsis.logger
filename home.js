@@ -116,10 +116,49 @@ let currentExifPreviewUrl = null;
 let currentExifTakenAt = null;
 let currentExifFile = null;
 
+// Occupancy photo/EXIF state (separate from inspection)
+let occupancyExifLat = null;
+let occupancyExifLng = null;
+let occupancyExifPreviewUrl = null;
+let occupancyExifTakenAt = null;
+let occupancyExifFile = null;
+
 let inspectionMarkersLayer = null;
+let occupancyMarkersLayer = null;
 let inspectionDataLoaded = false;
 let inspectionActiveTab = "with-location";
 let inspectionFocusMapAfterSave = false;
+
+let mapMarkerFilter = "all"; // all | businesses | residential
+
+function applyMapMarkerFilter(next) {
+  mapMarkerFilter = next || "all";
+  const buttons = Array.from(document.querySelectorAll("[data-map-filter]"));
+  buttons.forEach((b) => b.classList.toggle("is-active", b.getAttribute("data-map-filter") === mapMarkerFilter));
+
+  if (!mapInstance) return;
+  const showInspection = mapMarkerFilter === "all" || mapMarkerFilter === "businesses";
+  const showOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "residential";
+
+  if (inspectionMarkersLayer) {
+    if (showInspection) inspectionMarkersLayer.addTo(mapInstance);
+    else mapInstance.removeLayer(inspectionMarkersLayer);
+  }
+  if (occupancyMarkersLayer) {
+    if (showOccupancy) occupancyMarkersLayer.addTo(mapInstance);
+    else mapInstance.removeLayer(occupancyMarkersLayer);
+  }
+}
+
+function initMapMarkerFilterUi() {
+  document.addEventListener("click", (e) => {
+    const el = e.target instanceof Element ? e.target : null;
+    const btn = el?.closest?.("[data-map-filter]");
+    if (!btn) return;
+    const f = btn.getAttribute("data-map-filter") || "all";
+    applyMapMarkerFilter(f);
+  });
+}
 
 function resizeMapLayout() {
   const mapSection = document.querySelector('[data-view="map"]');
@@ -152,6 +191,8 @@ function initLeafletMap() {
 
   // Layer to hold all inspection markers so we can manage them together
   inspectionMarkersLayer = L.layerGroup().addTo(mapInstance);
+  // Layer to hold occupancy markers (blue) so we can toggle/manage separately
+  occupancyMarkersLayer = L.layerGroup().addTo(mapInstance);
 
   // Base layers: OpenStreetMap (faster, lighter) + Google-style satellite with labels
   const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -201,12 +242,22 @@ function initLeafletMap() {
     });
   }
 
+  // If occupancy data is already loaded, render any markers that have coordinates
+  if (Array.isArray(occupancyData) && occupancyData.length > 0) {
+    occupancyData.forEach((row) => {
+      if (row.lat != null && row.lng != null) {
+        addOccupancyMarkerFromEntry(row);
+      }
+    });
+  }
+
   // Make sure the map fully renders after layout
   setTimeout(() => {
     mapInstance.invalidateSize();
   }, 0);
 
   initMapSearch();
+  applyMapMarkerFilter(mapMarkerFilter);
 }
 
 function resetMapView() {
@@ -239,6 +290,10 @@ function showView(name) {
 
   if ((name === "map" || name === "inspection") && !inspectionDataLoaded) {
     inspectionInitData();
+    // Map also shows residential (occupancy) markers
+    if (name === "map" && !occupancyDataLoaded) {
+      occupancyInitData();
+    }
   } else if (name === "fsec" && !fsecDataLoaded) {
     fsecInitData();
   } else if (name === "conveyance" && !conveyanceDataLoaded) {
@@ -503,12 +558,17 @@ function init() {
   populateModalDropdowns();
   initViewRouting();
   initTableFilters();
+  initMapMarkerFilterUi();
   initInspectionPhotoExif();
+  initOccupancyPhotoExif();
   refreshStorageBadge();
 
   const initialView = getCurrentView();
   if ((initialView === "map" || initialView === "inspection") && !inspectionDataLoaded) {
     inspectionInitData();
+    if (initialView === "map" && !occupancyDataLoaded) {
+      occupancyInitData();
+    }
     if (initialView === "inspection") {
       setInspectionTab(inspectionActiveTab);
     }
@@ -803,6 +863,7 @@ function inspectionRenderTable() {
         [
           row.io_number,
           row.insp_owner,
+          row.insp_owner_phone,
           row.business_name,
           inspectionFormatAddressDisplay(row),
           row.fsic_number,
@@ -826,6 +887,7 @@ function inspectionRenderTable() {
         <td data-label="#">${displayIdx + 1}</td>
         <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
         <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
+        <td data-label="Owner phone">${logbookEsc(row.insp_owner_phone)}</td>
         <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
         <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
         <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
@@ -910,6 +972,7 @@ function inspectionEditEntry(idx) {
   setVal("inspection_io_number", row.io_number);
   setVal("inspection_fsic_number", row.fsic_number);
   setVal("inspection_owner", row.insp_owner);
+  setVal("inspection_owner_phone", row.insp_owner_phone);
   setVal("inspection_business_name", row.business_name);
   setVal("inspection_date_inspected", row.date_inspected);
   // Optional IO-specific fields (may not exist on older records or in the DOM)
@@ -1249,6 +1312,7 @@ function inspectionClearForm() {
     "inspection_io_number",
     "inspection_fsic_number",
     "inspection_owner",
+    "inspection_owner_phone",
     "inspection_business_name",
     "inspection_addr_barangay",
     "inspection_addr_line",
@@ -1303,6 +1367,9 @@ function inspectionSaveEntry(e) {
     ).value.trim(),
     insp_owner: (
       document.getElementById("inspection_owner") || { value: "" }
+    ).value.trim(),
+    insp_owner_phone: (
+      document.getElementById("inspection_owner_phone") || { value: "" }
     ).value.trim(),
     business_name: (
       document.getElementById("inspection_business_name") || { value: "" }
@@ -1470,6 +1537,7 @@ function inspectionSaveEntry(e) {
       const payload = {
         io_number: entry.io_number,
         owner_name: entry.insp_owner,
+        owner_phone: entry.insp_owner_phone || null,
         business_name: entry.business_name,
         address: entry.insp_address,
         date_inspected: entry.date_inspected,
@@ -1520,6 +1588,7 @@ function inspectionSaveEntry(e) {
           const payloadNoGeo = {
             io_number: entry.io_number,
             owner_name: entry.insp_owner,
+            owner_phone: entry.insp_owner_phone || null,
             business_name: entry.business_name,
             address: entry.insp_address,
             date_inspected: entry.date_inspected,
@@ -1596,6 +1665,7 @@ function openInspectionDetailPanel(entry) {
   const panel = document.getElementById("map-detail-panel");
   if (!panel) return;
 
+  const titleEl = panel.querySelector?.(".map-detail-title");
   const businessEl = document.getElementById("map-detail-business");
   const addressEl = document.getElementById("map-detail-address");
   const coordsEl = document.getElementById("map-detail-coords");
@@ -1608,6 +1678,7 @@ function openInspectionDetailPanel(entry) {
   const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
   const viewBtn = document.getElementById("map-detail-view-logbook");
 
+  if (titleEl) titleEl.textContent = "Inspection details";
   if (businessEl) {
     businessEl.textContent =
       entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
@@ -1679,6 +1750,7 @@ function openInspectionDetailPanel(entry) {
   }
 
   if (viewBtn) {
+    viewBtn.textContent = "View in Inspection logbook";
     viewBtn.onclick = () => viewInspectionInLogbook(entry);
   }
 
@@ -1696,6 +1768,118 @@ function openInspectionDetailPanel(entry) {
 
   panel.classList.add("is-open");
   panel.setAttribute("aria-hidden", "false");
+}
+
+function openOccupancyDetailPanel(entry) {
+  const panel = document.getElementById("map-detail-panel");
+  if (!panel) return;
+
+  const titleEl = panel.querySelector?.(".map-detail-title");
+  const businessEl = document.getElementById("map-detail-business");
+  const addressEl = document.getElementById("map-detail-address");
+  const coordsEl = document.getElementById("map-detail-coords");
+  const dateEl = document.getElementById("map-detail-date");
+  const takenEl = document.getElementById("map-detail-taken");
+  const inspectorEl = document.getElementById("map-detail-inspector");
+  const photoWrap = document.getElementById("map-detail-photo-wrapper");
+  const photoImg = document.getElementById("map-detail-photo");
+  const directionsLink = document.getElementById("map-detail-directions");
+  const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
+  const viewBtn = document.getElementById("map-detail-view-logbook");
+
+  if (titleEl) titleEl.textContent = "Residential details";
+  if (businessEl) businessEl.textContent = entry.owner_name || entry.io_number || "Residential";
+  if (addressEl) {
+    const parts = [
+      entry.io_number ? `IO: ${entry.io_number}` : null,
+      entry.remarks_signature ? String(entry.remarks_signature) : null,
+    ].filter(Boolean);
+    addressEl.textContent = parts.join(" · ") || "—";
+  }
+  if (coordsEl) {
+    coordsEl.textContent =
+      entry.lat != null && entry.lng != null ? `${entry.lat.toFixed(6)}, ${entry.lng.toFixed(6)}` : "—";
+  }
+  if (dateEl) dateEl.textContent = logbookFormatDate(entry.log_date);
+  if (takenEl) {
+    takenEl.textContent = entry.photo_taken_at ? String(entry.photo_taken_at) : "—";
+    takenEl.classList.toggle("meta-muted", !entry.photo_taken_at);
+  }
+  if (inspectorEl) inspectorEl.textContent = entry.inspectors || "—";
+
+  if (directionsLink) {
+    if (entry.lat != null && entry.lng != null) {
+      const dest = `${entry.lat},${entry.lng}`;
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        dest
+      )}&travelmode=driving`;
+      directionsLink.href = url;
+      directionsLink.style.display = "";
+    } else {
+      directionsLink.removeAttribute("href");
+      directionsLink.style.display = "none";
+    }
+  }
+
+  if (copyCoordsBtn) {
+    if (entry.lat != null && entry.lng != null) {
+      copyCoordsBtn.style.display = "";
+      copyCoordsBtn.onclick = async () => {
+        const text = `${entry.lat.toFixed(6)}, ${entry.lng.toFixed(6)}`;
+        try {
+          await navigator.clipboard.writeText(text);
+          logbookShowToast("occupancy-toast", "Coordinates copied.");
+        } catch {
+          try {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            logbookShowToast("occupancy-toast", "Coordinates copied.");
+          } catch {
+            logbookShowToast("occupancy-toast", "Copy failed.");
+          }
+        }
+      };
+    } else {
+      copyCoordsBtn.style.display = "none";
+      copyCoordsBtn.onclick = null;
+    }
+  }
+
+  if (viewBtn) {
+    viewBtn.textContent = "View in Occupancy logbook";
+    viewBtn.onclick = () => viewOccupancyInLogbook(entry);
+  }
+
+  if (photoWrap && photoImg) {
+    if (entry.photo_url) {
+      photoImg.src = entry.photo_url;
+      photoImg.alt = entry.owner_name || "Occupancy photo";
+      photoWrap.style.display = "";
+    } else {
+      photoWrap.style.display = "none";
+      photoImg.removeAttribute("src");
+      photoImg.alt = "";
+    }
+  }
+
+  panel.classList.add("is-open");
+  panel.setAttribute("aria-hidden", "false");
+}
+
+function viewOccupancyInLogbook(entry) {
+  showView("occupancy");
+  if (getCurrentView() !== "occupancy") window.location.hash = "occupancy";
+
+  const qEl = document.getElementById("occupancy-filter-q");
+  if (qEl) qEl.value = (entry.io_number || entry.owner_name || "").trim();
+  occupancyRenderTable?.();
+  document.getElementById("table-occupancy")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function viewInspectionInLogbook(entry) {
@@ -1741,63 +1925,6 @@ function initInspectionPhotoExif() {
   const inputCamera = document.getElementById("inspection_photo");
   const inputLibrary = document.getElementById("inspection_photo_library");
   if (!inputCamera && !inputLibrary) return;
-
-  async function readGpsFromFile(file) {
-    // Prefer exifr (reads EXIF directly from File; works better on iPhone/HEIC).
-    const exifr = window.exifr;
-    if (exifr?.gps) {
-      try {
-        const gps = await exifr.gps(file);
-        if (gps?.latitude != null && gps?.longitude != null) {
-          return { lat: gps.latitude, lng: gps.longitude };
-        }
-      } catch (e) {
-        console.warn("exifr gps read failed:", e);
-      }
-    }
-
-    // Fallback to exif-js using an Image element (works for many JPEGs).
-    if (window.EXIF && window.FileReader) {
-      try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(r.result);
-          r.onerror = () => reject(new Error("FileReader failed"));
-          r.readAsDataURL(file);
-        });
-
-        if (typeof dataUrl !== "string") return null;
-        const img = new Image();
-        await new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-          img.src = dataUrl;
-        });
-
-        return await new Promise((resolve) => {
-          try {
-            window.EXIF.getData(img, function () {
-              const lat = window.EXIF.getTag(this, "GPSLatitude");
-              const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
-              const lng = window.EXIF.getTag(this, "GPSLongitude");
-              const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
-              if (lat && lng && latRef && lngRef) {
-                resolve({ lat: dmsToDecimal(lat, latRef), lng: dmsToDecimal(lng, lngRef) });
-              } else {
-                resolve(null);
-              }
-            });
-          } catch (e) {
-            resolve(null);
-          }
-        });
-      } catch (e) {
-        console.warn("exif-js gps read failed:", e);
-      }
-    }
-
-    return null;
-  }
 
   async function onPhotoChange(sourceInput) {
     const file = sourceInput?.files?.[0];
@@ -1974,6 +2101,106 @@ function dmsToDecimal(dms, ref) {
   return isFinite(value) ? value : null;
 }
 
+// Shared GPS extraction (used by both inspection and occupancy) to ensure consistent behavior.
+async function readGpsFromFile(file) {
+  const exifrApi = window.exifr?.default || window.exifr;
+  if (exifrApi?.gps) {
+    try {
+      const gps = await exifrApi.gps(file);
+      const lat = gps?.latitude ?? gps?.lat;
+      const lng = gps?.longitude ?? gps?.lng;
+      if (lat != null && lng != null) return { lat: Number(lat), lng: Number(lng) };
+    } catch (e) {
+      console.warn("exifr gps read failed:", e);
+    }
+  }
+
+  if (window.EXIF && window.FileReader) {
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = () => reject(new Error("FileReader failed"));
+        r.readAsDataURL(file);
+      });
+      if (typeof dataUrl !== "string") return null;
+
+      const img = new Image();
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+        img.src = dataUrl;
+      });
+
+      return await new Promise((resolve) => {
+        const done = (result) => {
+          clearTimeout(timer);
+          resolve(result);
+        };
+        const timer = setTimeout(() => done(null), 5000);
+        try {
+          window.EXIF.getData(img, function () {
+            const lat = window.EXIF.getTag(this, "GPSLatitude");
+            const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
+            const lng = window.EXIF.getTag(this, "GPSLongitude");
+            const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
+            if (lat && lng && latRef && lngRef) {
+              done({ lat: dmsToDecimal(lat, latRef), lng: dmsToDecimal(lng, lngRef) });
+            } else {
+              done(null);
+            }
+          });
+        } catch (e) {
+          done(null);
+        }
+      });
+    } catch (e) {
+      console.warn("exif-js gps read failed:", e);
+    }
+  }
+  return null;
+}
+
+function initOccupancyPhotoExif() {
+  const input = document.getElementById("occupancy_photo");
+  if (!input) return;
+
+  async function onPhotoChange() {
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    occupancyExifLat = null;
+    occupancyExifLng = null;
+    occupancyExifPreviewUrl = null;
+    occupancyExifTakenAt = null;
+    occupancyExifFile = file;
+
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = () => reject(new Error("FileReader failed"));
+        r.readAsDataURL(file);
+      });
+      if (typeof dataUrl === "string") occupancyExifPreviewUrl = dataUrl;
+    } catch (e) {
+      console.warn("Occupancy preview read failed:", e);
+    }
+
+    try {
+      const gps = await readGpsFromFile(file);
+      if (gps) {
+        occupancyExifLat = gps.lat;
+        occupancyExifLng = gps.lng;
+      }
+    } catch (e) {
+      console.warn("Occupancy GPS read failed:", e);
+    }
+  }
+
+  input.addEventListener("change", () => void onPhotoChange());
+}
+
 function addInspectionMarkerFromEntry(entry) {
   if (!mapInstance || !inspectionMarkersLayer) return;
   if (entry.lat == null || entry.lng == null) return;
@@ -2025,6 +2252,51 @@ function addInspectionMarkerFromEntry(entry) {
   });
 }
 
+function addOccupancyMarkerFromEntry(entry) {
+  if (!mapInstance || !occupancyMarkersLayer) return;
+  if (entry.lat == null || entry.lng == null) return;
+
+  let icon;
+  if (entry.photo_url) {
+    icon = L.divIcon({
+      className: "occupancy-marker occupancy-marker--photo",
+      html: `<div class="occupancy-marker-thumb" style="background-image:url('${entry.photo_url}')"></div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 40],
+      popupAnchor: [0, -36],
+    });
+  } else {
+    icon = L.divIcon({
+      className: "occupancy-marker occupancy-marker--default",
+      html: '<div class="occupancy-marker-pin"></div>',
+      iconSize: [28, 36],
+      iconAnchor: [14, 36],
+      popupAnchor: [0, -30],
+    });
+  }
+
+  const title = entry.owner_name || entry.io_number || "Occupancy";
+  const marker = L.marker([entry.lat, entry.lng], { icon }).addTo(occupancyMarkersLayer);
+  marker.bindPopup(`<strong>${logbookEsc(title)}</strong><br>${logbookEsc(entry.io_number || "")}`);
+  marker.on("click", () => {
+    openOccupancyDetailPanel(entry);
+  });
+}
+
+function renderOccupancyMarkersBatched() {
+  if (!mapInstance || !occupancyMarkersLayer || !Array.isArray(occupancyData)) return;
+  occupancyMarkersLayer.clearLayers();
+  const withCoords = occupancyData.filter((row) => row.lat != null && row.lng != null);
+  let i = 0;
+  const batchSize = 40;
+  function addBatch() {
+    const end = Math.min(i + batchSize, withCoords.length);
+    for (; i < end; i++) addOccupancyMarkerFromEntry(withCoords[i]);
+    if (i < withCoords.length) requestAnimationFrame(addBatch);
+  }
+  addBatch();
+}
+
 const INSPECTION_MARKER_BATCH_SIZE = 40;
 
 function renderInspectionMarkersBatched() {
@@ -2045,23 +2317,65 @@ function getMarkedInspectionEntries() {
   return inspectionData.filter((row) => row.lat != null && row.lng != null);
 }
 
+function getMarkedOccupancyEntries() {
+  if (!Array.isArray(occupancyData)) return [];
+  return occupancyData.filter((row) => row.lat != null && row.lng != null);
+}
+
 function searchMapLocations(query) {
   const q = normalizeQuery(query);
-  const marked = getMarkedInspectionEntries();
-  if (!q) return marked.slice(0, 20);
-  return marked.filter((row) => {
-    const hay = normalizeQuery(
-      [
-        row.io_number,
-        row.insp_owner,
-        row.business_name,
-        inspectionFormatAddressDisplay(row),
-        row.fsic_number,
-        row.inspected_by,
-      ].join(" | ")
+  const includeInspection = mapMarkerFilter === "all" || mapMarkerFilter === "businesses";
+  const includeOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "residential";
+
+  const candidates = [
+    ...(includeInspection ? getMarkedInspectionEntries().map((r) => ({ type: "inspection", r })) : []),
+    ...(includeOccupancy ? getMarkedOccupancyEntries().map((r) => ({ type: "occupancy", r })) : []),
+  ];
+
+  const filtered = !q
+    ? candidates
+    : candidates.filter(({ type, r }) => {
+        const hay =
+          type === "inspection"
+            ? normalizeQuery(
+                [
+                  r.io_number,
+                  r.insp_owner,
+                  r.insp_owner_phone,
+                  r.business_name,
+                  inspectionFormatAddressDisplay(r),
+                  r.fsic_number,
+                  r.inspected_by,
+                ].join(" | ")
+              )
+            : normalizeQuery(
+                [
+                  r.io_number,
+                  r.owner_name,
+                  r.inspectors,
+                  r.remarks_signature,
+                  r.lat,
+                  r.lng,
+                ].join(" | ")
+              );
+        return hay.includes(q);
+      });
+
+  // Convert back to a unified shape used by the UI list.
+  return filtered
+    .slice(0, 20)
+    .map(({ type, r }) =>
+      type === "inspection"
+        ? { ...r, _mapType: "inspection" }
+        : {
+            ...r,
+            insp_owner: r.owner_name,
+            business_name: "Residential",
+            fsic_number: "",
+            inspected_by: r.inspectors,
+            _mapType: "occupancy",
+          }
     );
-    return hay.includes(q);
-  }).slice(0, 20);
 }
 
 function initMapSearch() {
@@ -2088,7 +2402,10 @@ function initMapSearch() {
       btn.className = "map-search-result-item";
       btn.setAttribute("role", "option");
       const title = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
-      const sub = [entry.io_number, inspectionFormatAddressDisplay(entry)].filter(Boolean).join(" · ") || "—";
+      const sub =
+        entry._mapType === "occupancy"
+          ? [entry.io_number, entry.insp_owner].filter(Boolean).join(" · ") || "—"
+          : [entry.io_number, inspectionFormatAddressDisplay(entry)].filter(Boolean).join(" · ") || "—";
       const strong = document.createElement("strong");
       strong.textContent = title;
       const span = document.createElement("span");
@@ -2098,7 +2415,8 @@ function initMapSearch() {
       btn.onclick = () => {
         if (mapInstance && entry.lat != null && entry.lng != null) {
           mapInstance.setView([entry.lat, entry.lng], 16);
-          openInspectionDetailPanel(entry);
+          if (entry._mapType === "occupancy") openOccupancyDetailPanel(entry);
+          else openInspectionDetailPanel(entry);
         }
         input.value = "";
         resultsEl.hidden = true;
@@ -2147,9 +2465,9 @@ function inspectionPrintPanel() {
 
 async function inspectionLoadFromSupabase() {
   const selectWithGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, latitude, longitude, photo_url, photo_taken_at, created_at";
+    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, latitude, longitude, photo_url, photo_taken_at, created_at";
   const selectWithoutGeo =
-    "id, io_number, owner_name, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, created_at";
+    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, created_at";
 
   const INSPECTION_FETCH_LIMIT = 2000;
   const run = async (select) =>
@@ -2180,6 +2498,7 @@ async function inspectionLoadFromSupabase() {
     io_number: r.io_number,
     fsic_number: r.fsic_number,
     insp_owner: r.owner_name,
+    insp_owner_phone: r.owner_phone ?? "",
     business_name: r.business_name,
     insp_address: r.address,
     date_inspected: r.date_inspected,
@@ -3024,7 +3343,20 @@ function occupancyLoadFromLocal() {
 }
 
 function occupancySaveToLocal() {
-  localStorage.setItem(OCCUPANCY_STORAGE_KEY, JSON.stringify(occupancyData));
+  // Avoid storing huge inline image data URLs in localStorage (they quickly exceed quota).
+  const safe = occupancyData.map((row) => {
+    const copy = { ...row };
+    if (typeof copy.photo_url === "string" && copy.photo_url.startsWith("data:")) {
+      copy.photo_url = null;
+    }
+    return copy;
+  });
+
+  try {
+    localStorage.setItem(OCCUPANCY_STORAGE_KEY, JSON.stringify(safe));
+  } catch (err) {
+    console.warn("Failed to persist occupancy cache to localStorage:", err);
+  }
 }
 
 function occupancyRenderTable() {
@@ -3044,7 +3376,16 @@ function occupancyRenderTable() {
         if (!inDateRange(row.log_date, from, to)) return false;
       }
       if (!q) return true;
-      const hay = normalizeQuery([row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | "));
+      const hay = normalizeQuery(
+        [
+          row.io_number,
+          row.owner_name,
+          row.inspectors,
+          row.remarks_signature,
+          row.lat,
+          row.lng,
+        ].join(" | ")
+      );
       return hay.includes(q);
     });
 
@@ -3098,6 +3439,14 @@ function occupancyEditEntry(idx) {
   occupancyEditingIdx = idx;
   occupancyEditingId = row.id || null;
 
+  // Preserve existing location/photo for edits so we don't accidentally
+  // reuse EXIF state from a different modal action.
+  occupancyExifLat = row.lat ?? null;
+  occupancyExifLng = row.lng ?? null;
+  occupancyExifPreviewUrl = row.photo_url ?? null;
+  occupancyExifTakenAt = row.photo_taken_at ?? null;
+  occupancyExifFile = null;
+
   const setVal = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.value = value || "";
@@ -3120,6 +3469,13 @@ function occupancyOpenModal() {
   occupancyEditingIdx = null;
   occupancyEditingId = null;
 
+  // Reset any previously extracted EXIF coordinates and photo data
+  occupancyExifLat = null;
+  occupancyExifLng = null;
+  occupancyExifPreviewUrl = null;
+  occupancyExifTakenAt = null;
+  occupancyExifFile = null;
+
   setText("occupancy-modal-title", "Add Occupancy Record");
   const btn = document.getElementById("occupancy-btn-save");
   if (btn) btn.textContent = "Save Record";
@@ -3134,6 +3490,9 @@ function occupancyOpenModal() {
   if (insp) insp.value = "";
   const rem = document.getElementById("occupancy_remarks_signature");
   if (rem) rem.value = "";
+
+  const photoInput = document.getElementById("occupancy_photo");
+  if (photoInput) photoInput.value = "";
 
   const overlay = document.getElementById("occupancy-modal-overlay");
   overlay?.classList.add("open");
@@ -3188,8 +3547,25 @@ function occupancySaveEntry(e) {
     owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
     inspectors: (document.getElementById("occupancy_inspectors") || { value: "" }).value.trim(),
     remarks_signature: (document.getElementById("occupancy_remarks_signature") || { value: "" }).value.trim(),
+    // Optional coordinates and photo metadata extracted from EXIF / geolocation
+    lat: occupancyExifLat,
+    lng: occupancyExifLng,
+    photo_url: occupancyExifPreviewUrl,
+    photo_taken_at: occupancyExifTakenAt,
     created_at: new Date().toISOString(),
   };
+
+  // If the photo has no GPS EXIF, fall back to the user's current geolocation (same as inspection)
+  if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
+    entry.lat = lastUserLatitude;
+    entry.lng = lastUserLongitude;
+  }
+
+  // If we still have no coordinates, treat this as "no location yet"
+  if (entry.lat == null || entry.lng == null) {
+    entry.photo_url = null;
+    entry.photo_taken_at = null;
+  }
 
   if (!entry.log_date || !entry.io_number || !entry.inspectors) {
     logbookShowToast("occupancy-toast", "⚠️ Please fill in Date, IO Number, and Inspectors.");
@@ -3214,6 +3590,7 @@ function occupancySaveEntry(e) {
   occupancyRenderTable();
   occupancyCloseModal();
   showSaveIndicator("Occupancy record saved");
+  addOccupancyMarkerFromEntry(entry);
 
   if (!isOnline) {
     logbookShowToast("occupancy-toast", "Saved on this device only (offline mode).");
@@ -3222,12 +3599,48 @@ function occupancySaveEntry(e) {
 
   (async () => {
     try {
+      // If we have a photo file and Supabase Storage, upload and set entry.photo_url to public URL
+      if (occupancyExifFile && supabaseClient?.storage) {
+        let uploadFile = occupancyExifFile;
+        try {
+          uploadFile = await sanitizeInspectionImage(uploadFile);
+        } catch (sanitizeErr) {
+          console.warn("Occupancy image sanitization failed, using original:", sanitizeErr);
+          uploadFile = occupancyExifFile;
+        }
+        const fileExt =
+          (occupancyExifFile.name && occupancyExifFile.name.split(".").pop()) || "jpg";
+        const safeExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const path = `occupancy-photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+        try {
+          const { error: uploadError } = await supabaseClient.storage
+            .from("storage")
+            .upload(path, uploadFile, {
+              cacheControl: "3600",
+              upsert: false,
+              contentType: uploadFile.type || occupancyExifFile.type || "image/jpeg",
+            });
+          if (!uploadError) {
+            const { data: urlData } = supabaseClient.storage.from("storage").getPublicUrl(path);
+            if (urlData?.publicUrl) entry.photo_url = urlData.publicUrl;
+          } else {
+            console.warn("Occupancy photo upload failed:", uploadError);
+          }
+        } catch (uploadErr) {
+          console.warn("Occupancy photo upload threw:", uploadErr);
+        }
+      }
+
       const payload = {
         log_date: entry.log_date,
         io_number: entry.io_number,
         owner_name: entry.owner_name || null,
         inspectors: entry.inspectors,
         remarks_signature: entry.remarks_signature,
+        latitude: entry.lat ?? null,
+        longitude: entry.lng ?? null,
+        photo_url: entry.photo_url ?? null,
+        photo_taken_at: entry.photo_taken_at ?? null,
       };
       // On UPDATE, don't overwrite optional owner_name with null/blank.
       if (occupancyEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
@@ -3237,7 +3650,37 @@ function occupancySaveEntry(e) {
       const { error } = occupancyEditingId
         ? await q.update(payload).eq("id", occupancyEditingId)
         : await q.insert(payload);
-      if (error) throw error;
+      if (error) {
+        const msg = (error?.message || String(error)).toLowerCase();
+        const missingGeo =
+          msg.includes("latitude") ||
+          msg.includes("longitude") ||
+          msg.includes("photo_url") ||
+          msg.includes("photo_taken_at");
+        if (!missingGeo) throw error;
+
+        // Backward compatibility: database exists but hasn't been migrated yet
+        const payloadCompat = {
+          log_date: entry.log_date,
+          io_number: entry.io_number,
+          owner_name: entry.owner_name || null,
+          inspectors: entry.inspectors,
+          remarks_signature: entry.remarks_signature,
+        };
+        if (
+          occupancyEditingId &&
+          (!payloadCompat.owner_name || String(payloadCompat.owner_name).trim() === "")
+        ) {
+          delete payloadCompat.owner_name;
+        }
+        const retry = occupancyEditingId
+          ? await q.update(payloadCompat).eq("id", occupancyEditingId)
+          : await q.insert(payloadCompat);
+        if (retry.error) throw retry.error;
+      }
+      await occupancyLoadFromSupabase();
+      occupancyRenderTable();
+      renderOccupancyMarkersBatched();
       logbookShowToast("occupancy-toast", "Saved to database.");
     } catch (err) {
       const msg = err?.message || String(err);
@@ -3251,12 +3694,37 @@ function occupancySaveEntry(e) {
 }
 
 async function occupancyLoadFromSupabase() {
-  const { data: rows, error } = await supabaseClient
-    .from("occupancy_logbook")
-    .select("id, log_date, io_number, owner_name, inspectors, remarks_signature, created_at")
-    .order("created_at", { ascending: true })
-    .limit(2000);
-  if (error) throw error;
+  const selectWithGeo =
+    "id, log_date, io_number, owner_name, inspectors, remarks_signature, latitude, longitude, photo_url, photo_taken_at, created_at";
+  const selectWithoutGeo =
+    "id, log_date, io_number, owner_name, inspectors, remarks_signature, created_at";
+
+  const run = async (select) =>
+    await supabaseClient
+      .from("occupancy_logbook")
+      .select(select)
+      .order("created_at", { ascending: true })
+      .limit(2000);
+
+  let rows;
+  {
+    const { data, error } = await run(selectWithGeo);
+    if (!error) rows = data;
+    else {
+      const msg = (error?.message || String(error)).toLowerCase();
+      const missingGeo =
+        msg.includes("latitude") ||
+        msg.includes("longitude") ||
+        msg.includes("photo_url") ||
+        msg.includes("photo_taken_at");
+      if (!missingGeo) throw error;
+
+      const retry = await run(selectWithoutGeo);
+      if (retry.error) throw retry.error;
+      rows = retry.data;
+    }
+  }
+
   occupancyData = (rows || []).map((r) => ({
     id: r.id,
     log_date: r.log_date,
@@ -3264,6 +3732,12 @@ async function occupancyLoadFromSupabase() {
     owner_name: r.owner_name || "",
     inspectors: r.inspectors,
     remarks_signature: r.remarks_signature,
+    lat: r.latitude ?? null,
+    lng: r.longitude ?? null,
+    photo_url:
+      r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
+    photo_taken_at:
+      r.latitude != null && r.longitude != null ? r.photo_taken_at ?? null : null,
     created_at: r.created_at,
   }));
   occupancySaveToLocal();
@@ -3275,14 +3749,17 @@ async function occupancyInitData() {
   try {
     occupancyLoadFromLocal();
     occupancyRenderTable();
+    renderOccupancyMarkersBatched();
     if (isSupabaseEnabled()) {
       await occupancyLoadFromSupabase();
       occupancyRenderTable();
+      renderOccupancyMarkersBatched();
     }
   } catch (err) {
     occupancyLoadFromLocal();
     console.warn("Occupancy load failed, using local storage:", err);
     logbookShowToast("occupancy-toast", "Using data stored on this device.");
     occupancyRenderTable();
+    renderOccupancyMarkersBatched();
   }
 }
