@@ -447,24 +447,32 @@
       transform: translateY(-1px);
     }
 
-    /* Map search (marked locations) – aligned near Leaflet layers control */
+    /* Map search and filters — compact, touch-friendly, responsive */
     .map-search-wrap {
       position: fixed;
-      top: 64px;           /* sit just below the default top-right controls */
+      top: 64px;
       right: 16px;
-      width: 320px;
-      max-width: calc(100vw - 40px);
+      left: 16px;
+      max-width: 420px;
+      margin-left: auto;
       z-index: 200;
       pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    @media (min-width: 540px) {
+      .map-search-wrap { left: auto; }
     }
     .map-search-input {
-      width: 100%;
+      flex: 1;
+      min-width: 0;
       padding: 12px 16px;
       border-radius: 12px;
       border: 1px solid rgba(13, 27, 42, 0.2);
       background: var(--white);
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       box-shadow: var(--shadow-lg);
       outline: none;
     }
@@ -475,13 +483,46 @@
       border-color: var(--gold);
       box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.25);
     }
+    .map-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 0 0;
+    }
+    .map-filter-btn {
+      appearance: none;
+      border: 1px solid rgba(13, 27, 42, 0.2);
+      background: var(--white);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .map-filter-btn:hover {
+      background: var(--cream-dark);
+      border-color: rgba(13, 27, 42, 0.3);
+    }
+    .map-filter-btn.is-active {
+      background: var(--navy);
+      color: var(--white);
+      border-color: var(--navy);
+    }
+    .map-filter-btn:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
+    }
     .map-search-results {
       position: absolute;
       top: 100%;
       left: 0;
       right: 0;
-      margin-top: 6px;
-      max-height: 280px;
+      margin-top: 8px;
+      max-height: min(280px, 50vh);
       overflow-y: auto;
       background: var(--white);
       border-radius: 12px;
@@ -971,6 +1012,11 @@
         autocomplete="off"
       >
       <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
+      <div class="map-filter" role="group" aria-label="Map markers filter">
+        <button type="button" class="map-filter-btn is-active" data-map-filter="all">All</button>
+        <button type="button" class="map-filter-btn" data-map-filter="businesses">Businesses</button>
+        <button type="button" class="map-filter-btn" data-map-filter="residential">Residential</button>
+      </div>
     </div>
     <div class="map-layout">
       <aside
