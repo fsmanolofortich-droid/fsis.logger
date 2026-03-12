@@ -128,6 +128,37 @@ let occupancyMarkersLayer = null;
 let inspectionDataLoaded = false;
 let inspectionActiveTab = "with-location";
 
+let mapMarkerFilter = "all"; // all | businesses | residential
+
+function applyMapMarkerFilter(next) {
+  mapMarkerFilter = next || "all";
+  const buttons = Array.from(document.querySelectorAll("[data-map-filter]"));
+  buttons.forEach((b) => b.classList.toggle("is-active", b.getAttribute("data-map-filter") === mapMarkerFilter));
+
+  if (!mapInstance) return;
+  const showInspection = mapMarkerFilter === "all" || mapMarkerFilter === "businesses";
+  const showOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "residential";
+
+  if (inspectionMarkersLayer) {
+    if (showInspection) inspectionMarkersLayer.addTo(mapInstance);
+    else mapInstance.removeLayer(inspectionMarkersLayer);
+  }
+  if (occupancyMarkersLayer) {
+    if (showOccupancy) occupancyMarkersLayer.addTo(mapInstance);
+    else mapInstance.removeLayer(occupancyMarkersLayer);
+  }
+}
+
+function initMapMarkerFilterUi() {
+  document.addEventListener("click", (e) => {
+    const el = e.target instanceof Element ? e.target : null;
+    const btn = el?.closest?.("[data-map-filter]");
+    if (!btn) return;
+    const f = btn.getAttribute("data-map-filter") || "all";
+    applyMapMarkerFilter(f);
+  });
+}
+
 function resizeMapLayout() {
   const mapSection = document.querySelector('[data-view="map"]');
   const layout = document.querySelector(".map-layout");
@@ -225,6 +256,7 @@ function initLeafletMap() {
   }, 0);
 
   initMapSearch();
+  applyMapMarkerFilter(mapMarkerFilter);
 }
 
 function resetMapView() {
@@ -521,6 +553,7 @@ function init() {
   populateModalDropdowns();
   initViewRouting();
   initTableFilters();
+  initMapMarkerFilterUi();
   initInspectionPhotoExif();
   initOccupancyPhotoExif();
   refreshStorageBadge();
@@ -1726,63 +1759,6 @@ function initInspectionPhotoExif() {
   const inputLibrary = document.getElementById("inspection_photo_library");
   if (!inputCamera && !inputLibrary) return;
 
-  async function readGpsFromFile(file) {
-    // Prefer exifr (reads EXIF directly from File; works better on iPhone/HEIC).
-    const exifr = window.exifr;
-    if (exifr?.gps) {
-      try {
-        const gps = await exifr.gps(file);
-        if (gps?.latitude != null && gps?.longitude != null) {
-          return { lat: gps.latitude, lng: gps.longitude };
-        }
-      } catch (e) {
-        console.warn("exifr gps read failed:", e);
-      }
-    }
-
-    // Fallback to exif-js using an Image element (works for many JPEGs).
-    if (window.EXIF && window.FileReader) {
-      try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(r.result);
-          r.onerror = () => reject(new Error("FileReader failed"));
-          r.readAsDataURL(file);
-        });
-
-        if (typeof dataUrl !== "string") return null;
-        const img = new Image();
-        await new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-          img.src = dataUrl;
-        });
-
-        return await new Promise((resolve) => {
-          try {
-            window.EXIF.getData(img, function () {
-              const lat = window.EXIF.getTag(this, "GPSLatitude");
-              const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
-              const lng = window.EXIF.getTag(this, "GPSLongitude");
-              const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
-              if (lat && lng && latRef && lngRef) {
-                resolve({ lat: dmsToDecimal(lat, latRef), lng: dmsToDecimal(lng, lngRef) });
-              } else {
-                resolve(null);
-              }
-            });
-          } catch (e) {
-            resolve(null);
-          }
-        });
-      } catch (e) {
-        console.warn("exif-js gps read failed:", e);
-      }
-    }
-
-    return null;
-  }
-
   async function onPhotoChange(sourceInput) {
     const file = sourceInput?.files?.[0];
     if (!file) return;
@@ -1958,66 +1934,69 @@ function dmsToDecimal(dms, ref) {
   return isFinite(value) ? value : null;
 }
 
+// Shared GPS extraction (used by both inspection and occupancy) to ensure consistent behavior.
+async function readGpsFromFile(file) {
+  const exifrApi = window.exifr?.default || window.exifr;
+  if (exifrApi?.gps) {
+    try {
+      const gps = await exifrApi.gps(file);
+      const lat = gps?.latitude ?? gps?.lat;
+      const lng = gps?.longitude ?? gps?.lng;
+      if (lat != null && lng != null) return { lat: Number(lat), lng: Number(lng) };
+    } catch (e) {
+      console.warn("exifr gps read failed:", e);
+    }
+  }
+
+  if (window.EXIF && window.FileReader) {
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = () => reject(new Error("FileReader failed"));
+        r.readAsDataURL(file);
+      });
+      if (typeof dataUrl !== "string") return null;
+
+      const img = new Image();
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+        img.src = dataUrl;
+      });
+
+      return await new Promise((resolve) => {
+        const done = (result) => {
+          clearTimeout(timer);
+          resolve(result);
+        };
+        const timer = setTimeout(() => done(null), 5000);
+        try {
+          window.EXIF.getData(img, function () {
+            const lat = window.EXIF.getTag(this, "GPSLatitude");
+            const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
+            const lng = window.EXIF.getTag(this, "GPSLongitude");
+            const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
+            if (lat && lng && latRef && lngRef) {
+              done({ lat: dmsToDecimal(lat, latRef), lng: dmsToDecimal(lng, lngRef) });
+            } else {
+              done(null);
+            }
+          });
+        } catch (e) {
+          done(null);
+        }
+      });
+    } catch (e) {
+      console.warn("exif-js gps read failed:", e);
+    }
+  }
+  return null;
+}
+
 function initOccupancyPhotoExif() {
   const input = document.getElementById("occupancy_photo");
   if (!input) return;
-
-  async function readGpsFromFile(file) {
-    const exifr = window.exifr;
-    if (exifr?.gps) {
-      try {
-        const gps = await exifr.gps(file);
-        if (gps?.latitude != null && gps?.longitude != null) {
-          return { lat: gps.latitude, lng: gps.longitude };
-        }
-      } catch (e) {
-        console.warn("exifr gps read failed:", e);
-      }
-    }
-
-    if (window.EXIF && window.FileReader) {
-      try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(r.result);
-          r.onerror = () => reject(new Error("FileReader failed"));
-          r.readAsDataURL(file);
-        });
-
-        if (typeof dataUrl !== "string") return null;
-        const img = new Image();
-        await new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-          img.src = dataUrl;
-        });
-
-        return await new Promise((resolve) => {
-          try {
-            window.EXIF.getData(img, function () {
-              const lat = window.EXIF.getTag(this, "GPSLatitude");
-              const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
-              const lng = window.EXIF.getTag(this, "GPSLongitude");
-              const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
-              const takenAt = window.EXIF.getTag(this, "DateTimeOriginal");
-              if (takenAt) occupancyExifTakenAt = takenAt;
-              if (lat && lng && latRef && lngRef) {
-                resolve({ lat: dmsToDecimal(lat, latRef), lng: dmsToDecimal(lng, lngRef) });
-              } else {
-                resolve(null);
-              }
-            });
-          } catch (e) {
-            resolve(null);
-          }
-        });
-      } catch (e) {
-        console.warn("exif-js gps read failed:", e);
-      }
-    }
-
-    return null;
-  }
 
   async function onPhotoChange() {
     const file = input?.files?.[0];
@@ -2168,23 +2147,64 @@ function getMarkedInspectionEntries() {
   return inspectionData.filter((row) => row.lat != null && row.lng != null);
 }
 
+function getMarkedOccupancyEntries() {
+  if (!Array.isArray(occupancyData)) return [];
+  return occupancyData.filter((row) => row.lat != null && row.lng != null);
+}
+
 function searchMapLocations(query) {
   const q = normalizeQuery(query);
-  const marked = getMarkedInspectionEntries();
-  if (!q) return marked.slice(0, 20);
-  return marked.filter((row) => {
-    const hay = normalizeQuery(
-      [
-        row.io_number,
-        row.insp_owner,
-        row.business_name,
-        inspectionFormatAddressDisplay(row),
-        row.fsic_number,
-        row.inspected_by,
-      ].join(" | ")
+  const includeInspection = mapMarkerFilter === "all" || mapMarkerFilter === "businesses";
+  const includeOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "residential";
+
+  const candidates = [
+    ...(includeInspection ? getMarkedInspectionEntries().map((r) => ({ type: "inspection", r })) : []),
+    ...(includeOccupancy ? getMarkedOccupancyEntries().map((r) => ({ type: "occupancy", r })) : []),
+  ];
+
+  const filtered = !q
+    ? candidates
+    : candidates.filter(({ type, r }) => {
+        const hay =
+          type === "inspection"
+            ? normalizeQuery(
+                [
+                  r.io_number,
+                  r.insp_owner,
+                  r.insp_owner_phone,
+                  r.business_name,
+                  inspectionFormatAddressDisplay(r),
+                  r.fsic_number,
+                  r.inspected_by,
+                ].join(" | ")
+              )
+            : normalizeQuery(
+                [
+                  r.io_number,
+                  r.owner_name,
+                  r.inspectors,
+                  r.remarks_signature,
+                  r.lat,
+                  r.lng,
+                ].join(" | ")
+              );
+        return hay.includes(q);
+      });
+
+  // Convert back to a unified shape used by the UI list.
+  return filtered
+    .slice(0, 20)
+    .map(({ type, r }) =>
+      type === "inspection"
+        ? r
+        : {
+            ...r,
+            insp_owner: r.owner_name,
+            business_name: "Residential",
+            fsic_number: "",
+            inspected_by: r.inspectors,
+          }
     );
-    return hay.includes(q);
-  }).slice(0, 20);
 }
 
 function initMapSearch() {
@@ -3360,7 +3380,13 @@ function occupancySaveEntry(e) {
     created_at: new Date().toISOString(),
   };
 
-  // If we have no coordinates from EXIF, treat this as "no location yet"
+  // If the photo has no GPS EXIF, fall back to the user's current geolocation (same as inspection)
+  if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
+    entry.lat = lastUserLatitude;
+    entry.lng = lastUserLongitude;
+  }
+
+  // If we still have no coordinates, treat this as "no location yet"
   if (entry.lat == null || entry.lng == null) {
     entry.photo_url = null;
     entry.photo_taken_at = null;
@@ -3398,6 +3424,38 @@ function occupancySaveEntry(e) {
 
   (async () => {
     try {
+      // If we have a photo file and Supabase Storage, upload and set entry.photo_url to public URL
+      if (occupancyExifFile && supabaseClient?.storage) {
+        let uploadFile = occupancyExifFile;
+        try {
+          uploadFile = await sanitizeInspectionImage(uploadFile);
+        } catch (sanitizeErr) {
+          console.warn("Occupancy image sanitization failed, using original:", sanitizeErr);
+          uploadFile = occupancyExifFile;
+        }
+        const fileExt =
+          (occupancyExifFile.name && occupancyExifFile.name.split(".").pop()) || "jpg";
+        const safeExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const path = `occupancy-photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+        try {
+          const { error: uploadError } = await supabaseClient.storage
+            .from("storage")
+            .upload(path, uploadFile, {
+              cacheControl: "3600",
+              upsert: false,
+              contentType: uploadFile.type || occupancyExifFile.type || "image/jpeg",
+            });
+          if (!uploadError) {
+            const { data: urlData } = supabaseClient.storage.from("storage").getPublicUrl(path);
+            if (urlData?.publicUrl) entry.photo_url = urlData.publicUrl;
+          } else {
+            console.warn("Occupancy photo upload failed:", uploadError);
+          }
+        } catch (uploadErr) {
+          console.warn("Occupancy photo upload threw:", uploadErr);
+        }
+      }
+
       const payload = {
         log_date: entry.log_date,
         io_number: entry.io_number,
@@ -3445,6 +3503,9 @@ function occupancySaveEntry(e) {
           : await q.insert(payloadCompat);
         if (retry.error) throw retry.error;
       }
+      await occupancyLoadFromSupabase();
+      occupancyRenderTable();
+      renderOccupancyMarkersBatched();
       logbookShowToast("occupancy-toast", "Saved to database.");
     } catch (err) {
       const msg = err?.message || String(err);
