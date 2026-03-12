@@ -115,6 +115,7 @@ let currentExifLng = null;
 let currentExifPreviewUrl = null;
 let currentExifTakenAt = null;
 let currentExifFile = null;
+let currentExifProcessingPromise = null;
 
 // Occupancy photo/EXIF state (separate from inspection)
 let occupancyExifLat = null;
@@ -1279,6 +1280,8 @@ function inspectionOpenModal() {
   currentExifLng = null;
   currentExifPreviewUrl = null;
   currentExifTakenAt = null;
+  currentExifFile = null;
+  currentExifProcessingPromise = null;
 
   const overlay = document.getElementById("inspection-modal-overlay");
   if (overlay) overlay.classList.add("open");
@@ -1295,6 +1298,8 @@ function inspectionOpenModal() {
   // Clear photo input
   const photoInput = document.getElementById("inspection_photo");
   if (photoInput) photoInput.value = "";
+  const photoLibraryInput = document.getElementById("inspection_photo_library");
+  if (photoLibraryInput) photoLibraryInput.value = "";
 }
 
 function inspectionCloseModal() {
@@ -1330,8 +1335,23 @@ function inspectionClearForm() {
   });
 }
 
-function inspectionSaveEntry(e) {
+async function inspectionSaveEntry(e) {
   if (e?.preventDefault) e.preventDefault();
+  if (inspectionSaveEntry._lastRun && Date.now() - inspectionSaveEntry._lastRun < 800) return;
+  inspectionSaveEntry._lastRun = Date.now();
+
+  // If the user just attached a photo, GPS extraction may still be running.
+  // Wait briefly so we don't save null lat/lng and lose the map pin.
+  if (currentExifProcessingPromise) {
+    try {
+      await Promise.race([
+        currentExifProcessingPromise,
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ]);
+    } catch {
+      // ignore
+    }
+  }
 
   const region =
     (document.getElementById("inspection_addr_region")?.value || "X").trim();
@@ -1416,7 +1436,7 @@ function inspectionSaveEntry(e) {
 
   // When editing:
   // - If user didn't pick a new photo, keep existing photo URL/meta.
-  // - If user didn't pick new coordinates (EXIF), keep existing lat/lng (avoid overwriting).
+  // - If user picked a new photo but it has no EXIF GPS, keep existing lat/lng so the pin doesn't disappear.
   if (inspectionEditingIdx !== null) {
     const prev = inspectionData[inspectionEditingIdx] || {};
     const hasNewPhoto = !!currentExifFile;
@@ -1424,7 +1444,13 @@ function inspectionSaveEntry(e) {
       entry.photo_url = prev.photo_url ?? null;
       entry.photo_taken_at = prev.photo_taken_at ?? null;
     }
-    if (entry.lat == null || entry.lng == null) {
+    // For UPDATE: keep the existing red-pin location.
+    // Attaching a photo should not move/remove the pin; we reuse the current record coordinates.
+    if (prev.lat != null && prev.lng != null) {
+      entry.lat = prev.lat;
+      entry.lng = prev.lng;
+    } else if (entry.lat == null || entry.lng == null) {
+      // If the record had no coordinates yet, keep whatever we can (EXIF/device fallback may fill it).
       entry.lat = prev.lat ?? null;
       entry.lng = prev.lng ?? null;
     }
@@ -1555,6 +1581,12 @@ function inspectionSaveEntry(e) {
         photo_taken_at: entry.photo_taken_at ?? null,
       };
 
+      // On UPDATE: don't send photo_url when it's still a data URL (e.g. upload failed),
+      // so we don't overwrite the existing DB photo with a huge string or null.
+      if (inspectionEditingId && typeof payload.photo_url === "string" && payload.photo_url.startsWith("data:")) {
+        delete payload.photo_url;
+      }
+
       // On UPDATE, don't send empty/null optional fields — otherwise Supabase will
       // overwrite existing DB values to null when the user didn't intend to edit them.
       if (inspectionEditingId) {
@@ -1603,8 +1635,8 @@ function inspectionSaveEntry(e) {
       }
       await inspectionLoadFromSupabase();
       inspectionRenderTable();
-      // Place a marker based on the coordinates available on this entry.
-      addInspectionMarkerFromEntry(entry);
+      // Redraw all markers from refetched data so the map matches the DB (no duplicate/missing pins).
+      renderInspectionMarkersBatched();
       inspectionCloseModal();
       logbookShowToast("inspection-toast", "Saved to database.");
 
@@ -1930,40 +1962,68 @@ function initInspectionPhotoExif() {
     const file = sourceInput?.files?.[0];
     if (!file) return;
 
-    // Reset extracted photo/exif state.
-    currentExifLat = null;
-    currentExifLng = null;
-    currentExifPreviewUrl = null;
-    currentExifTakenAt = null;
-    currentExifFile = file;
+    // Track async work so Save can wait briefly if needed.
+    currentExifProcessingPromise = (async () => {
+      // Reset extracted photo/exif state.
+      currentExifLat = null;
+      currentExifLng = null;
+      currentExifPreviewUrl = null;
+      currentExifTakenAt = null;
+      currentExifFile = file;
 
-    // Clear the other input so only one is active.
-    if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
-    if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
+      // Clear the other input so only one is active.
+      if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
+      if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
 
-    // Set preview URL (for immediate UI feedback); upload uses the File.
-    try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = () => reject(new Error("FileReader failed"));
-        r.readAsDataURL(file);
-      });
-      if (typeof dataUrl === "string") currentExifPreviewUrl = dataUrl;
-    } catch (e) {
-      console.warn("Preview read failed:", e);
-    }
-
-    // Read GPS from EXIF if present.
-    try {
-      const gps = await readGpsFromFile(file);
-      if (gps) {
-        currentExifLat = gps.lat;
-        currentExifLng = gps.lng;
+      // Set preview URL (for immediate UI feedback); upload uses the File.
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = () => reject(new Error("FileReader failed"));
+          r.readAsDataURL(file);
+        });
+        if (typeof dataUrl === "string") currentExifPreviewUrl = dataUrl;
+      } catch (e) {
+        console.warn("Preview read failed:", e);
       }
-    } catch (e) {
-      console.warn("GPS read failed:", e);
-    }
+
+      // Read GPS from EXIF if present.
+      try {
+        const gps = await readGpsFromFile(file);
+        if (gps) {
+          currentExifLat = gps.lat;
+          currentExifLng = gps.lng;
+        }
+      } catch (e) {
+        console.warn("GPS read failed:", e);
+      }
+
+      // If EXIF GPS is not available, fall back to the device's current location.
+      if ((currentExifLat == null || currentExifLng == null) && navigator.geolocation) {
+        try {
+          await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const { latitude, longitude } = pos.coords || {};
+                if (latitude != null && longitude != null) {
+                  currentExifLat = latitude;
+                  currentExifLng = longitude;
+                }
+                resolve();
+              },
+              () => resolve(),
+              { enableHighAccuracy: true, timeout: 6000, maximumAge: 30_000 }
+            );
+          });
+        } catch {
+          // ignore
+        }
+      }
+    })();
+
+    // Fire and forget, but keep the promise for Save to await.
+    void currentExifProcessingPromise;
   }
 
   inputCamera?.addEventListener("change", () => void onPhotoChange(inputCamera));
@@ -2106,10 +2166,19 @@ async function readGpsFromFile(file) {
   const exifrApi = window.exifr?.default || window.exifr;
   if (exifrApi?.gps) {
     try {
-      const gps = await exifrApi.gps(file);
-      const lat = gps?.latitude ?? gps?.lat;
-      const lng = gps?.longitude ?? gps?.lng;
+      // ArrayBuffer parsing is more reliable than File parsing on some mobile browsers.
+      const buf = typeof file?.arrayBuffer === "function" ? await file.arrayBuffer() : file;
+      const gps = await exifrApi.gps(buf);
+      const lat = gps?.latitude ?? gps?.lat ?? gps?.GPSLatitude;
+      const lng = gps?.longitude ?? gps?.lng ?? gps?.GPSLongitude;
       if (lat != null && lng != null) return { lat: Number(lat), lng: Number(lng) };
+      // Some variants expose latitude/longitude on parse(), not gps().
+      if (typeof exifrApi.parse === "function") {
+        const parsed = await exifrApi.parse(buf, { gps: true });
+        const plat = parsed?.latitude ?? parsed?.lat ?? parsed?.GPSLatitude;
+        const plng = parsed?.longitude ?? parsed?.lng ?? parsed?.GPSLongitude;
+        if (plat != null && plng != null) return { lat: Number(plat), lng: Number(plng) };
+      }
     } catch (e) {
       console.warn("exifr gps read failed:", e);
     }
@@ -2464,10 +2533,14 @@ function inspectionPrintPanel() {
 }
 
 async function inspectionLoadFromSupabase() {
-  const selectWithGeo =
-    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, latitude, longitude, photo_url, photo_taken_at, created_at";
-  const selectWithoutGeo =
-    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, created_at";
+  const baseSelect =
+    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, photo_url, photo_taken_at, created_at";
+  // Geo columns vary across deployments:
+  // - New schema: latitude/longitude
+  // - Legacy schema: lat/lng
+  const selectWithGeo = `${baseSelect}, latitude, longitude`;
+  const selectWithGeoLegacy = `${baseSelect}, lat, lng`;
+  const selectWithoutGeo = baseSelect;
 
   const INSPECTION_FETCH_LIMIT = 2000;
   const run = async (select) =>
@@ -2483,13 +2556,18 @@ async function inspectionLoadFromSupabase() {
     if (!error) rows = data;
     else {
       const msg = (error?.message || String(error)).toLowerCase();
-      const missingGeo = msg.includes("latitude") || msg.includes("longitude");
-      if (!missingGeo) throw error;
+      const missingNewGeo = msg.includes("latitude") || msg.includes("longitude");
+      if (!missingNewGeo) throw error;
 
-      // Backward compatibility: database exists but hasn't been migrated yet
-      const retry = await run(selectWithoutGeo);
-      if (retry.error) throw retry.error;
-      rows = retry.data;
+      // Backward compatibility: try legacy lat/lng columns
+      const legacy = await run(selectWithGeoLegacy);
+      if (!legacy.error) rows = legacy.data;
+      else {
+        // Last fallback: no geo columns at all
+        const retry = await run(selectWithoutGeo);
+        if (retry.error) throw retry.error;
+        rows = retry.data;
+      }
     }
   }
 
@@ -2517,8 +2595,8 @@ async function inspectionLoadFromSupabase() {
     fsic_fee_amount: r.fsic_fee_amount ?? null,
     fsic_fee_or_number: r.fsic_fee_or_number ?? null,
     fsic_fee_date: r.fsic_fee_date ?? null,
-    lat: r.latitude ?? null,
-    lng: r.longitude ?? null,
+    lat: r.latitude ?? r.lat ?? null,
+    lng: r.longitude ?? r.lng ?? null,
     photo_url: r.photo_url ?? null,
     photo_taken_at: r.photo_taken_at ?? null,
     created_at: r.created_at,
