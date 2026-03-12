@@ -564,6 +564,33 @@ function init() {
   initOccupancyPhotoExif();
   refreshStorageBadge();
 
+  // Mobile safety net: ensure Save button always triggers save handler.
+  // Some mobile browsers can drop inline handlers in certain contexts.
+  const saveBtn = document.getElementById("inspection-btn-save");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", (ev) => void inspectionSaveEntry(ev));
+    // touchend can fire without click on some devices
+    saveBtn.addEventListener(
+      "touchend",
+      (ev) => {
+        try { ev.preventDefault(); } catch {}
+        void inspectionSaveEntry(ev);
+      },
+      { passive: false }
+    );
+  }
+
+  // Surface runtime errors on mobile (otherwise it looks like "Save does nothing").
+  window.addEventListener("error", (ev) => {
+    const msg = ev?.error?.message || ev?.message || "Unknown error";
+    logbookShowToast("inspection-toast", "⚠️ Error: " + msg);
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    const reason = ev?.reason;
+    const msg = reason?.message || String(reason || "Unknown error");
+    logbookShowToast("inspection-toast", "⚠️ Error: " + msg);
+  });
+
   const initialView = getCurrentView();
   if ((initialView === "map" || initialView === "inspection") && !inspectionDataLoaded) {
     inspectionInitData();
@@ -1340,6 +1367,9 @@ async function inspectionSaveEntry(e) {
   if (inspectionSaveEntry._lastRun && Date.now() - inspectionSaveEntry._lastRun < 800) return;
   inspectionSaveEntry._lastRun = Date.now();
 
+  // Immediate feedback so "Save" never feels dead.
+  logbookShowToast("inspection-toast", "Saving...");
+
   // If the user just attached a photo, GPS extraction may still be running.
   // Wait briefly so we don't save null lat/lng and lose the map pin.
   if (currentExifProcessingPromise) {
@@ -1465,11 +1495,26 @@ async function inspectionSaveEntry(e) {
   // Keep the attached photo even if coordinates are missing.
   // (Coordinates may come from the device location or be added later.)
 
-  if (!entry.business_name || !barangay || !entry.date_inspected) {
-    logbookShowToast(
-      "inspection-toast",
-      "⚠️ Please fill in at least Business name, Barangay, and Date inspected."
-    );
+  const isPlaceholderBarangay = !barangay || /^select\s+barangay$/i.test(String(barangay).trim());
+  if (!entry.business_name || isPlaceholderBarangay || !entry.date_inspected) {
+    const missing = [
+      !entry.business_name ? "Business name" : null,
+      isPlaceholderBarangay ? "Barangay" : null,
+      !entry.date_inspected ? "Date inspected" : null,
+    ].filter(Boolean);
+    logbookShowToast("inspection-toast", `⚠️ Missing: ${missing.join(", ")}`);
+
+    // Bring the missing field into view on mobile so it's obvious.
+    const firstMissingId = !entry.business_name
+      ? "inspection_business_name"
+      : isPlaceholderBarangay
+        ? "inspection_addr_barangay"
+        : "inspection_date_inspected";
+    const el = document.getElementById(firstMissingId);
+    if (el?.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (el?.focus) {
+      try { el.focus({ preventScroll: true }); } catch { el.focus(); }
+    }
     return;
   }
 
@@ -1992,8 +2037,10 @@ function initInspectionPhotoExif() {
       try {
         const gps = await readGpsFromFile(file);
         if (gps) {
+        if (Number.isFinite(gps.lat) && Number.isFinite(gps.lng)) {
           currentExifLat = gps.lat;
           currentExifLng = gps.lng;
+        }
         }
       } catch (e) {
         console.warn("GPS read failed:", e);
@@ -2169,15 +2216,24 @@ async function readGpsFromFile(file) {
       // ArrayBuffer parsing is more reliable than File parsing on some mobile browsers.
       const buf = typeof file?.arrayBuffer === "function" ? await file.arrayBuffer() : file;
       const gps = await exifrApi.gps(buf);
-      const lat = gps?.latitude ?? gps?.lat ?? gps?.GPSLatitude;
-      const lng = gps?.longitude ?? gps?.lng ?? gps?.GPSLongitude;
-      if (lat != null && lng != null) return { lat: Number(lat), lng: Number(lng) };
+      const toFinite = (v) => {
+        if (v == null) return null;
+        if (typeof v === "number") return Number.isFinite(v) ? v : null;
+        if (typeof v === "string") {
+          const n = Number.parseFloat(v);
+          return Number.isFinite(n) ? n : null;
+        }
+        return null;
+      };
+      const lat = toFinite(gps?.latitude ?? gps?.lat ?? gps?.GPSLatitude);
+      const lng = toFinite(gps?.longitude ?? gps?.lng ?? gps?.GPSLongitude);
+      if (lat != null && lng != null) return { lat, lng };
       // Some variants expose latitude/longitude on parse(), not gps().
       if (typeof exifrApi.parse === "function") {
         const parsed = await exifrApi.parse(buf, { gps: true });
-        const plat = parsed?.latitude ?? parsed?.lat ?? parsed?.GPSLatitude;
-        const plng = parsed?.longitude ?? parsed?.lng ?? parsed?.GPSLongitude;
-        if (plat != null && plng != null) return { lat: Number(plat), lng: Number(plng) };
+        const plat = toFinite(parsed?.latitude ?? parsed?.lat ?? parsed?.GPSLatitude);
+        const plng = toFinite(parsed?.longitude ?? parsed?.lng ?? parsed?.GPSLongitude);
+        if (plat != null && plng != null) return { lat: plat, lng: plng };
       }
     } catch (e) {
       console.warn("exifr gps read failed:", e);
@@ -2272,7 +2328,7 @@ function initOccupancyPhotoExif() {
 
 function addInspectionMarkerFromEntry(entry) {
   if (!mapInstance || !inspectionMarkersLayer) return;
-  if (entry.lat == null || entry.lng == null) return;
+  if (!Number.isFinite(entry.lat) || !Number.isFinite(entry.lng)) return;
 
   let icon;
   if (entry.photo_url) {
@@ -2323,7 +2379,7 @@ function addInspectionMarkerFromEntry(entry) {
 
 function addOccupancyMarkerFromEntry(entry) {
   if (!mapInstance || !occupancyMarkersLayer) return;
-  if (entry.lat == null || entry.lng == null) return;
+  if (!Number.isFinite(entry.lat) || !Number.isFinite(entry.lng)) return;
 
   let icon;
   if (entry.photo_url) {
