@@ -289,6 +289,10 @@ function showView(name) {
 
   if ((name === "map" || name === "inspection") && !inspectionDataLoaded) {
     inspectionInitData();
+    // Map also shows residential (occupancy) markers
+    if (name === "map" && !occupancyDataLoaded) {
+      occupancyInitData();
+    }
   } else if (name === "fsec" && !fsecDataLoaded) {
     fsecInitData();
   } else if (name === "conveyance" && !conveyanceDataLoaded) {
@@ -561,6 +565,9 @@ function init() {
   const initialView = getCurrentView();
   if ((initialView === "map" || initialView === "inspection") && !inspectionDataLoaded) {
     inspectionInitData();
+    if (initialView === "map" && !occupancyDataLoaded) {
+      occupancyInitData();
+    }
     if (initialView === "inspection") {
       setInspectionTab(inspectionActiveTab);
     }
