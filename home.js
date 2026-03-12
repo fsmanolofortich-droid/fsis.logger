@@ -1613,6 +1613,7 @@ function openInspectionDetailPanel(entry) {
   const panel = document.getElementById("map-detail-panel");
   if (!panel) return;
 
+  const titleEl = panel.querySelector?.(".map-detail-title");
   const businessEl = document.getElementById("map-detail-business");
   const addressEl = document.getElementById("map-detail-address");
   const coordsEl = document.getElementById("map-detail-coords");
@@ -1625,6 +1626,7 @@ function openInspectionDetailPanel(entry) {
   const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
   const viewBtn = document.getElementById("map-detail-view-logbook");
 
+  if (titleEl) titleEl.textContent = "Inspection details";
   if (businessEl) {
     businessEl.textContent =
       entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
@@ -1696,6 +1698,7 @@ function openInspectionDetailPanel(entry) {
   }
 
   if (viewBtn) {
+    viewBtn.textContent = "View in Inspection logbook";
     viewBtn.onclick = () => viewInspectionInLogbook(entry);
   }
 
@@ -1713,6 +1716,118 @@ function openInspectionDetailPanel(entry) {
 
   panel.classList.add("is-open");
   panel.setAttribute("aria-hidden", "false");
+}
+
+function openOccupancyDetailPanel(entry) {
+  const panel = document.getElementById("map-detail-panel");
+  if (!panel) return;
+
+  const titleEl = panel.querySelector?.(".map-detail-title");
+  const businessEl = document.getElementById("map-detail-business");
+  const addressEl = document.getElementById("map-detail-address");
+  const coordsEl = document.getElementById("map-detail-coords");
+  const dateEl = document.getElementById("map-detail-date");
+  const takenEl = document.getElementById("map-detail-taken");
+  const inspectorEl = document.getElementById("map-detail-inspector");
+  const photoWrap = document.getElementById("map-detail-photo-wrapper");
+  const photoImg = document.getElementById("map-detail-photo");
+  const directionsLink = document.getElementById("map-detail-directions");
+  const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
+  const viewBtn = document.getElementById("map-detail-view-logbook");
+
+  if (titleEl) titleEl.textContent = "Residential details";
+  if (businessEl) businessEl.textContent = entry.owner_name || entry.io_number || "Residential";
+  if (addressEl) {
+    const parts = [
+      entry.io_number ? `IO: ${entry.io_number}` : null,
+      entry.remarks_signature ? String(entry.remarks_signature) : null,
+    ].filter(Boolean);
+    addressEl.textContent = parts.join(" · ") || "—";
+  }
+  if (coordsEl) {
+    coordsEl.textContent =
+      entry.lat != null && entry.lng != null ? `${entry.lat.toFixed(6)}, ${entry.lng.toFixed(6)}` : "—";
+  }
+  if (dateEl) dateEl.textContent = logbookFormatDate(entry.log_date);
+  if (takenEl) {
+    takenEl.textContent = entry.photo_taken_at ? String(entry.photo_taken_at) : "—";
+    takenEl.classList.toggle("meta-muted", !entry.photo_taken_at);
+  }
+  if (inspectorEl) inspectorEl.textContent = entry.inspectors || "—";
+
+  if (directionsLink) {
+    if (entry.lat != null && entry.lng != null) {
+      const dest = `${entry.lat},${entry.lng}`;
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        dest
+      )}&travelmode=driving`;
+      directionsLink.href = url;
+      directionsLink.style.display = "";
+    } else {
+      directionsLink.removeAttribute("href");
+      directionsLink.style.display = "none";
+    }
+  }
+
+  if (copyCoordsBtn) {
+    if (entry.lat != null && entry.lng != null) {
+      copyCoordsBtn.style.display = "";
+      copyCoordsBtn.onclick = async () => {
+        const text = `${entry.lat.toFixed(6)}, ${entry.lng.toFixed(6)}`;
+        try {
+          await navigator.clipboard.writeText(text);
+          logbookShowToast("occupancy-toast", "Coordinates copied.");
+        } catch {
+          try {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            logbookShowToast("occupancy-toast", "Coordinates copied.");
+          } catch {
+            logbookShowToast("occupancy-toast", "Copy failed.");
+          }
+        }
+      };
+    } else {
+      copyCoordsBtn.style.display = "none";
+      copyCoordsBtn.onclick = null;
+    }
+  }
+
+  if (viewBtn) {
+    viewBtn.textContent = "View in Occupancy logbook";
+    viewBtn.onclick = () => viewOccupancyInLogbook(entry);
+  }
+
+  if (photoWrap && photoImg) {
+    if (entry.photo_url) {
+      photoImg.src = entry.photo_url;
+      photoImg.alt = entry.owner_name || "Occupancy photo";
+      photoWrap.style.display = "";
+    } else {
+      photoWrap.style.display = "none";
+      photoImg.removeAttribute("src");
+      photoImg.alt = "";
+    }
+  }
+
+  panel.classList.add("is-open");
+  panel.setAttribute("aria-hidden", "false");
+}
+
+function viewOccupancyInLogbook(entry) {
+  showView("occupancy");
+  if (getCurrentView() !== "occupancy") window.location.hash = "occupancy";
+
+  const qEl = document.getElementById("occupancy-filter-q");
+  if (qEl) qEl.value = (entry.io_number || entry.owner_name || "").trim();
+  occupancyRenderTable?.();
+  document.getElementById("table-occupancy")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function viewInspectionInLogbook(entry) {
@@ -2111,6 +2226,9 @@ function addOccupancyMarkerFromEntry(entry) {
   const title = entry.owner_name || entry.io_number || "Occupancy";
   const marker = L.marker([entry.lat, entry.lng], { icon }).addTo(occupancyMarkersLayer);
   marker.bindPopup(`<strong>${logbookEsc(title)}</strong><br>${logbookEsc(entry.io_number || "")}`);
+  marker.on("click", () => {
+    openOccupancyDetailPanel(entry);
+  });
 }
 
 function renderOccupancyMarkersBatched() {
@@ -2196,13 +2314,14 @@ function searchMapLocations(query) {
     .slice(0, 20)
     .map(({ type, r }) =>
       type === "inspection"
-        ? r
+        ? { ...r, _mapType: "inspection" }
         : {
             ...r,
             insp_owner: r.owner_name,
             business_name: "Residential",
             fsic_number: "",
             inspected_by: r.inspectors,
+            _mapType: "occupancy",
           }
     );
 }
@@ -2231,7 +2350,10 @@ function initMapSearch() {
       btn.className = "map-search-result-item";
       btn.setAttribute("role", "option");
       const title = entry.business_name || entry.insp_owner || entry.io_number || "Inspection";
-      const sub = [entry.io_number, inspectionFormatAddressDisplay(entry)].filter(Boolean).join(" · ") || "—";
+      const sub =
+        entry._mapType === "occupancy"
+          ? [entry.io_number, entry.insp_owner].filter(Boolean).join(" · ") || "—"
+          : [entry.io_number, inspectionFormatAddressDisplay(entry)].filter(Boolean).join(" · ") || "—";
       const strong = document.createElement("strong");
       strong.textContent = title;
       const span = document.createElement("span");
@@ -2241,7 +2363,8 @@ function initMapSearch() {
       btn.onclick = () => {
         if (mapInstance && entry.lat != null && entry.lng != null) {
           mapInstance.setView([entry.lat, entry.lng], 16);
-          openInspectionDetailPanel(entry);
+          if (entry._mapType === "occupancy") openOccupancyDetailPanel(entry);
+          else openInspectionDetailPanel(entry);
         }
         input.value = "";
         resultsEl.hidden = true;
