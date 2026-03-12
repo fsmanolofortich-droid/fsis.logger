@@ -1793,7 +1793,10 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
-        <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save Record</button>
+        <button type="button" class="btn btn-save" id="inspection-btn-save"
+          onclick="inspectionSaveEntry(event)"
+          ontouchend="event.preventDefault(); inspectionSaveEntry(event);"
+        >Save Record</button>
       </div>
     </div>
   </div>
@@ -1810,8 +1813,8 @@
   crossorigin=""
   defer
 ></script>
-<script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js" defer></script>
+<script src="./vendor/exif-js/exif.js" defer></script>
+<script src="./vendor/exifr/lite.umd.js" defer></script>
 <script src="./home.js" defer></script>
 </body>
 </html>
