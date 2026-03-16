@@ -133,6 +133,7 @@ main {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  row-gap: 10px;
 }
 
 .panel-title {
@@ -167,6 +168,7 @@ main {
   border: none;
   transition: all 0.2s;
   white-space: nowrap;
+  min-height: 44px; /* WCAG touch target */
 }
 
 .btn-print {
@@ -196,7 +198,7 @@ main {
   align-items: end;
   gap: 10px;
   padding: 12px 14px;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  border-top: 1px solid rgba(13, 27, 42, 0.1);
   background: rgba(250, 247, 242, 0.6);
 }
 
@@ -269,6 +271,7 @@ main {
   border-radius: 10px;
   padding: 8px 34px 8px 12px;
   line-height: 1.1;
+  min-height: 44px; /* WCAG touch target */
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, transform 0.05s ease;
   /* chevron */
@@ -344,16 +347,43 @@ tr:hover td { background: #FAFAF8; }
   font-size: 0.8rem;
 }
 
-/* EMPTY STATE */
 .empty-state {
   text-align: center;
   padding: 60px 24px;
   color: var(--text-light);
 }
 
-.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+.empty-state .empty-icon { font-size: 56px; margin-bottom: 14px; opacity: 0.65; }
 .empty-state p { font-size: 0.9rem; }
 .empty-state strong { display: block; font-size: 1.05rem; color: var(--text-mid); margin-bottom: 4px; }
+
+/* Record count badge (inside panel-title) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(193, 39, 45, 0.12);
+  color: var(--fire-dark);
+  border: 1px solid rgba(193, 39, 45, 0.25);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+/* Filter result count bar (below table-controls) */
+.filter-results-badge {
+  padding: 6px 16px;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  background: rgba(250, 247, 242, 0.7);
+  border-top: 1px solid rgba(13, 27, 42, 0.06);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
 
 /* MODAL */
 .modal-overlay {
@@ -941,6 +971,10 @@ footer {
   .modal-body { padding: 16px; }
   .modal-footer { padding: 12px 16px 20px; }
   .modal-header { padding: 18px 16px; }
+  /* Let each filter control take its own row on very small screens */
+  .table-controls .control { min-width: 100%; flex: 1 1 100%; }
+  .table-controls .spacer { display: none; }
+  .table-controls .btn-cancel { width: 100%; justify-content: center; margin-top: 4px; }
 }
 
 /* TOAST */

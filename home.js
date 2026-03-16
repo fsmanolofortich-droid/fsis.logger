@@ -1091,6 +1091,37 @@ function inspectionRenderTable() {
       panelNoPhoto.style.display = "";
     }
   }
+
+  // ── Record count badges ──────────────────────────────────────────────
+  const countBadge = document.getElementById("inspection-record-count");
+  if (countBadge) countBadge.textContent = withLocationCount;
+
+  const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
+  if (noPhotoBadge) noPhotoBadge.textContent = noLocationCount;
+
+  // ── Filter result info bars ──────────────────────────────────────────
+  const isFiltered = !!(q || brgy || personnel || from || to);
+  const resultsBadge = document.getElementById("inspection-results-badge");
+  if (resultsBadge) {
+    if (isFiltered && inspectionData.length > 0) {
+      resultsBadge.textContent =
+        `Showing ${withLocationCount} of ${inspectionData.filter(r => r.lat != null && r.lng != null).length} records (with location)`;
+      resultsBadge.removeAttribute("hidden");
+    } else {
+      resultsBadge.setAttribute("hidden", "");
+    }
+  }
+
+  const noPhotoResultsBadge = document.getElementById("inspection-nophoto-results-badge");
+  if (noPhotoResultsBadge) {
+    if (isFiltered && inspectionData.length > 0) {
+      noPhotoResultsBadge.textContent =
+        `Showing ${noLocationCount} of ${inspectionData.filter(r => r.lat == null || r.lng == null).length} records (no location)`;
+      noPhotoResultsBadge.removeAttribute("hidden");
+    } else {
+      noPhotoResultsBadge.setAttribute("hidden", "");
+    }
+  }
 }
 
 function inspectionEditEntry(idx) {

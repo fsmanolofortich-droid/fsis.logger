@@ -364,28 +364,37 @@
     /* Inspection sub‑navigation inside Inspection view */
     .inspection-subnav {
       display: inline-flex;
-      gap: 8px;
-      margin: 0 0 16px 0;
+      gap: 4px;
+      margin: 0;
       border-radius: 999px;
-      padding: 2px;
-      background: var(--cream-dark);
+      padding: 3px;
+      background: rgba(0, 0, 0, 0.3);
     }
 
     .inspection-subnav-btn {
       border: none;
-      padding: 6px 14px;
+      padding: 8px 16px;
       border-radius: 999px;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       background: transparent;
-      color: var(--text-light);
+      color: rgba(255, 255, 255, 0.7);
       cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+      min-height: 36px;
+      white-space: nowrap;
     }
 
     .inspection-subnav-btn.is-active {
-      background: var(--navy);
+      background: rgba(240, 201, 106, 0.22);
+      color: var(--gold-light);
+      border: 1px solid rgba(240, 201, 106, 0.45);
+    }
+
+    .inspection-subnav-btn:not(.is-active):hover {
+      background: rgba(255, 255, 255, 0.12);
       color: #fff;
     }
 
@@ -1218,7 +1227,7 @@
               </table>
             </div>
             <div id="empty-conveyance" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">—</div>
+              <div class="empty-icon" aria-hidden="true">🚗</div>
               <strong>No Conveyance Records Yet</strong>
               <p>Use this logbook to track conveyance-related inspections based on IO numbers.</p>
             </div>
@@ -1345,7 +1354,7 @@
               </table>
             </div>
             <div id="empty-occupancy" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">—</div>
+              <div class="empty-icon" aria-hidden="true">🏠</div>
               <strong>No Occupancy Records Yet</strong>
               <p>Use this logbook to track occupancy-related inspections based on IO numbers.</p>
             </div>
@@ -1363,47 +1372,9 @@
         <h1>Inspection Logbook</h1>
         <p>Manage Fire Safety Inspection Certificates for businesses and establishments in Manolo Fortich.</p>
       </div>
-      <div class="inspection-subnav" role="tablist" aria-label="Inspection categories">
-        <button type="button" class="inspection-subnav-btn is-active" data-inspection-tab="with-location" role="tab"
-          aria-selected="true">
-          With location
-        </button>
-        <button type="button" class="inspection-subnav-btn" data-inspection-tab="no-location" role="tab"
-          aria-selected="false">
-          No location yet
-        </button>
-      </div>
+
       <div class="home-embed">
         <div id="inspection_list">
-          <div class="table-controls" aria-label="Inspection filters">
-            <div class="control">
-              <label for="inspection-filter-q">Search</label>
-              <input id="inspection-filter-q" type="search"
-                placeholder="Search IO, owner, business, address, FSIC, inspector">
-            </div>
-            <div class="control">
-              <label for="inspection-filter-barangay">Barangay</label>
-              <select id="inspection-filter-barangay" aria-label="Filter by barangay">
-                <option value="">All barangays</option>
-              </select>
-            </div>
-            <div class="control">
-              <label for="inspection-filter-personnel">Personnel</label>
-              <select id="inspection-filter-personnel" aria-label="Filter by personnel">
-                <option value="">All personnel</option>
-              </select>
-            </div>
-            <div class="control">
-              <label for="inspection-filter-from">From</label>
-              <input id="inspection-filter-from" type="date">
-            </div>
-            <div class="control">
-              <label for="inspection-filter-to">To</label>
-              <input id="inspection-filter-to" type="date">
-            </div>
-            <div class="spacer"></div>
-            <button type="button" class="btn btn-cancel" onclick="inspectionClearFilters()">Clear</button>
-          </div>
           <!-- Inspection Logbook Panel -->
           <div class="logbook-panel visible" id="panel-inspection">
             <div class="print-header">
@@ -1418,9 +1389,48 @@
             <div class="panel-header">
               <div class="panel-title">
                 <span>Active Logbook</span>
-                Inspection Logbook
+                Inspection Logbook <span class="badge" id="inspection-record-count">0</span>
+              </div>
+              <div class="inspection-subnav" role="tablist" aria-label="Inspection categories">
+                <button type="button" class="inspection-subnav-btn is-active" data-inspection-tab="with-location"
+                  role="tab" aria-selected="true">
+                  With location
+                </button>
+                <button type="button" class="inspection-subnav-btn" data-inspection-tab="no-location" role="tab"
+                  aria-selected="false">
+                  No location yet
+                </button>
               </div>
               <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
+            </div>
+            <div class="table-controls" aria-label="Inspection filters">
+              <div class="control">
+                <label for="inspection-filter-q">Search</label>
+                <input id="inspection-filter-q" type="search"
+                  placeholder="Search IO, owner, business, address, FSIC, inspector">
+              </div>
+              <div class="control">
+                <label for="inspection-filter-barangay">Barangay</label>
+                <select id="inspection-filter-barangay" aria-label="Filter by barangay">
+                  <option value="">All barangays</option>
+                </select>
+              </div>
+              <div class="control">
+                <label for="inspection-filter-personnel">Personnel</label>
+                <select id="inspection-filter-personnel" aria-label="Filter by personnel">
+                  <option value="">All personnel</option>
+                </select>
+              </div>
+              <div class="control">
+                <label for="inspection-filter-from">From</label>
+                <input id="inspection-filter-from" type="date">
+              </div>
+              <div class="control">
+                <label for="inspection-filter-to">To</label>
+                <input id="inspection-filter-to" type="date">
+              </div>
+              <div class="spacer"></div>
+              <button type="button" class="btn btn-cancel" onclick="inspectionClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-inspection">
@@ -1442,7 +1452,7 @@
               </table>
             </div>
             <div id="empty-inspection" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">—</div>
+              <div class="empty-icon" aria-hidden="true">🗄️</div>
               <strong>No Inspection Records Yet</strong>
               <p>Use the red + button on the map to log a new inspection.</p>
             </div>
@@ -1450,10 +1460,19 @@
 
           <!-- Inspected buildings without photo yet -->
           <div class="logbook-panel" id="panel-inspection-nophoto">
+            <div class="print-header">
+              <h2>Bureau of Fire Protection</h2>
+              <p class="print-subtitle">Manolo Fortich Fire Station</p>
+              <p class="print-subtitle"><strong>Inspection Logbook</strong> — Inspected buildings without photo</p>
+              <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
+                  id="inspection-print-date-nophoto">—</span></p>
+            </div>
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document
+              is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
                 <span>Pending photos</span>
-                Inspected buildings without photo
+                Inspected buildings without photo <span class="badge" id="inspection-nophoto-record-count">0</span>
               </div>
               <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
             </div>
@@ -1477,7 +1496,7 @@
               </table>
             </div>
             <div id="empty-inspection-nophoto" class="empty-state">
-              <div class="empty-icon" aria-hidden="true">—</div>
+              <div class="empty-icon" aria-hidden="true">🖼️</div>
               <strong>No pending building photos</strong>
               <p>All inspection records already have an attached building photo.</p>
             </div>
@@ -1549,7 +1568,7 @@
               </table>
             </div>
             <div id="empty-fsec" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">—</div>
+              <div class="empty-icon" aria-hidden="true">🏗️</div>
               <strong>No FSEC Records Yet</strong>
               <p>Click "Add Entry" to log a new building plan.</p>
             </div>
