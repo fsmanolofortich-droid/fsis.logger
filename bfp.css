@@ -192,11 +192,11 @@ main {
 }
 
 table#table-inspection, table#table-inspection-nophoto {
-  min-width: 1300px;
+  min-width: 1000px;
 }
 
 table#table-occupancy, table#table-conveyance, table#table-fsec {
-  min-width: 1000px;
+  min-width: 800px;
 }
 
 /* Filter / search toolbar (screen only; print rules hide panel header anyway) */
@@ -322,7 +322,8 @@ th {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-mid);
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 td {
@@ -350,9 +351,10 @@ tr:hover td { background: #FAFAF8; }
 }
 
 .td-date {
-  white-space: nowrap;
+  white-space: normal;
   color: var(--text-mid);
   font-size: 0.8rem;
+  line-height: 1.25;
 }
 
 .empty-state {
