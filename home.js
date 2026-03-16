@@ -1465,24 +1465,34 @@ async function inspectionSaveEntry(e) {
   };
 
   // When editing:
-  // - If user didn't pick a new photo, keep existing photo URL/meta.
-  // - If user picked a new photo but it has no EXIF GPS, keep existing lat/lng so the pin doesn't disappear.
+  // - If user didn't pick a new photo, keep existing photo URL/meta and coordinates.
+  // - If user picked a new photo and EXIF has GPS, USE the photo's coordinates (move pin to where photo was taken).
+  // - If EXIF has no GPS, keep existing lat/lng so the pin doesn't disappear.
   if (inspectionEditingIdx !== null) {
     const prev = inspectionData[inspectionEditingIdx] || {};
     const hasNewPhoto = !!currentExifFile;
+
     if (!hasNewPhoto) {
+      // No new file: keep previous photo + coordinates.
       entry.photo_url = prev.photo_url ?? null;
       entry.photo_taken_at = prev.photo_taken_at ?? null;
-    }
-    // For UPDATE: keep the existing red-pin location.
-    // Attaching a photo should not move/remove the pin; we reuse the current record coordinates.
-    if (prev.lat != null && prev.lng != null) {
-      entry.lat = prev.lat;
-      entry.lng = prev.lng;
-    } else if (entry.lat == null || entry.lng == null) {
-      // If the record had no coordinates yet, keep whatever we can (EXIF/device fallback may fill it).
-      entry.lat = prev.lat ?? null;
-      entry.lng = prev.lng ?? null;
+      entry.lat = prev.lat ?? entry.lat;
+      entry.lng = prev.lng ?? entry.lng;
+    } else {
+      // New photo chosen:
+      const hasExifGps =
+        Number.isFinite(currentExifLat) && Number.isFinite(currentExifLng);
+      if (hasExifGps) {
+        // EXIF GPS present: move pin to photo capture location.
+        entry.lat = currentExifLat;
+        entry.lng = currentExifLng;
+      } else {
+        // No EXIF GPS: keep existing pin location if we have one.
+        if (prev.lat != null && prev.lng != null) {
+          entry.lat = prev.lat;
+          entry.lng = prev.lng;
+        }
+      }
     }
   }
 
@@ -1662,16 +1672,9 @@ async function inspectionSaveEntry(e) {
         const msg = (error?.message || String(error)).toLowerCase();
         const missingGeo = msg.includes("latitude") || msg.includes("longitude");
         if (missingGeo) {
-          const payloadNoGeo = {
-            io_number: entry.io_number,
-            owner_name: entry.insp_owner,
-            owner_phone: entry.insp_owner_phone || null,
-            business_name: entry.business_name,
-            address: entry.insp_address,
-            date_inspected: entry.date_inspected,
-            fsic_number: entry.fsic_number,
-            inspected_by: entry.inspected_by || null,
-          };
+          const payloadNoGeo = { ...payload };
+          delete payloadNoGeo.latitude;
+          delete payloadNoGeo.longitude;
           const retry = await runWrite(payloadNoGeo);
           if (retry.error) throw retry.error;
         } else {
@@ -1680,14 +1683,14 @@ async function inspectionSaveEntry(e) {
       }
       await inspectionLoadFromSupabase();
       inspectionRenderTable();
-      // Redraw all markers from refetched data so the map matches the DB (no duplicate/missing pins).
       renderInspectionMarkersBatched();
       inspectionCloseModal();
       logbookShowToast("inspection-toast", "Saved to database.");
 
-      // If user used "Add photo", jump to the photo's GPS location (or existing location).
-      if (inspectionFocusMapAfterSave && entry.lat != null && entry.lng != null) {
-        inspectionFocusMapAfterSave = false;
+      const hasLocation = entry.lat != null && entry.lng != null;
+
+      if (hasLocation) {
+        // Always jump to the map to show the new pin
         showView("map");
         window.location.hash = "map";
         closeNavSidebar();
@@ -1697,6 +1700,27 @@ async function inspectionSaveEntry(e) {
             openInspectionDetailPanel(entry);
           }
         }, 100);
+      } else {
+        // No location found: Force them to the logbook "No location" tab so they know it saved!
+        // We highlight it without fully filtering so they see it in context.
+        logbookShowToast("inspection-toast", "Saved! (No location found in photo)");
+        showView("inspection");
+        window.location.hash = "inspection";
+        setInspectionTab("no-location");
+        inspectionRenderTable();
+        
+        setTimeout(() => {
+          // Find the newly saved row based on io_number or highest id
+          const idx = inspectionData.findIndex((r) => r.io_number === entry.io_number);
+          if (idx >= 0) {
+            const rowEl = document.getElementById(`inspection-row-${idx}`);
+            if (rowEl) {
+              rowEl.classList.add("row-highlight");
+              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
+            }
+          }
+        }, 200);
       }
     } catch (err) {
       const msg = err?.message || String(err);
@@ -2036,14 +2060,16 @@ function initInspectionPhotoExif() {
       // Read GPS from EXIF if present.
       try {
         const gps = await readGpsFromFile(file);
-        if (gps) {
-        if (Number.isFinite(gps.lat) && Number.isFinite(gps.lng)) {
+        if (gps && Number.isFinite(gps.lat) && Number.isFinite(gps.lng)) {
           currentExifLat = gps.lat;
           currentExifLng = gps.lng;
-        }
+          logbookShowToast("inspection-toast", `GPS found: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`);
+        } else {
+          logbookShowToast("inspection-toast", "No GPS data found in this photo file. Your device may be stripping it.");
         }
       } catch (e) {
         console.warn("GPS read failed:", e);
+        logbookShowToast("inspection-toast", "Error reading photo EXIF data.");
       }
 
       // If EXIF GPS is not available, fall back to the device's current location.
@@ -2211,55 +2237,81 @@ function dmsToDecimal(dms, ref) {
 // Shared GPS extraction (used by both inspection and occupancy) to ensure consistent behavior.
 async function readGpsFromFile(file) {
   const exifrApi = window.exifr?.default || window.exifr;
-  if (exifrApi?.gps) {
+  
+  const toFinite = (v) => {
+    if (v == null) return null;
+    if (typeof v === "number") return Number.isFinite(v) ? v : null;
+    if (typeof v === "string") {
+      const n = Number.parseFloat(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+
+  const tryExifr = async (input) => {
+    if (!exifrApi) return null;
     try {
-      // ArrayBuffer parsing is more reliable than File parsing on some mobile browsers.
-      const buf = typeof file?.arrayBuffer === "function" ? await file.arrayBuffer() : file;
-      const gps = await exifrApi.gps(buf);
-      const toFinite = (v) => {
-        if (v == null) return null;
-        if (typeof v === "number") return Number.isFinite(v) ? v : null;
-        if (typeof v === "string") {
-          const n = Number.parseFloat(v);
-          return Number.isFinite(n) ? n : null;
-        }
-        return null;
-      };
-      const lat = toFinite(gps?.latitude ?? gps?.lat ?? gps?.GPSLatitude);
-      const lng = toFinite(gps?.longitude ?? gps?.lng ?? gps?.GPSLongitude);
-      if (lat != null && lng != null) return { lat, lng };
-      // Some variants expose latitude/longitude on parse(), not gps().
+      // Aggressive parse: check all common blocks where Android might stuff GPS data during gallery intent
       if (typeof exifrApi.parse === "function") {
-        const parsed = await exifrApi.parse(buf, { gps: true });
-        const plat = toFinite(parsed?.latitude ?? parsed?.lat ?? parsed?.GPSLatitude);
-        const plng = toFinite(parsed?.longitude ?? parsed?.lng ?? parsed?.GPSLongitude);
-        if (plat != null && plng != null) return { lat: plat, lng: plng };
+        const parsed = await exifrApi.parse(input, { tiff: true, exif: true, gps: true });
+        if (parsed) {
+          const plat = toFinite(parsed.latitude ?? parsed.lat ?? parsed.GPSLatitude);
+          const plng = toFinite(parsed.longitude ?? parsed.lng ?? parsed.GPSLongitude);
+          if (plat != null && plng != null) return { lat: plat, lng: plng };
+        }
+      }
+      
+      // Fallback to the dedicated gps() method if parse() didn't find it or wasn't available
+      if (typeof exifrApi.gps === "function") {
+        const gps = await exifrApi.gps(input);
+        const lat = toFinite(gps?.latitude ?? gps?.lat ?? gps?.GPSLatitude);
+        const lng = toFinite(gps?.longitude ?? gps?.lng ?? gps?.GPSLongitude);
+        if (lat != null && lng != null) return { lat, lng };
       }
     } catch (e) {
-      console.warn("exifr gps read failed:", e);
+      console.warn("exifr read attempt failed:", e);
+    }
+    return null;
+  };
+
+  if (exifrApi) {
+    // 1st attempt: ArrayBuffer (most reliable for raw binary)
+    try {
+      if (typeof file?.arrayBuffer === "function") {
+        const buf = await file.arrayBuffer();
+        const result = await tryExifr(buf);
+        if (result) return result;
+      }
+    } catch (e) {
+      console.warn("exifr arrayBuffer read failed:", e);
+    }
+
+    // 2nd attempt: Raw File object (sometimes needed depending on parser internals)
+    try {
+      const result = await tryExifr(file);
+      if (result) return result;
+    } catch (e) {
+      console.warn("exifr file read failed:", e);
     }
   }
 
-  if (window.EXIF && window.FileReader) {
+  // 3rd attempt: Fallback to exif-js if available
+  if (window.EXIF) {
+    let objectUrl = null;
     try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = () => reject(new Error("FileReader failed"));
-        r.readAsDataURL(file);
-      });
-      if (typeof dataUrl !== "string") return null;
-
+      objectUrl = URL.createObjectURL(file);
       const img = new Image();
+      
       await new Promise((resolve) => {
         img.onload = resolve;
         img.onerror = resolve;
-        img.src = dataUrl;
+        img.src = objectUrl;
       });
 
       return await new Promise((resolve) => {
         const done = (result) => {
           clearTimeout(timer);
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
           resolve(result);
         };
         const timer = setTimeout(() => done(null), 5000);
@@ -2276,22 +2328,25 @@ async function readGpsFromFile(file) {
             }
           });
         } catch (e) {
+          console.warn("exif-js sync block failed:", e);
           done(null);
         }
       });
     } catch (e) {
-      console.warn("exif-js gps read failed:", e);
+      console.warn("exif-js outer block failed:", e);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     }
   }
   return null;
 }
 
 function initOccupancyPhotoExif() {
-  const input = document.getElementById("occupancy_photo");
-  if (!input) return;
+  const inputCamera = document.getElementById("occupancy_photo");
+  const inputLibrary = document.getElementById("occupancy_photo_library");
+  if (!inputCamera && !inputLibrary) return;
 
-  async function onPhotoChange() {
-    const file = input?.files?.[0];
+  async function onPhotoChange(sourceInput) {
+    const file = sourceInput?.files?.[0];
     if (!file) return;
 
     occupancyExifLat = null;
@@ -2299,6 +2354,10 @@ function initOccupancyPhotoExif() {
     occupancyExifPreviewUrl = null;
     occupancyExifTakenAt = null;
     occupancyExifFile = file;
+
+    // Clear the other input so only one is active.
+    if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
+    if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
 
     try {
       const dataUrl = await new Promise((resolve, reject) => {
@@ -2317,13 +2376,18 @@ function initOccupancyPhotoExif() {
       if (gps) {
         occupancyExifLat = gps.lat;
         occupancyExifLng = gps.lng;
+        logbookShowToast("occupancy-toast", `GPS found: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`);
+      } else {
+        logbookShowToast("occupancy-toast", "No GPS data found in this photo file. Your device may be stripping it.");
       }
     } catch (e) {
       console.warn("Occupancy GPS read failed:", e);
+      logbookShowToast("occupancy-toast", "Error reading photo EXIF data.");
     }
   }
 
-  input.addEventListener("change", () => void onPhotoChange());
+  inputCamera?.addEventListener("change", () => void onPhotoChange(inputCamera));
+  inputLibrary?.addEventListener("change", () => void onPhotoChange(inputLibrary));
 }
 
 function addInspectionMarkerFromEntry(entry) {
@@ -3541,6 +3605,7 @@ function occupancyRenderTable() {
 
   filtered.forEach(({ row, idx }, displayIdx) => {
     const tr = document.createElement("tr");
+    tr.id = `occupancy-row-${idx}`;
     tr.innerHTML = `
       <td data-label="#">${displayIdx + 1}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
@@ -3794,13 +3859,11 @@ function occupancySaveEntry(e) {
         if (!missingGeo) throw error;
 
         // Backward compatibility: database exists but hasn't been migrated yet
-        const payloadCompat = {
-          log_date: entry.log_date,
-          io_number: entry.io_number,
-          owner_name: entry.owner_name || null,
-          inspectors: entry.inspectors,
-          remarks_signature: entry.remarks_signature,
-        };
+        const payloadCompat = { ...payload };
+        delete payloadCompat.latitude;
+        delete payloadCompat.longitude;
+        delete payloadCompat.photo_url;
+        delete payloadCompat.photo_taken_at;
         if (
           occupancyEditingId &&
           (!payloadCompat.owner_name || String(payloadCompat.owner_name).trim() === "")
@@ -3816,6 +3879,33 @@ function occupancySaveEntry(e) {
       occupancyRenderTable();
       renderOccupancyMarkersBatched();
       logbookShowToast("occupancy-toast", "Saved to database.");
+
+      const hasLocation = entry.lat != null && entry.lng != null;
+      if (hasLocation) {
+        showView("map");
+        window.location.hash = "map";
+        closeNavSidebar();
+        setTimeout(() => {
+          if (mapInstance) {
+            mapInstance.setView([entry.lat, entry.lng], 16);
+            openOccupancyDetailPanel(entry);
+          }
+        }, 100);
+      } else {
+        showView("occupancy");
+        window.location.hash = "occupancy";
+        setTimeout(() => {
+          const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
+          if (idx >= 0) {
+            const rowEl = document.getElementById(`occupancy-row-${idx}`);
+            if (rowEl) {
+              rowEl.classList.add("row-highlight");
+              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
+            }
+          }
+        }, 200);
+      }
     } catch (err) {
       const msg = err?.message || String(err);
       const hint =
