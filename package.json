@@ -7,8 +7,9 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "exif-js": "^2.3.0",
+    "exifr": "^7.1.3",
     "express": "^4.19.2",
     "puppeteer": "^23.11.1"
   }
 }
-

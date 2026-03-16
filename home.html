@@ -1742,6 +1742,11 @@
                     <label for="inspection_duration_end">Duration — To</label>
                     <input type="date" id="inspection_duration_end">
                   </div>
+                  <div class="form-group full">
+                    <label for="inspection_remarks">Remarks on IO</label>
+                    <textarea id="inspection_remarks" rows="2"
+                      placeholder="Any special instructions or remarks to show on the Inspection Order"></textarea>
+                  </div>
                 </div>
               </div>
               <div class="form-section">
@@ -1751,7 +1756,7 @@
                     <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
                     <div class="photo-option-buttons">
                       <label class="photo-option-btn">
-                        <input type="file" id="inspection_photo" accept="image/*"
+                        <input type="file" id="inspection_photo" accept="image/*" capture="environment"
                           aria-label="Take photo with camera">
                         <span class="photo-option-text">Take photo</span>
                       </label>
@@ -1815,8 +1820,7 @@
                   <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
                   <div class="photo-option-buttons">
                     <label class="photo-option-btn">
-                      <input type="file" id="occupancy_photo" accept="image/*"
-                        aria-label="Take photo with camera">
+                      <input type="file" id="occupancy_photo" accept="image/*" aria-label="Take photo with camera">
                       <span class="photo-option-text">Take photo</span>
                     </label>
                     <label class="photo-option-btn">
