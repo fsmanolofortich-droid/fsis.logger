@@ -366,7 +366,7 @@
       <td class="label">REMARKS</td>
       <td class="colon">:</td>
       <td class="value">
-        <div id="io_remarks" contenteditable="true"></div>
+        <div id="io_remarks" contenteditable="true">To conduct Fire Safety Inspection Certificate(OCCUPANCY PERMIT) In accordance with the pertinent provision of Rule 9, Division 1 of the RIRR of the Fire Code of the Philippines(R.A. 9514)</div>
       </td>
     </tr>
   </table>
@@ -448,45 +448,43 @@
     }
 
     const todayIso = new Date().toISOString().slice(0, 10);
-    // Use the inspection's own date for the printed date,
-    // falling back to today only if it's missing.
-    const headerSourceDate = entry.date_inspected || todayIso;
+    // Occupancy logbook uses log_date (not date_inspected).
+    const headerSourceDate = entry.log_date || todayIso;
     const headerDate = formatDateISOToLong(headerSourceDate);
 
-    const durationStart =
-      entry.duration_start || entry.date_inspected || todayIso;
-    const durationEnd =
-      entry.duration_end || entry.date_inspected || todayIso;
+    const durationStart = entry.log_date || todayIso;
+    const durationEnd = entry.log_date || todayIso;
 
-    const toName = entry.inspected_by || "";
-    const toPosition = entry.inspector_position || "";
-    const includedName = entry.included_personnel_name || "";
-    const includedPosition = entry.included_personnel_position || "";
-    // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
-    // Merged format: "Region X, Province, Municipal, Barangay Name, Street/Line"
-    let business_name = entry.business_name || "";
-    let addrLine = entry.addr_line || "";
-    let addrBarangay = entry.addr_barangay || "";
-    const fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
-    if ((!addrLine || !addrBarangay) && fullAddr) {
-      const parts = fullAddr.split(/,\s*/);
-      if (parts.length >= 5) {
-        addrLine = parts[4].trim();
-        addrBarangay = (parts[3] || "").replace(/^Barangay\s+/i, "").trim();
-      }
+    function rankCodeToTitle(code) {
+      const c = String(code || "").trim().toUpperCase();
+      if (c === "FO1") return "Fire Officer I";
+      if (c === "FO2") return "Fire Officer II";
+      if (c === "FO3") return "Fire Officer III";
+      if (c === "SF01" || c === "SFO1") return "Senior Fire Officer I";
+      if (c === "SF02" || c === "SFO2") return "Senior Fire Officer II";
+      if (c === "SF03" || c === "SFO3") return "Senior Fire Officer III";
+      if (c === "SF04" || c === "SFO4") return "Senior Fire Officer IV";
+      if (c === "FIRE AIDE") return "Fire Aide";
+      return code ? String(code) : "";
     }
-    const addressParts = [
-      addrLine,
-      addrBarangay ? "Barangay " + addrBarangay : "",
-      "Manolo Fortich",
-      "Bukidnon",
-      "Region X",
+
+    const inspectors = (entry.inspectors || "").toString().trim();
+    const firstCode = inspectors.split(/\s+/)[0] || "";
+    const toName = inspectors;
+    const toPosition = rankCodeToTitle(firstCode);
+
+    const owner = (entry.owner_name || "").toString().trim();
+    const lat = entry.lat ?? entry.latitude ?? null;
+    const lng = entry.lng ?? entry.longitude ?? null;
+    const coords =
+      lat != null && lng != null && isFinite(Number(lat)) && isFinite(Number(lng))
+        ? `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`
+        : "";
+    const proceedLines = [
+      owner ? `Residential premises of: ${owner}` : "",
+      "Manolo Fortich, Bukidnon, Region X",
+      coords ? `Coordinates: ${coords}` : "",
     ].filter(Boolean);
-    const address =
-      addressParts.length > 0
-        ? addressParts.join(", ")
-        : fullAddr || "";
-    const remarks = entry.remarks || "";
 
     const setText = (id, value) => {
       const el = document.getElementById(id);
@@ -499,13 +497,13 @@
     setText("io_number", entry.io_number || "");
     setText("io_to_name", toName);
     setText("io_to_position", toPosition ? "" + toPosition : "");
-    setText("io_included_name", includedName);
-    setText("io_included_position", includedPosition);
-    const proceedText = [business_name.trim(), address].filter(Boolean).join("\n");
-    setText("io_address", proceedText);
+    setText("io_included_name", "");
+    setText("io_included_position", "");
+    setText("io_address", proceedLines.join("\n"));
     setText("io_duration_start", formatDateISOToLong(durationStart));
     setText("io_duration_end", formatDateISOToLong(durationEnd));
-    setText("io_remarks", remarks);
+    // Don't override the template's default Occupancy remarks block unless a custom value is provided.
+    if (entry.io_remarks) setText("io_remarks", String(entry.io_remarks));
   })();
 
   // When opened with ?download=pdf, generate PDF from this page and download.
