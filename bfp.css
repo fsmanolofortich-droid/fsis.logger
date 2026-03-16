@@ -191,6 +191,14 @@ main {
   -webkit-overflow-scrolling: touch;
 }
 
+table#table-inspection, table#table-inspection-nophoto {
+  min-width: 1300px;
+}
+
+table#table-occupancy, table#table-conveyance, table#table-fsec {
+  min-width: 1000px;
+}
+
 /* Filter / search toolbar (screen only; print rules hide panel header anyway) */
 .table-controls {
   display: flex;
@@ -880,6 +888,7 @@ footer {
   td {
     display: block;
     width: 100%;
+    min-width: 0 !important;
     box-sizing: border-box;
   }
 
