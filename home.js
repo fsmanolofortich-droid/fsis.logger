@@ -74,31 +74,44 @@ const BARANGAYS = [
 ];
 
 const FIRE_PERSONNEL_META = [
-  { name: "SF03 Rafael I. Corona Jr", rank: "SF03", position: "Acting Municipal Fire Marshal" },
-  { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01", position: "OIC, Administrative Section / Building Inspector" },
-  { name: "SF01 Cedric B. Gamolo", rank: "SF01", position: "OIC, Fire Safety Enforcement Section" },
-  { name: "FO3 Rey Edward S. Descallar", rank: "FO3", position: "CRU Staff / EMS / Medical First Responder" },
-  { name: "FO3 Jun Ray D. Abarquez", rank: "FO3", position: "Building Inspector / Assessor / Plan Evaluator" },
-  { name: "FO3 Clyde Q. Rejas", rank: "FO3", position: "Building Inspector" },
-  { name: "FO3 Juan M. Derayunan II", rank: "FO3", position: "Building Inspector" },
-  { name: "FO3 Julious G. Cloma", rank: "FO3", position: "OIC, Operations Section / OIC, Intel & Investigation Unit" },
-  { name: "FO3 Luigi C. Cajes", rank: "FO3", position: "Building Inspector / Finance Unit, SDO" },
-  { name: "FO2 Michael S. Guyan", rank: "FO2", position: "Shift-B Commander / Logistics Unit / Building Inspector" },
-  { name: "FO2 Rhea Mae B. Lambago", rank: "FO2", position: "FSES Admin Clerk / Customer Relations Officer" },
-  { name: "FO1 John Ansel P. Labinay", rank: "FO1", position: "Shift-B FT Driver / Building Inspector / Fire Arson Investigator" },
-  { name: "FO1 Jessel Joy C. Paca", rank: "FO1", position: "CRU Staff / Collecting Officer / Fire Arson Investigator" },
-  { name: "FO1 Adoniram C. Nacilla", rank: "FO1", position: "Shift-A Nozzleman / Building Inspector" },
-  { name: "FO1 Johnremar B. Cinchez", rank: "FO1", position: "Shift-B Nozzleman / PIS Officer / Admin Clerk" },
-  { name: "FO1 Moctar M. Manarinta", rank: "FO1", position: "Shift-A Nozzleman / CRU Staff / Operations Section – Admin Clerk" },
-  { name: "FO1 Sairah Ville L. Sante", rank: "FO1", position: "CRU Staff / SPMS Action Officer / Morale & Welfare Unit" },
-  { name: "FO1 Lester V. Villarta", rank: "FO1", position: "Shift-B Nozzleman / Operations Section – Admin Clerk" },
-  { name: "Cherry Mae N. Lusno", rank: "Fire Aide", position: "Fire Aide" },
+  { name: "SF03 Rafael I. Corona Jr", rank: "SF03" },
+  { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01" },
+  { name: "SF01 Cedric B. Gamolo", rank: "SF01" },
+  { name: "FO3 Rey Edward S. Descallar", rank: "FO3" },
+  { name: "FO3 Jun Ray D. Abarquez", rank: "FO3" },
+  { name: "FO3 Clyde Q. Rejas", rank: "FO3" },
+  { name: "FO3 Juan M. Derayunan II", rank: "FO3" },
+  { name: "FO3 Julious G. Cloma", rank: "FO3" },
+  { name: "FO3 Luigi C. Cajes", rank: "FO3" },
+  { name: "FO2 Michael S. Guyan", rank: "FO2" },
+  { name: "FO2 Rhea Mae B. Lambago", rank: "FO2" },
+  { name: "FO1 John Ansel P. Labinay", rank: "FO1" },
+  { name: "FO1 Jessel Joy C. Paca", rank: "FO1" },
+  { name: "FO1 Adoniram C. Nacilla", rank: "FO1" },
+  { name: "FO1 Johnremar B. Cinchez", rank: "FO1" },
+  { name: "FO1 Moctar M. Manarinta", rank: "FO1" },
+  { name: "FO1 Sairah Ville L. Sante", rank: "FO1" },
+  { name: "FO1 Lester V. Villarta", rank: "FO1" },
+  { name: "Cherry Mae N. Lusno", rank: "Fire Aide" },
 ];
 
 const FIRE_PERSONNEL = FIRE_PERSONNEL_META.map((p) => p.name);
 const FIRE_PERSONNEL_BY_NAME = Object.fromEntries(
-  FIRE_PERSONNEL_META.map((p) => [p.name, { rank: p.rank, position: p.position }])
+  FIRE_PERSONNEL_META.map((p) => [p.name, { rank: p.rank }])
 );
+
+function rankCodeToTitle(code) {
+  const c = String(code || "").trim().toUpperCase();
+  if (c === "FO1") return "Fire Officer I";
+  if (c === "FO2") return "Fire Officer II";
+  if (c === "FO3") return "Fire Officer III";
+  if (c === "SF01" || c === "SFO1") return "Senior Fire Officer I";
+  if (c === "SF02" || c === "SFO2") return "Senior Fire Officer II";
+  if (c === "SF03" || c === "SFO3") return "Senior Fire Officer III";
+  if (c === "SF04" || c === "SFO4") return "Senior Fire Officer IV";
+  if (c === "FIRE AIDE") return "Fire Aide";
+  return code ? String(code) : "";
+}
 
 const MAP_CENTER = [8.369, 124.864];
 const MAP_ZOOM = 12;
@@ -267,10 +280,36 @@ function resetMapView() {
 }
 
 function handleFabAddInspection() {
-  // Stay on the map view and open the inspection modal in-place
-  if (typeof inspectionOpenModal === "function") {
-    inspectionOpenModal();
+  openMapAddChooser();
+}
+
+function openMapAddChooser() {
+  const overlay = document.getElementById("map-add-modal-overlay");
+  if (!overlay) return;
+  overlay.style.display = "";
+  overlay.classList.add("open");
+}
+
+function closeMapAddChooser() {
+  const overlay = document.getElementById("map-add-modal-overlay");
+  if (!overlay) return;
+  overlay.classList.remove("open");
+  overlay.style.display = "none";
+}
+
+function mapAddCloseOnOverlay(e) {
+  const overlay = document.getElementById("map-add-modal-overlay");
+  if (!overlay) return;
+  if (e.target === overlay) closeMapAddChooser();
+}
+
+function mapAddChoose(type) {
+  closeMapAddChooser();
+  if (type === "occupancy") {
+    occupancyOpenModal?.();
+    return;
   }
+  inspectionOpenModal?.();
 }
 
 function showView(name) {
@@ -443,7 +482,7 @@ function populateModalDropdowns() {
   fillSelect("inspection_inspected_by", FIRE_PERSONNEL, "Select inspector");
   fillSelect("inspection_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
   fillSelect("conveyance_inspector_select", FIRE_PERSONNEL, "Select inspector");
-  fillSelect("occupancy_inspector_select", FIRE_PERSONNEL, "Select inspector");
+  fillSelect("occupancy_inspected_by", FIRE_PERSONNEL, "Select inspector");
   fillSelect("inspection-filter-barangay", BARANGAYS, "All barangays");
   fillSelect("inspection-filter-personnel", FIRE_PERSONNEL, "All personnel");
 
@@ -455,8 +494,7 @@ function getFirePersonnelRankPositionByName(name) {
   if (!name || typeof name !== "string") return "";
   const meta = FIRE_PERSONNEL_BY_NAME[name];
   if (!meta) return "";
-  if (meta.rank && meta.position) return `${meta.rank} – ${meta.position}`;
-  return meta.position || meta.rank || "";
+  return rankCodeToTitle(meta.rank) || "";
 }
 
 function bindInspectionPersonnelAutoFill() {
@@ -483,15 +521,8 @@ function conveyanceAddInspector() {
   sel.selectedIndex = 0;
 }
 
-function occupancyAddInspector() {
-  const sel = document.getElementById("occupancy_inspector_select");
-  const ta = document.getElementById("occupancy_inspectors");
-  if (!sel || !ta || !sel.value) return;
-  const current = (ta.value || "").trim();
-  const sep = current ? "\n" : "";
-  ta.value = current + sep + sel.value;
-  sel.selectedIndex = 0;
-}
+// Legacy helper kept for compatibility; no longer used by the current UI.
+function occupancyAddInspector() {}
 
 function initViewRouting() {
   const applyFromHash = () => showView(getCurrentView());
@@ -517,6 +548,63 @@ function initViewRouting() {
   applyFromHash();
 }
 
+// -----------------------------
+// In-app browser detection for file upload warning
+// -----------------------------
+
+function isInAppBrowser() {
+  const ua = navigator.userAgent || "";
+  // Detect common in-app WebViews where file input is restricted
+  return (
+    /FBAN|FBAV|FB_IAB|FBIOS/.test(ua) ||   // Facebook
+    /Instagram/.test(ua) ||                  // Instagram
+    /Snapchat/.test(ua) ||                   // Snapchat
+    /TikTok/.test(ua) ||                     // TikTok
+    /Twitter/.test(ua) ||                    // Twitter/X
+    /LinkedInApp/.test(ua) ||                // LinkedIn
+    /Line\//.test(ua) ||                     // LINE messenger
+    (ua.includes("wv") && ua.includes("Android") && !ua.includes("Chrome/")) // Generic Android WebView
+  );
+}
+
+function showInAppBrowserBanner() {
+  if (!isInAppBrowser()) return;
+
+  // Don't show more than once per session
+  if (sessionStorage.getItem("fsis.inapp_banner_dismissed")) return;
+
+  const banner = document.createElement("div");
+  banner.id = "inapp-browser-banner";
+  banner.style.cssText = [
+    "position:fixed",
+    "top:0",
+    "left:0",
+    "right:0",
+    "z-index:9999",
+    "background:#C1272D",
+    "color:#fff",
+    "font-family:'DM Sans',sans-serif",
+    "font-size:0.85rem",
+    "padding:10px 48px 10px 16px",
+    "line-height:1.4",
+    "box-shadow:0 2px 12px rgba(0,0,0,0.4)",
+  ].join(";");
+
+  const pageUrl = window.location.href;
+  banner.innerHTML = `
+    <strong>⚠️ File uploads may not work in this browser.</strong>
+    Open this page in your system browser (Chrome/Safari) for full functionality.
+    <a href="${pageUrl}" target="_blank" rel="noopener"
+       style="color:#fde68a;font-weight:700;text-decoration:underline;margin-left:6px;">
+      Open in browser ↗
+    </a>
+    <button onclick="this.parentElement.remove();sessionStorage.setItem('fsis.inapp_banner_dismissed','1')"
+      style="position:absolute;top:50%;right:10px;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;line-height:1;padding:4px 6px;"
+      aria-label="Dismiss">×</button>
+  `;
+  document.body.prepend(banner);
+}
+
 function init() {
   const session = requireSession();
   if (!session) return;
@@ -528,6 +616,10 @@ function init() {
     lastEl.textContent = session.issuedAt ? "Signed in " + toFriendlyDate(session.issuedAt) : "";
     lastEl.setAttribute("aria-hidden", lastEl.textContent ? "false" : "true");
   }
+
+  // Warn users accessing the app from in-app browsers (e.g. Facebook, Messenger)
+  // where file input is often blocked or restricted.
+  showInAppBrowserBanner();
 
   const logoutBtn = document.getElementById("logoutBtn");
   logoutBtn?.addEventListener("click", () => {
@@ -850,6 +942,22 @@ function inspectionFormatAddressDisplay(row) {
   return full;
 }
 
+// Short address for table display — strips the repeated municipality/province/region
+// to keep the address column compact. Full version still used for print and detail panels.
+function inspectionFormatAddressShort(row) {
+  const addrLine = (row.addr_line || "").trim();
+  const addrBarangay = (row.addr_barangay || "").trim();
+  if (addrLine || addrBarangay) {
+    const parts = [];
+    if (addrLine) parts.push(addrLine);
+    if (addrBarangay) parts.push("Brgy. " + addrBarangay);
+    return parts.join(", ") || "—";
+  }
+  // Legacy free-text fallback: just use the raw string (it's already compact)
+  const full = (row.insp_address || "").toString().trim();
+  return full || "—";
+}
+
 function inspectionRenderTable() {
   const tbody = document.getElementById("tbody-inspection");
   const empty = document.getElementById("empty-inspection");
@@ -917,7 +1025,7 @@ function inspectionRenderTable() {
         <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
         <td data-label="Owner phone">${logbookEsc(row.insp_owner_phone)}</td>
         <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
-        <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
+        <td data-label="Address">${logbookEsc(inspectionFormatAddressShort(row))}</td>
         <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
         <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
         <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
@@ -1012,7 +1120,6 @@ function inspectionEditEntry(idx) {
   );
   setVal("inspection_duration_start", row.duration_start);
   setVal("inspection_duration_end", row.duration_end);
-  setVal("inspection_remarks", row.remarks);
 
   const addr = (row.insp_address || "").toString();
   const brgyMatch = addr.match(/Barangay\s+([^,]+)/i);
@@ -1091,7 +1198,7 @@ function inspectionOpenIoHtml(idx) {
     // If sessionStorage is unavailable, we still open the template;
     // it will show a friendly notice instead of data.
   }
-  window.open("./io_fsis.html", "_blank");
+  window.open("./inspection_io_fsis.html", "_blank");
 }
 
 function inspectionOpenClearanceHtml(idx) {
@@ -1255,7 +1362,7 @@ async function inspectionDownloadPdf(idx) {
   } catch {
     // If sessionStorage is unavailable, open without auto-download
   }
-  window.open("./io_fsis.html?download=pdf", "_blank");
+  window.open("./inspection_io_fsis.html?download=pdf", "_blank");
 }
 
 function inspectionDeleteEntry(idx) {
@@ -1355,7 +1462,6 @@ function inspectionClearForm() {
     "inspection_included_personnel_position",
     "inspection_duration_start",
     "inspection_duration_end",
-    "inspection_remarks",
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
@@ -1453,9 +1559,7 @@ async function inspectionSaveEntry(e) {
     duration_end: (
       document.getElementById("inspection_duration_end") || { value: "" }
     ).value,
-    remarks: (
-      document.getElementById("inspection_remarks") || { value: "" }
-    ).value.trim(),
+    remarks: "",
     // Optional coordinates and photo metadata extracted from EXIF / geolocation
     lat: currentExifLat,
     lng: currentExifLng,
@@ -1619,7 +1723,7 @@ async function inspectionSaveEntry(e) {
         included_personnel_position: entry.included_personnel_position || null,
         duration_start: entry.duration_start || null,
         duration_end: entry.duration_end || null,
-        remarks: entry.remarks || null,
+        remarks: null,
         latitude: entry.lat ?? null,
         longitude: entry.lng ?? null,
         photo_url: entry.photo_url ?? null,
@@ -1754,6 +1858,7 @@ function openInspectionDetailPanel(entry) {
   const directionsLink = document.getElementById("map-detail-directions");
   const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
   const viewBtn = document.getElementById("map-detail-view-logbook");
+  const openIoBtn = document.getElementById("map-detail-open-io");
 
   if (titleEl) titleEl.textContent = "Inspection details";
   if (businessEl) {
@@ -1830,6 +1935,16 @@ function openInspectionDetailPanel(entry) {
     viewBtn.textContent = "View in Inspection logbook";
     viewBtn.onclick = () => viewInspectionInLogbook(entry);
   }
+  if (openIoBtn) {
+    openIoBtn.style.display = "";
+    openIoBtn.textContent = "Open IO (HTML)";
+    openIoBtn.onclick = () => {
+      try {
+        sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
+      } catch {}
+      window.open("./inspection_io_fsis.html", "_blank");
+    };
+  }
 
   if (photoWrap && photoImg) {
     if (entry.photo_url) {
@@ -1863,6 +1978,7 @@ function openOccupancyDetailPanel(entry) {
   const directionsLink = document.getElementById("map-detail-directions");
   const copyCoordsBtn = document.getElementById("map-detail-copy-coords");
   const viewBtn = document.getElementById("map-detail-view-logbook");
+  const openIoBtn = document.getElementById("map-detail-open-io");
 
   if (titleEl) titleEl.textContent = "Residential details";
   if (businessEl) businessEl.textContent = entry.owner_name || entry.io_number || "Residential";
@@ -1931,6 +2047,16 @@ function openOccupancyDetailPanel(entry) {
   if (viewBtn) {
     viewBtn.textContent = "View in Occupancy logbook";
     viewBtn.onclick = () => viewOccupancyInLogbook(entry);
+  }
+  if (openIoBtn) {
+    openIoBtn.style.display = "";
+    openIoBtn.textContent = "Open IO (HTML)";
+    openIoBtn.onclick = () => {
+      try {
+        sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
+      } catch {}
+      window.open("./occupancy_io_fsis.html", "_blank");
+    };
   }
 
   if (photoWrap && photoImg) {
@@ -2287,11 +2413,12 @@ async function readGpsFromFile(file) {
 }
 
 function initOccupancyPhotoExif() {
-  const input = document.getElementById("occupancy_photo");
-  if (!input) return;
+  const inputCamera = document.getElementById("occupancy_photo");
+  const inputLibrary = document.getElementById("occupancy_photo_library");
+  if (!inputCamera && !inputLibrary) return;
 
-  async function onPhotoChange() {
-    const file = input?.files?.[0];
+  async function onPhotoChange(sourceInput) {
+    const file = sourceInput?.files?.[0];
     if (!file) return;
 
     occupancyExifLat = null;
@@ -2299,6 +2426,10 @@ function initOccupancyPhotoExif() {
     occupancyExifPreviewUrl = null;
     occupancyExifTakenAt = null;
     occupancyExifFile = file;
+
+    // Clear the other input so only one is active.
+    if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
+    if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
 
     try {
       const dataUrl = await new Promise((resolve, reject) => {
@@ -2323,7 +2454,8 @@ function initOccupancyPhotoExif() {
     }
   }
 
-  input.addEventListener("change", () => void onPhotoChange());
+  inputCamera?.addEventListener("change", () => void onPhotoChange(inputCamera));
+  inputLibrary?.addEventListener("change", () => void onPhotoChange(inputLibrary));
 }
 
 function addInspectionMarkerFromEntry(entry) {
@@ -3552,6 +3684,7 @@ function occupancyRenderTable() {
         <select class="action-select" aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
           <option value="">Actions…</option>
           <option value="edit">Edit</option>
+          <option value="open_io_html">Open IO (HTML)</option>
           <option value="delete">Delete</option>
         </select>
       </td>
@@ -3563,7 +3696,20 @@ function occupancyRenderTable() {
 function occupancyHandleAction(action, idx) {
   if (!action) return;
   if (action === "edit") return occupancyEditEntry(idx);
+  if (action === "open_io_html") return occupancyOpenIoHtml(idx);
   if (action === "delete") return occupancyDeleteEntry(idx);
+}
+
+function occupancyOpenIoHtml(idx) {
+  const row = occupancyData[idx];
+  if (!row) return;
+  try {
+    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
+  } catch {
+    // If sessionStorage is unavailable, we still open the template;
+    // it will show a friendly notice instead of data.
+  }
+  window.open("./occupancy_io_fsis.html", "_blank");
 }
 
 function occupancyEditEntry(idx) {
@@ -3588,8 +3734,7 @@ function occupancyEditEntry(idx) {
   setVal("occupancy_date", row.log_date);
   setVal("occupancy_io_number", row.io_number);
   setVal("occupancy_owner_name", row.owner_name);
-  setVal("occupancy_inspectors", row.inspectors);
-  setVal("occupancy_remarks_signature", row.remarks_signature);
+  setVal("occupancy_inspected_by", row.inspectors);
 
   setText("occupancy-modal-title", "Edit Occupancy Record");
   const btn = document.getElementById("occupancy-btn-save");
@@ -3620,13 +3765,13 @@ function occupancyOpenModal() {
   if (io) io.value = "";
   const owner = document.getElementById("occupancy_owner_name");
   if (owner) owner.value = "";
-  const insp = document.getElementById("occupancy_inspectors");
-  if (insp) insp.value = "";
-  const rem = document.getElementById("occupancy_remarks_signature");
-  if (rem) rem.value = "";
+  const insp = document.getElementById("occupancy_inspected_by");
+  if (insp) insp.selectedIndex = 0;
 
   const photoInput = document.getElementById("occupancy_photo");
   if (photoInput) photoInput.value = "";
+  const photoLibraryInput = document.getElementById("occupancy_photo_library");
+  if (photoLibraryInput) photoLibraryInput.value = "";
 
   const overlay = document.getElementById("occupancy-modal-overlay");
   overlay?.classList.add("open");
@@ -3679,8 +3824,8 @@ function occupancySaveEntry(e) {
     log_date: (document.getElementById("occupancy_date") || { value: "" }).value,
     io_number: (document.getElementById("occupancy_io_number") || { value: "" }).value.trim(),
     owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
-    inspectors: (document.getElementById("occupancy_inspectors") || { value: "" }).value.trim(),
-    remarks_signature: (document.getElementById("occupancy_remarks_signature") || { value: "" }).value.trim(),
+    inspectors: (document.getElementById("occupancy_inspected_by") || { value: "" }).value.trim(),
+    remarks_signature: "",
     // Optional coordinates and photo metadata extracted from EXIF / geolocation
     lat: occupancyExifLat,
     lng: occupancyExifLng,
@@ -3695,10 +3840,11 @@ function occupancySaveEntry(e) {
     entry.lng = lastUserLongitude;
   }
 
-  // If we still have no coordinates, treat this as "no location yet"
+  // If we still have no coordinates, clear coordinates but keep the photo
+  // (the photo may still be useful even without GPS location data)
   if (entry.lat == null || entry.lng == null) {
-    entry.photo_url = null;
-    entry.photo_taken_at = null;
+    entry.lat = null;
+    entry.lng = null;
   }
 
   if (!entry.log_date || !entry.io_number || !entry.inspectors) {
@@ -3770,7 +3916,7 @@ function occupancySaveEntry(e) {
         io_number: entry.io_number,
         owner_name: entry.owner_name || null,
         inspectors: entry.inspectors,
-        remarks_signature: entry.remarks_signature,
+        remarks_signature: null,
         latitude: entry.lat ?? null,
         longitude: entry.lng ?? null,
         photo_url: entry.photo_url ?? null,
@@ -3799,7 +3945,7 @@ function occupancySaveEntry(e) {
           io_number: entry.io_number,
           owner_name: entry.owner_name || null,
           inspectors: entry.inspectors,
-          remarks_signature: entry.remarks_signature,
+          remarks_signature: null,
         };
         if (
           occupancyEditingId &&

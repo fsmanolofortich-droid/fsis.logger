@@ -599,7 +599,8 @@ footer {
 }
 
 /* PRINT STYLES — professional letterhead layout */
-@page { size: A4 portrait; margin: 14mm 14mm 16mm 14mm; }
+/* Landscape gives enough room for the wide inspection table */
+@page { size: A4 landscape; margin: 10mm 14mm 12mm 14mm; }
 
 @media print {
   header,
@@ -610,6 +611,7 @@ footer {
   .tbl-actions,
   .inspection-subnav,
   .table-controls,
+  .action-select,
   footer {
     display: none !important;
   }
@@ -617,8 +619,9 @@ footer {
   body {
     background: #ffffff;
     color: #1a1a1a;
-    font-size: 11px;
+    font-size: 9pt;
     overflow: visible !important;
+    font-family: 'DM Sans', Arial, sans-serif;
   }
 
   main {
@@ -633,17 +636,19 @@ footer {
     border: none;
     border-radius: 0;
     overflow: visible !important;
-    padding-top: 4mm;
+    padding-top: 2mm;
   }
 
-  .panel-header {
-    display: none !important;
-  }
+  .panel-header { display: none !important; }
 
-  th.col-action,
-  td.col-action {
-    display: none !important;
-  }
+  /* Hide action column */
+  th.col-action, td.col-action { display: none !important; }
+
+  /* Hide "Owner Phone" column in Inspection tables (col 4) — usually blank, saves space */
+  #table-inspection th:nth-child(4),
+  #table-inspection td:nth-child(4),
+  #table-inspection-nophoto th:nth-child(4),
+  #table-inspection-nophoto td:nth-child(4) { display: none !important; }
 
   .table-wrap {
     overflow: visible !important;
@@ -651,139 +656,270 @@ footer {
     max-width: 100%;
   }
 
+  /* ── Letterhead ── */
   .print-header {
     display: block !important;
     text-align: center;
-    padding: 0 0 10px 0;
-    margin: 0 0 14px 0;
-    border-bottom: 2px solid #111827;
+    padding: 0 0 8px 0;
+    margin: 0 0 10px 0;
+    border-bottom: 2.5px solid #111827;
     font-family: 'Playfair Display', 'Times New Roman', serif;
   }
 
   .print-header h2 {
-    font-size: 19px;
+    font-size: 20pt;
     font-weight: 700;
-    letter-spacing: 0.04em;
-    margin: 0 0 4px 0;
+    letter-spacing: 0.05em;
+    margin: 0 0 3px 0;
     text-transform: uppercase;
     color: #111827;
   }
 
   .print-header .print-subtitle {
-    font-size: 10px;
+    font-size: 9pt;
     color: #374151;
-    margin: 1px 0;
+    margin: 2px 0;
     font-family: 'DM Sans', Arial, sans-serif;
+    letter-spacing: 0.01em;
   }
 
   .print-header .print-meta {
-    font-size: 9px;
+    font-size: 8pt;
     color: #4b5563;
-    margin-top: 6px;
+    margin-top: 4px;
     font-family: 'DM Sans', Arial, sans-serif;
   }
 
   .print-footer {
     display: block !important;
     text-align: center;
-    font-size: 8.5px;
-    color: #4b5563;
-    margin-top: 16px;
-    padding-top: 8px;
+    font-size: 7.5pt;
+    color: #6b7280;
+    margin-top: 12px;
+    padding-top: 6px;
     border-top: 1px solid #d4d4d4;
+    font-style: italic;
   }
 
+  /* ── Base table style ── */
   table {
-    font-size: 8.5px;
+    font-size: 8pt;
     width: 100% !important;
     max-width: 100%;
     table-layout: fixed;
     border-collapse: collapse;
-    border-bottom: 1px solid #111827;
+    border-bottom: 1.5px solid #374151;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
-  thead tr {
-    background: #f3f4f6 !important;
-  }
+  thead tr { background: #e5e7eb !important; }
 
   th {
     background: #e5e7eb !important;
-    padding: 4px 5px;
+    padding: 5px 6px;
     text-align: left;
-    font-weight: 600;
-    font-size: 7.5px;
-    letter-spacing: 0.06em;
+    font-weight: 700;
+    font-size: 7pt;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    border: 1px solid #d1d5db;
-    overflow: hidden;
-    word-wrap: break-word;
+    border: 1px solid #9ca3af;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    color: #111827;
   }
 
   td {
-    padding: 3px 5px;
-    border: 1px solid #e5e7eb;
-    overflow: hidden;
-    word-wrap: break-word;
+    padding: 5px 6px;
+    border: 1px solid #d1d5db;
     word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    vertical-align: top;
+    line-height: 1.35;
+    color: #1a1a1a;
   }
 
-  tbody tr:nth-child(even) td {
-    background: #f9fafb;
+  td.td-date, th.th-date {
+    white-space: normal;
+    word-break: break-word;
+    font-size: 7.5pt;
   }
 
-  th.th-date,
-  td.td-date {
-    /* Prevent date from spilling into next column (no ellipsis) */
-    width: 9.5em;
-    white-space: nowrap;
-    overflow: hidden;
-    font-size: 7.5px;
-    padding: 2px 4px;
-  }
+  tbody tr:nth-child(even) td { background: #f9fafb; }
+  tbody tr:nth-child(odd)  td { background: #ffffff; }
 
-  .home-embed .logbook-panel {
-    box-shadow: none !important;
-    border: none !important;
-  }
+  /* Prevent rows from splitting across pages */
+  tr { page-break-inside: avoid; }
 
-  #panel-inspection-nophoto {
-    display: none !important;
-  }
+  /* ── Inspection logbook column widths (landscape ~267mm, 8 cols after hiding phone) ──
+     1:#   2:IO   3:Owner   [4:Phone hidden]   5:Business   6:Address   7:Date   8:FSIC   9:InspectedBy  */
+  #table-inspection th:nth-child(1), #table-inspection td:nth-child(1) { width: 3%; }
+  #table-inspection th:nth-child(2), #table-inspection td:nth-child(2) { width: 11%; }
+  #table-inspection th:nth-child(3), #table-inspection td:nth-child(3) { width: 14%; }
+  /* col 4 is hidden */
+  #table-inspection th:nth-child(5), #table-inspection td:nth-child(5) { width: 18%; }
+  #table-inspection th:nth-child(6), #table-inspection td:nth-child(6) { width: 23%; }
+  #table-inspection th:nth-child(7), #table-inspection td:nth-child(7) { width: 11%; }
+  #table-inspection th:nth-child(8), #table-inspection td:nth-child(8) { width: 10%; }
+  #table-inspection th:nth-child(9), #table-inspection td:nth-child(9) { width: 10%; }
+
+  #table-inspection-nophoto th:nth-child(1), #table-inspection-nophoto td:nth-child(1) { width: 3%; }
+  #table-inspection-nophoto th:nth-child(2), #table-inspection-nophoto td:nth-child(2) { width: 11%; }
+  #table-inspection-nophoto th:nth-child(3), #table-inspection-nophoto td:nth-child(3) { width: 14%; }
+  /* col 4 hidden */
+  #table-inspection-nophoto th:nth-child(5), #table-inspection-nophoto td:nth-child(5) { width: 18%; }
+  #table-inspection-nophoto th:nth-child(6), #table-inspection-nophoto td:nth-child(6) { width: 23%; }
+  #table-inspection-nophoto th:nth-child(7), #table-inspection-nophoto td:nth-child(7) { width: 11%; }
+  #table-inspection-nophoto th:nth-child(8), #table-inspection-nophoto td:nth-child(8) { width: 10%; }
+  #table-inspection-nophoto th:nth-child(9), #table-inspection-nophoto td:nth-child(9) { width: 10%; }
+
+  /* ── Occupancy logbook (7 cols, action hidden → 6 visible) ──
+     1:#  2:Date  3:IO  4:Owner  5:Inspectors  6:Remarks  */
+  #table-occupancy th:nth-child(1), #table-occupancy td:nth-child(1) { width: 3%; }
+  #table-occupancy th:nth-child(2), #table-occupancy td:nth-child(2) { width: 11%; }
+  #table-occupancy th:nth-child(3), #table-occupancy td:nth-child(3) { width: 13%; }
+  #table-occupancy th:nth-child(4), #table-occupancy td:nth-child(4) { width: 20%; }
+  #table-occupancy th:nth-child(5), #table-occupancy td:nth-child(5) { width: 26%; }
+  #table-occupancy th:nth-child(6), #table-occupancy td:nth-child(6) { width: 27%; }
+
+  /* ── Conveyance logbook (7 cols, action hidden → 6 visible) ──
+     Same structure as Occupancy */
+  #table-conveyance th:nth-child(1), #table-conveyance td:nth-child(1) { width: 3%; }
+  #table-conveyance th:nth-child(2), #table-conveyance td:nth-child(2) { width: 11%; }
+  #table-conveyance th:nth-child(3), #table-conveyance td:nth-child(3) { width: 13%; }
+  #table-conveyance th:nth-child(4), #table-conveyance td:nth-child(4) { width: 20%; }
+  #table-conveyance th:nth-child(5), #table-conveyance td:nth-child(5) { width: 26%; }
+  #table-conveyance th:nth-child(6), #table-conveyance td:nth-child(6) { width: 27%; }
+
+  /* ── FSEC logbook (7 cols, action hidden → 6 visible) ──
+     1:#  2:Owner  3:ProposedProject  4:Address  5:Date  6:Contact  */
+  #table-fsec th:nth-child(1), #table-fsec td:nth-child(1) { width: 3%; }
+  #table-fsec th:nth-child(2), #table-fsec td:nth-child(2) { width: 20%; }
+  #table-fsec th:nth-child(3), #table-fsec td:nth-child(3) { width: 27%; }
+  #table-fsec th:nth-child(4), #table-fsec td:nth-child(4) { width: 28%; }
+  #table-fsec th:nth-child(5), #table-fsec td:nth-child(5) { width: 12%; }
+  #table-fsec th:nth-child(6), #table-fsec td:nth-child(6) { width: 10%; }
+
+  .home-embed .logbook-panel { box-shadow: none !important; border: none !important; }
+  #panel-inspection-nophoto { display: none !important; }
 }
 
 .print-header, .print-footer { display: none; }
 
-/* RESPONSIVE — inspection/FSEC tables: horizontal scroll on small/medium screens (print unchanged) */
+
+
+
+/* =======================================
+   RESPONSIVE TABLES
+   Tablet (641-1024px): horizontal scroll
+   Mobile (≤640px): card-stack layout
+   ======================================= */
+
+/* Tablet: ensure wide tables can scroll */
 @media screen and (max-width: 1024px) and (min-width: 641px) {
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   #table-inspection,
   #table-fsec,
   #table-inspection-nophoto,
   #table-conveyance,
   #table-occupancy {
-    min-width: 800px;
+    min-width: 720px;
   }
 }
 
-/* Phone: keep tables as tables (screen-only) */
+/* Mobile (≤640px): card-stack layout — each row becomes a card */
 @media screen and (max-width: 640px) {
-  .table-wrap { overflow-x: auto; }
+  .table-wrap { overflow-x: visible; }
 
-  table { font-size: 0.78rem; }
-  th { padding: 10px 10px; font-size: 0.66rem; }
-  td { padding: 10px 10px; }
-
-  /* Keep all logbook tables as actual tables; use horizontal scroll when needed */
+  /* Remove the min-width forcing on mobile */
   #table-inspection,
   #table-fsec,
   #table-inspection-nophoto,
   #table-conveyance,
   #table-occupancy {
-    min-width: 860px;
+    min-width: 0;
   }
 
+  table,
+  thead,
+  tbody,
+  tfoot,
+  tr,
+  th,
+  td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Hide the column header row — labels come from data-label */
+  thead { display: none; }
+
+  /* Each row is a card */
+  tbody tr {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    background: var(--white);
+    box-shadow: 0 2px 6px rgba(13,27,42,0.07);
+    overflow: hidden;
+  }
+
+  tbody tr:hover td { background: transparent; }
+
+  /* Each cell shows as a labeled row */
+  td {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 14px;
+    border: none;
+    border-bottom: 1px solid #f0ede8;
+    font-size: 0.86rem;
+    line-height: 1.4;
+  }
+
+  td:last-child { border-bottom: none; }
+
+  /* Skip the # cell (just a row number) */
+  td:first-child {
+    background: linear-gradient(135deg, var(--navy), var(--navy-light));
+    color: rgba(255,255,255,0.6);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  td:first-child::before { display: none; }
+
+  /* Label column using data-label attribute */
+  td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    width: 110px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-light);
+    padding-top: 2px;
+  }
+
+  /* Action cell: full width, centered */
+  td.col-action {
+    justify-content: flex-end;
+    padding: 10px 14px;
+    background: #fafaf8;
+  }
+  td.col-action::before { display: none; }
+
   .action-select {
-    font-size: 0.78rem;
-    padding: 8px 32px 8px 10px;
+    width: auto;
+    min-width: 140px;
+    font-size: 0.84rem;
   }
 }
 
