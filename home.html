@@ -1194,9 +1194,13 @@
                 Conveyance Logbook
               </div>
               <button class="btn btn-print" onclick="conveyancePrintPanel()">Print</button>
+              <button class="btn btn-filter" onclick="toggleFilters('conveyance')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                Filter
+              </button>
               <button class="btn btn-add" onclick="conveyanceOpenModal()">Add Entry</button>
             </div>
-            <div class="table-controls" aria-label="Conveyance filters">
+            <div class="table-controls" id="filter-conveyance" aria-label="Conveyance filters" style="display: none;">
               <div class="control">
                 <label for="conveyance-filter-q">Search</label>
                 <input id="conveyance-filter-q" type="search"
@@ -1321,9 +1325,13 @@
                 Occupancy Logbook
               </div>
               <button class="btn btn-print" onclick="occupancyPrintPanel()">Print</button>
+              <button class="btn btn-filter" onclick="toggleFilters('occupancy')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                Filter
+              </button>
               <button class="btn btn-add" onclick="occupancyOpenModal()">Add Entry</button>
             </div>
-            <div class="table-controls" aria-label="Occupancy filters">
+            <div class="table-controls" id="filter-occupancy" aria-label="Occupancy filters" style="display: none;">
               <div class="control">
                 <label for="occupancy-filter-q">Search</label>
                 <input id="occupancy-filter-q" type="search"
@@ -1405,8 +1413,12 @@
                 </button>
               </div>
               <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
+              <button class="btn btn-filter" onclick="toggleFilters('inspection')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                Filter
+              </button>
             </div>
-            <div class="table-controls" aria-label="Inspection filters">
+            <div class="table-controls" id="filter-inspection" aria-label="Inspection filters" style="display: none;">
               <div class="control">
                 <label for="inspection-filter-q">Search</label>
                 <input id="inspection-filter-q" type="search"
@@ -1536,9 +1548,13 @@
                 FSEC Building Plan Logbook
               </div>
               <button class="btn btn-print" onclick="fsecPrintPanel()">Print</button>
+              <button class="btn btn-filter" onclick="toggleFilters('fsec')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                Filter
+              </button>
               <button class="btn btn-add" onclick="fsecOpenModal()">Add Entry</button>
             </div>
-            <div class="table-controls" aria-label="FSEC filters">
+            <div class="table-controls" id="filter-fsec" aria-label="FSEC filters" style="display: none;">
               <div class="control">
                 <label for="fsec-filter-q">Search</label>
                 <input id="fsec-filter-q" type="search" placeholder="Search owner, project, address, contact">

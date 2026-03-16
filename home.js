@@ -60,10 +60,22 @@ function getCurrentView() {
     hash === "fsec" ||
     hash === "conveyance" ||
     hash === "occupancy" ||
-    hash === "map"
-  )
+    hash === "occupancy"
+  ) {
     return hash;
+  }
   return "map";
+}
+
+function toggleFilters(logbookType) {
+  const filterPanel = document.getElementById(`filter-${logbookType}`);
+  if (!filterPanel) return;
+
+  if (filterPanel.style.display === "none") {
+    filterPanel.style.display = "flex";
+  } else {
+    filterPanel.style.display = "none";
+  }
 }
 
 const BARANGAYS = [

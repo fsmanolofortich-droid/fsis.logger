@@ -178,6 +178,14 @@ main {
 }
 .btn-print:hover { background: rgba(212, 168, 67, 0.25); }
 
+.btn-filter {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.btn-filter:hover { background: rgba(255, 255, 255, 0.15); }
+.btn-filter svg { margin-right: -2px; }
+
 .btn-add {
   background: var(--fire);
   color: white;
@@ -262,8 +270,19 @@ table#table-occupancy, table#table-conveyance, table#table-fsec {
 }
 
 @media screen and (max-width: 640px) {
-  .table-controls { padding: 12px; }
-  .table-controls .control { min-width: 140px; flex: 1; }
+  .table-controls { padding: 16px; gap: 12px; }
+  .table-controls .control { min-width: 130px; flex: 1; }
+  .table-controls .btn-cancel { width: 100%; justify-content: center; }
+  .table-controls .spacer { display: none; }
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.table-controls {
+  animation: slideDownFade 0.2s ease-out;
 }
 
 /* Actions dropdown (row actions) */
