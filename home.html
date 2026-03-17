@@ -737,144 +737,143 @@
          GLOBAL INSPECTION MODAL (map + inspection views)
          ================================================================ -->
     <div class="modal-overlay" id="inspection-modal-overlay" onclick="inspectionCloseOnOverlay(event)">
-      <div class="modal">
-        <div class="modal-header">
-          <div>
-            <small id="inspection-modal-subtitle">New Entry</small>
-            <h2 id="inspection-modal-title">Add Record</h2>
-          </div>
-          <button class="btn-close" onclick="inspectionCloseModal()" aria-label="Close">×</button>
-        </div>
-        <div class="modal-body">
-          <form id="inspection-entry-form" onsubmit="inspectionSaveEntry(event)">
-            <div id="fields-inspection">
-              <div class="form-section">
-                <div class="form-section-title">Record details</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_io_number">IO Number</label>
-                    <input type="text" id="inspection_io_number" placeholder="e.g. IO-2025-001">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_fsic_number">FSIC Number</label>
-                    <input type="text" id="inspection_fsic_number" placeholder="e.g. FSIC-2025-001">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_owner">Name of Owner</label>
-                    <input type="text" id="inspection_owner" placeholder="Full name of owner">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_owner_phone">Owner phone number</label>
-                    <input type="tel" id="inspection_owner_phone" placeholder="e.g. 09XXXXXXXXX">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_business_name">Business / Establishment</label>
-                    <input type="text" id="inspection_business_name" placeholder="Business or establishment name">
-                  </div>
-                </div>
+      <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+          <div class="modal-content">
+            <div class="modal-header bfp-header">
+              <div>
+                <small id="inspection-modal-subtitle">New Entry</small>
+                <h5 class="mb-0" id="inspection-modal-title">Add Record</h5>
               </div>
-              <div class="form-section">
-                <div class="form-section-title">Address</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_addr_region">Region</label>
-                    <input type="text" id="inspection_addr_region" value="X" readonly>
+              <button class="btn-close btn-close-white" onclick="inspectionCloseModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="inspection-entry-form" onsubmit="inspectionSaveEntry(event)">
+                <div id="fields-inspection">
+                  <div class="form-section">
+                    <div class="form-section-title">Record details</div>
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_io_number">IO Number</label>
+                        <input type="text" id="inspection_io_number" class="form-control" placeholder="e.g. IO-2025-001">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_fsic_number">FSIC Number</label>
+                        <input type="text" id="inspection_fsic_number" class="form-control" placeholder="e.g. FSIC-2025-001">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="inspection_owner">Name of Owner</label>
+                        <input type="text" id="inspection_owner" class="form-control" placeholder="Full name of owner">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="inspection_owner_phone">Owner phone number</label>
+                        <input type="tel" id="inspection_owner_phone" class="form-control" placeholder="e.g. 09XXXXXXXXX">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="inspection_business_name">Business / Establishment</label>
+                        <input type="text" id="inspection_business_name" class="form-control" placeholder="Business or establishment name">
+                      </div>
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_province">Province</label>
-                    <input type="text" id="inspection_addr_province" value="Bukidnon" readonly>
+                  <div class="form-section">
+                    <div class="form-section-title">Address</div>
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_addr_region">Region</label>
+                        <input type="text" id="inspection_addr_region" class="form-control" value="X" readonly>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_addr_province">Province</label>
+                        <input type="text" id="inspection_addr_province" class="form-control" value="Bukidnon" readonly>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_addr_municipal">Municipal</label>
+                        <input type="text" id="inspection_addr_municipal" class="form-control" value="Manolo Fortich" readonly>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_addr_barangay">Barangay</label>
+                        <select id="inspection_addr_barangay" class="form-select" aria-label="Select barangay">
+                          <option value="">Select barangay</option>
+                        </select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="inspection_addr_line">House no. / Street / Zone</label>
+                        <input type="text" id="inspection_addr_line" class="form-control" placeholder="e.g. Purok 3, Zone 1, National Highway">
+                      </div>
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_municipal">Municipal</label>
-                    <input type="text" id="inspection_addr_municipal" value="Manolo Fortich" readonly>
+                  <div class="form-section">
+                    <div class="form-section-title">Inspection</div>
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_date_inspected">Date Inspected</label>
+                        <input type="date" id="inspection_date_inspected" class="form-control">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_inspected_by">Inspected By</label>
+                        <select id="inspection_inspected_by" class="form-select" aria-label="Select fire personnel">
+                          <option value="">Select inspector</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label for="inspection_addr_barangay">Barangay</label>
-                    <select id="inspection_addr_barangay" aria-label="Select barangay">
-                      <option value="">Select barangay</option>
-                    </select>
+                  <div class="form-section">
+                    <div class="form-section-title">Inspection Order (IO)</div>
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_inspector_position">Inspector Position</label>
+                        <input type="text" id="inspection_inspector_position" class="form-control" placeholder="e.g. Fire Safety Inspector">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_included_personnel_name">Included Personnel</label>
+                        <select id="inspection_included_personnel_name" class="form-select" aria-label="Select additional personnel">
+                          <option value="">Select personnel (optional)</option>
+                        </select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="inspection_included_personnel_position">Included Position</label>
+                        <input type="text" id="inspection_included_personnel_position" class="form-control" placeholder="Position of additional inspector">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_duration_start">Duration &mdash; From</label>
+                        <input type="date" id="inspection_duration_start" class="form-control">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="inspection_duration_end">Duration &mdash; To</label>
+                        <input type="date" id="inspection_duration_end" class="form-control">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="inspection_remarks">Remarks on IO</label>
+                        <textarea id="inspection_remarks" class="form-control" rows="2" placeholder="Any special instructions or remarks to show on the Inspection Order"></textarea>
+                      </div>
+                    </div>
                   </div>
-                  <div class="form-group full">
-                    <label for="inspection_addr_line">House no. / Street / Zone</label>
-                    <input type="text" id="inspection_addr_line" placeholder="e.g. Purok 3, Zone 1, National Highway">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Inspection</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_date_inspected">Date Inspected</label>
-                    <input type="date" id="inspection_date_inspected">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_inspected_by">Inspected By</label>
-                    <select id="inspection_inspected_by" aria-label="Select fire personnel">
-                      <option value="">Select inspector</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Inspection Order (IO)</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="inspection_inspector_position">Inspector Position</label>
-                    <input type="text" id="inspection_inspector_position" placeholder="e.g. Fire Safety Inspector">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_included_personnel_name">Included Personnel</label>
-                    <select id="inspection_included_personnel_name" aria-label="Select additional personnel">
-                      <option value="">Select personnel (optional)</option>
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_included_personnel_position">Included Position</label>
-                    <input type="text" id="inspection_included_personnel_position"
-                      placeholder="Position of additional inspector">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_duration_start">Duration — From</label>
-                    <input type="date" id="inspection_duration_start">
-                  </div>
-                  <div class="form-group">
-                    <label for="inspection_duration_end">Duration — To</label>
-                    <input type="date" id="inspection_duration_end">
-                  </div>
-                  <div class="form-group full">
-                    <label for="inspection_remarks">Remarks on IO</label>
-                    <textarea id="inspection_remarks" rows="2"
-                      placeholder="Any special instructions or remarks to show on the Inspection Order"></textarea>
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Location &amp; photo</div>
-                <div class="form-grid">
-                  <div class="form-group full">
-                    <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
-                    <div class="photo-option-buttons">
-                      <label class="photo-option-btn">
-                        <input type="file" id="inspection_photo" accept="image/*" capture="environment"
-                          aria-label="Take photo with camera">
-                        <span class="photo-option-text">Take photo</span>
-                      </label>
-                      <label class="photo-option-btn">
-                        <input type="file" id="inspection_photo_library" accept="image/*"
-                          aria-label="Choose photo from gallery">
-                        <span class="photo-option-text">Choose from gallery</span>
-                      </label>
+                  <div class="form-section">
+                    <div class="form-section-title">Location &amp; photo</div>
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
+                        <div class="photo-option-buttons">
+                          <label class="photo-option-btn">
+                            <input type="file" id="inspection_photo" accept="image/*" capture="environment" aria-label="Take photo with camera">
+                            <span class="photo-option-text">Take photo</span>
+                          </label>
+                          <label class="photo-option-btn">
+                            <input type="file" id="inspection_photo_library" accept="image/*" aria-label="Choose photo from gallery">
+                            <span class="photo-option-text">Choose from gallery</span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </form>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
-          <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save
-            Record</button>
+            <div class="modal-footer bfp-footer">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="inspectionCloseModal()">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-dark" id="inspection-btn-save" form="inspection-entry-form">Save Record</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -886,59 +885,61 @@
          GLOBAL OCCUPANCY MODAL (map + occupancy views)
          ================================================================ -->
     <div class="modal-overlay" id="occupancy-modal-overlay" onclick="occupancyCloseOnOverlay(event)">
-      <div class="modal">
-        <div class="modal-header">
-          <div>
-            <small id="occupancy-modal-subtitle">Occupancy Logbook</small>
-            <h2 id="occupancy-modal-title">Add Occupancy Record</h2>
-          </div>
-          <button class="btn-close" onclick="occupancyCloseModal()" aria-label="Close">×</button>
-        </div>
-        <div class="modal-body">
-          <form id="occupancy-entry-form" onsubmit="occupancySaveEntry(event)">
-            <div class="form-section">
-              <div class="form-section-title">Record details</div>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="occupancy_date">Date</label>
-                  <input type="date" id="occupancy_date">
-                </div>
-                <div class="form-group">
-                  <label for="occupancy_io_number">IO Number</label>
-                  <input type="text" id="occupancy_io_number" placeholder="e.g. IO-2026-001">
-                </div>
-                <div class="form-group">
-                  <label for="occupancy_owner_name">Name of Owner</label>
-                  <input type="text" id="occupancy_owner_name" placeholder="Full name of owner">
-                </div>
-                <div class="form-group full">
-                  <label for="occupancy_inspected_by">Inspected By</label>
-                  <select id="occupancy_inspected_by" aria-label="Select fire personnel">
-                    <option value="">Select inspector</option>
-                  </select>
-                </div>
-                <div class="form-group full">
-                  <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
-                  <div class="photo-option-buttons">
-                    <label class="photo-option-btn">
-                      <input type="file" id="occupancy_photo" accept="image/*" capture="environment" aria-label="Take photo with camera">
-                      <span class="photo-option-text">Take photo</span>
-                    </label>
-                    <label class="photo-option-btn">
-                      <input type="file" id="occupancy_photo_library" accept="image/*"
-                        aria-label="Choose photo from gallery">
-                      <span class="photo-option-text">Choose from gallery</span>
-                    </label>
+      <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
+        <div class="modal-dialog modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header bfp-header">
+              <div>
+                <small id="occupancy-modal-subtitle">Occupancy Logbook</small>
+                <h5 class="mb-0" id="occupancy-modal-title">Add Occupancy Record</h5>
+              </div>
+              <button class="btn-close btn-close-white" onclick="occupancyCloseModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="occupancy-entry-form" onsubmit="occupancySaveEntry(event)">
+                <div class="form-section">
+                  <div class="form-section-title">Record details</div>
+                  <div class="row g-3">
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_date">Date</label>
+                      <input type="date" id="occupancy_date" class="form-control">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_io_number">IO Number</label>
+                      <input type="text" id="occupancy_io_number" class="form-control" placeholder="e.g. IO-2026-001">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="occupancy_owner_name">Name of Owner</label>
+                      <input type="text" id="occupancy_owner_name" class="form-control" placeholder="Full name of owner">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="occupancy_inspected_by">Inspected By</label>
+                      <select id="occupancy_inspected_by" class="form-select" aria-label="Select fire personnel">
+                        <option value="">Select inspector</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <p class="photo-option-label mb-2">Attach photo (uses GPS from EXIF if available)</p>
+                      <div class="photo-option-buttons">
+                        <label class="photo-option-btn">
+                          <input type="file" id="occupancy_photo" accept="image/*" capture="environment" aria-label="Take photo with camera">
+                          <span class="photo-option-text">Take photo</span>
+                        </label>
+                        <label class="photo-option-btn">
+                          <input type="file" id="occupancy_photo_library" accept="image/*" aria-label="Choose photo from gallery">
+                          <span class="photo-option-text">Choose from gallery</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </form>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-cancel" onclick="occupancyCloseModal()">Cancel</button>
-          <button type="submit" class="btn btn-save" id="occupancy-btn-save" form="occupancy-entry-form">Save
-            Record</button>
+            <div class="modal-footer bfp-footer">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="occupancyCloseModal()">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-dark" id="occupancy-btn-save" form="occupancy-entry-form">Save Record</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
