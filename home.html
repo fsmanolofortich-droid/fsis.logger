@@ -6,11 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BFP Inspection Management System &mdash; Home</title>
   <!-- Bootstrap 5.3 -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
   <!-- BFP Brand skin (loads after Bootstrap so overrides apply) -->
   <link rel="stylesheet" href="./bfp.css">
   <!-- Leaflet -->
@@ -21,8 +24,8 @@
 <body>
 
   <!-- Burger button (opens nav offcanvas) -->
-  <button type="button" class="burger-btn" id="burgerBtn" aria-label="Open menu"
-    data-bs-toggle="offcanvas" data-bs-target="#navSidebar" aria-controls="navSidebar">&#9776;</button>
+  <button type="button" class="burger-btn" id="burgerBtn" aria-label="Open menu" data-bs-toggle="offcanvas"
+    data-bs-target="#navSidebar" aria-controls="navSidebar">&#9776;</button>
 
   <!-- Navigation Offcanvas sidebar -->
   <div class="offcanvas offcanvas-start" tabindex="-1" id="navSidebar" aria-labelledby="navSidebarLabel">
@@ -81,13 +84,16 @@
                 <div class="form-section">
                   <div class="form-section-title">Choose type</div>
                   <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-dark" onclick="mapAddChoose('inspection')">Inspection (Business)</button>
-                    <button type="button" class="btn btn-dark" onclick="mapAddChoose('occupancy')">Occupancy (Residential)</button>
+                    <button type="button" class="btn btn-dark" onclick="mapAddChoose('inspection')">Inspection
+                      (Business)</button>
+                    <button type="button" class="btn btn-dark" onclick="mapAddChoose('occupancy')">Occupancy
+                      (Residential)</button>
                   </div>
                 </div>
               </div>
               <div class="modal-footer bfp-footer">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeMapAddChooser()">Cancel</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="closeMapAddChooser()">Cancel</button>
               </div>
             </div>
           </div>
@@ -96,8 +102,8 @@
 
       <div class="map-search-wrap">
         <input type="search" id="map-search-input" class="map-search-input"
-          placeholder="Search marked locations (business, IO, address, owner&hellip;)" aria-label="Search marked locations"
-          autocomplete="off">
+          placeholder="Search marked locations (business, IO, address, owner&hellip;)"
+          aria-label="Search marked locations" autocomplete="off">
         <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
         <div class="map-filter" role="group" aria-label="Map markers filter">
           <button type="button" class="map-filter-btn is-active" data-map-filter="all">All</button>
@@ -177,7 +183,8 @@
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
                   id="conveyance-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
@@ -188,7 +195,9 @@
                 <i class="bi bi-printer"></i> Print
               </button>
               <button class="btn-panel-filter" onclick="toggleFilters('conveyance')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
                 Filter
               </button>
               <button class="btn-panel-add" onclick="conveyanceOpenModal()">+ Add Entry</button>
@@ -208,7 +217,8 @@
                 <input id="conveyance-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end" onclick="conveyanceClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="conveyanceClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-conveyance" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -261,16 +271,19 @@
                       </div>
                       <div class="col-6">
                         <label class="form-label" for="conveyance_io_number">IO Number</label>
-                        <input type="text" id="conveyance_io_number" class="form-control" placeholder="e.g. IO-2026-001">
+                        <input type="text" id="conveyance_io_number" class="form-control"
+                          placeholder="e.g. IO-2026-001">
                       </div>
                       <div class="col-12">
                         <label class="form-label" for="conveyance_owner_name">Name of Owner</label>
-                        <input type="text" id="conveyance_owner_name" class="form-control" placeholder="Full name of owner">
+                        <input type="text" id="conveyance_owner_name" class="form-control"
+                          placeholder="Full name of owner">
                       </div>
                       <div class="col-12">
                         <label class="form-label" for="conveyance_inspectors">Name of Inspectors (2 or more)</label>
                         <div class="input-group mb-2">
-                          <select id="conveyance_inspector_select" class="form-select" aria-label="Select inspector to add">
+                          <select id="conveyance_inspector_select" class="form-select"
+                            aria-label="Select inspector to add">
                             <option value="">Select inspector</option>
                           </select>
                           <button type="button" class="btn-add-inline" onclick="conveyanceAddInspector()">Add</button>
@@ -288,8 +301,10 @@
                 </form>
               </div>
               <div class="modal-footer bfp-footer">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="conveyanceCloseModal()">Cancel</button>
-                <button type="submit" class="btn btn-sm btn-dark" id="conveyance-btn-save" form="conveyance-entry-form">Save Record</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="conveyanceCloseModal()">Cancel</button>
+                <button type="submit" class="btn btn-sm btn-dark" id="conveyance-btn-save"
+                  form="conveyance-entry-form">Save Record</button>
               </div>
             </div>
           </div>
@@ -316,7 +331,8 @@
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
                   id="occupancy-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
@@ -327,7 +343,9 @@
                 <i class="bi bi-printer"></i> Print
               </button>
               <button class="btn-panel-filter" onclick="toggleFilters('occupancy')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
                 Filter
               </button>
               <button class="btn-panel-add" onclick="occupancyOpenModal()">+ Add Entry</button>
@@ -347,7 +365,8 @@
                 <input id="occupancy-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end" onclick="occupancyClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="occupancyClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-occupancy" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -377,6 +396,65 @@
       <footer class="text-center text-muted py-3 border-top small mt-4">
         Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
       </footer>
+
+      <div class="modal-overlay" id="occupancy-modal-overlay" onclick="occupancyCloseOnOverlay(event)">
+        <div class="modal">
+          <div class="modal-header">
+            <div>
+              <small id="occupancy-modal-subtitle">Occupancy Logbook</small>
+              <h2 id="occupancy-modal-title">Add Occupancy Record</h2>
+            </div>
+            <button class="btn-close" onclick="occupancyCloseModal()" aria-label="Close">×</button>
+          </div>
+          <div class="modal-body">
+            <form id="occupancy-entry-form" onsubmit="occupancySaveEntry(event)">
+              <div class="form-section">
+                <div class="form-section-title">Record details</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="occupancy_date">Date</label>
+                    <input type="date" id="occupancy_date">
+                  </div>
+                  <div class="form-group">
+                    <label for="occupancy_io_number">IO Number</label>
+                    <input type="text" id="occupancy_io_number" placeholder="e.g. IO-2026-001">
+                  </div>
+                  <div class="form-group">
+                    <label for="occupancy_owner_name">Name of Owner</label>
+                    <input type="text" id="occupancy_owner_name" placeholder="Full name of owner">
+                  </div>
+                  <div class="form-group full">
+                    <label for="occupancy_inspectors">Name of Inspectors (2 or more)</label>
+                    <div class="form-row-with-add">
+                      <select id="occupancy_inspector_select" aria-label="Select inspector to add">
+                        <option value="">Select inspector</option>
+                      </select>
+                      <button type="button" class="btn btn-add-inline" onclick="occupancyAddInspector()">Add</button>
+                    </div>
+                    <textarea id="occupancy_inspectors" rows="2"
+                      placeholder="Enter names separated by commas or new lines"></textarea>
+                  </div>
+                  <div class="form-group full">
+                    <label for="occupancy_remarks_signature">Remarks / Signature</label>
+                    <textarea id="occupancy_remarks_signature" rows="2"
+                      placeholder="Remarks and/or signature"></textarea>
+                  </div>
+                  <div class="form-group full">
+                    <label for="occupancy_photo">Attach photo (uses GPS from EXIF if available)</label>
+                    <input type="file" id="occupancy_photo" accept="image/*" capture="environment">
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-cancel" onclick="occupancyCloseModal()">Cancel</button>
+            <button type="submit" class="btn btn-save" id="occupancy-btn-save" form="occupancy-entry-form">Save
+              Record</button>
+          </div>
+        </div>
+      </div>
+      <div class="toast" id="occupancy-toast"></div>
     </section>
 
     <!-- ================================================================
@@ -395,11 +473,13 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>Inspection Logbook</strong> &mdash; Fire Safety Inspection Certificates</p>
+              <p class="print-subtitle"><strong>Inspection Logbook</strong> &mdash; Fire Safety Inspection Certificates
+              </p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
                   id="inspection-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
@@ -420,7 +500,9 @@
                 <i class="bi bi-printer"></i> Print
               </button>
               <button class="btn-panel-filter" onclick="toggleFilters('inspection')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
                 Filter
               </button>
             </div>
@@ -432,13 +514,15 @@
               </div>
               <div class="control">
                 <label for="inspection-filter-barangay">Barangay</label>
-                <select id="inspection-filter-barangay" class="form-select form-select-sm" aria-label="Filter by barangay">
+                <select id="inspection-filter-barangay" class="form-select form-select-sm"
+                  aria-label="Filter by barangay">
                   <option value="">All barangays</option>
                 </select>
               </div>
               <div class="control">
                 <label for="inspection-filter-personnel">Personnel</label>
-                <select id="inspection-filter-personnel" class="form-select form-select-sm" aria-label="Filter by personnel">
+                <select id="inspection-filter-personnel" class="form-select form-select-sm"
+                  aria-label="Filter by personnel">
                   <option value="">All personnel</option>
                 </select>
               </div>
@@ -451,7 +535,8 @@
                 <input id="inspection-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end" onclick="inspectionClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="inspectionClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-inspection" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -484,16 +569,19 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>Inspection Logbook</strong> &mdash; Inspected buildings without photo</p>
+              <p class="print-subtitle"><strong>Inspection Logbook</strong> &mdash; Inspected buildings without photo
+              </p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
                   id="inspection-print-date-nophoto">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
                 <span>Pending photos</span>
-                Inspected buildings without photo <span class="record-badge" id="inspection-nophoto-record-count">0</span>
+                Inspected buildings without photo <span class="record-badge"
+                  id="inspection-nophoto-record-count">0</span>
               </div>
               <button class="btn-panel-print" onclick="inspectionPrintPanel()">
                 <i class="bi bi-printer"></i> Print
@@ -546,11 +634,13 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>FSEC Building Plan Logbook</strong> &mdash; Fire Safety Evaluation Clearances</p>
+              <p class="print-subtitle"><strong>FSEC Building Plan Logbook</strong> &mdash; Fire Safety Evaluation
+                Clearances</p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
                   id="fsec-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
@@ -561,7 +651,9 @@
                 <i class="bi bi-printer"></i> Print
               </button>
               <button class="btn-panel-filter" onclick="toggleFilters('fsec')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
                 Filter
               </button>
               <button class="btn-panel-add" onclick="fsecOpenModal()">+ Add Entry</button>
@@ -569,7 +661,8 @@
             <div class="table-controls" id="filter-fsec" aria-label="FSEC filters" style="display: none;">
               <div class="control">
                 <label for="fsec-filter-q">Search</label>
-                <input id="fsec-filter-q" type="search" class="form-control form-control-sm" placeholder="Search owner, project, address, contact">
+                <input id="fsec-filter-q" type="search" class="form-control form-control-sm"
+                  placeholder="Search owner, project, address, contact">
               </div>
               <div class="control">
                 <label for="fsec-filter-from">From</label>
@@ -580,7 +673,8 @@
                 <input id="fsec-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end" onclick="fsecClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="fsecClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-fsec" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -633,7 +727,8 @@
                       </div>
                       <div class="col-12">
                         <label class="form-label" for="proposed_project">Proposed Project</label>
-                        <input type="text" id="proposed_project" class="form-control" placeholder="Name or description of proposed project">
+                        <input type="text" id="proposed_project" class="form-control"
+                          placeholder="Name or description of proposed project">
                       </div>
                     </div>
                   </div>
@@ -650,7 +745,8 @@
                       </div>
                       <div class="col-6">
                         <label class="form-label" for="fsec_addr_municipal">Municipal</label>
-                        <input type="text" id="fsec_addr_municipal" class="form-control" value="Manolo Fortich" readonly>
+                        <input type="text" id="fsec_addr_municipal" class="form-control" value="Manolo Fortich"
+                          readonly>
                       </div>
                       <div class="col-6">
                         <label class="form-label" for="fsec_addr_barangay">Barangay</label>
@@ -660,7 +756,8 @@
                       </div>
                       <div class="col-12">
                         <label class="form-label" for="fsec_addr_line">House no. / Street / Zone</label>
-                        <input type="text" id="fsec_addr_line" class="form-control" placeholder="e.g. Purok 3, Zone 1, National Highway">
+                        <input type="text" id="fsec_addr_line" class="form-control"
+                          placeholder="e.g. Purok 3, Zone 1, National Highway">
                       </div>
                     </div>
                   </div>
@@ -680,8 +777,10 @@
                 </form>
               </div>
               <div class="modal-footer bfp-footer">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsecCloseModal()">Cancel</button>
-                <button type="submit" class="btn btn-sm btn-dark" id="fsec-btn-save" form="fsec-entry-form">Save Record</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="fsecCloseModal()">Cancel</button>
+                <button type="submit" class="btn btn-sm btn-dark" id="fsec-btn-save" form="fsec-entry-form">Save
+                  Record</button>
               </div>
             </div>
           </div>
@@ -695,147 +794,144 @@
          GLOBAL INSPECTION MODAL (map + inspection views)
          ================================================================ -->
     <div class="modal-overlay" id="inspection-modal-overlay" onclick="inspectionCloseOnOverlay(event)">
-      <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
-        <div class="modal-dialog modal-dialog-scrollable">
-          <div class="modal-content">
-            <div class="modal-header bfp-header">
-              <div>
-                <small id="inspection-modal-subtitle">New Entry</small>
-                <h5 class="mb-0" id="inspection-modal-title">Add Record</h5>
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <small id="inspection-modal-subtitle">New Entry</small>
+            <h2 id="inspection-modal-title">Add Record</h2>
+          </div>
+          <button class="btn-close" onclick="inspectionCloseModal()" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="inspection-entry-form" onsubmit="inspectionSaveEntry(event)">
+            <div id="fields-inspection">
+              <div class="form-section">
+                <div class="form-section-title">Record details</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="inspection_io_number">IO Number</label>
+                    <input type="text" id="inspection_io_number" placeholder="e.g. IO-2025-001">
+                  </div>
+                  <div class="form-group">
+                    <label for="inspection_fsic_number">FSIC Number</label>
+                    <input type="text" id="inspection_fsic_number" placeholder="e.g. FSIC-2025-001">
+                  </div>
+                  <div class="form-group full">
+                    <label for="inspection_owner">Name of Owner</label>
+                    <input type="text" id="inspection_owner" placeholder="Full name of owner">
+                  </div>
+                  <div class="form-group full">
+                    <label for="inspection_owner_phone">Owner phone number</label>
+                    <input type="tel" id="inspection_owner_phone" placeholder="e.g. 09XXXXXXXXX">
+                  </div>
+                  <div class="form-group full">
+                    <label for="inspection_business_name">Business / Establishment</label>
+                    <input type="text" id="inspection_business_name" placeholder="Business or establishment name">
+                  </div>
+                </div>
               </div>
-              <button class="btn-close btn-close-white" onclick="inspectionCloseModal()" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <form id="inspection-entry-form" onsubmit="inspectionSaveEntry(event)">
-                <div id="fields-inspection">
-                  <div class="form-section">
-                    <div class="form-section-title">Record details</div>
-                    <div class="row g-3">
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_io_number">IO Number</label>
-                        <input type="text" id="inspection_io_number" class="form-control" placeholder="e.g. IO-2025-001">
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_fsic_number">FSIC Number</label>
-                        <input type="text" id="inspection_fsic_number" class="form-control" placeholder="e.g. FSIC-2025-001">
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label" for="inspection_owner">Name of Owner</label>
-                        <input type="text" id="inspection_owner" class="form-control" placeholder="Full name of owner">
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label" for="inspection_owner_phone">Owner phone number</label>
-                        <input type="tel" id="inspection_owner_phone" class="form-control" placeholder="e.g. 09XXXXXXXXX">
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label" for="inspection_business_name">Business / Establishment</label>
-                        <input type="text" id="inspection_business_name" class="form-control" placeholder="Business or establishment name">
-                      </div>
-                    </div>
+              <div class="form-section">
+                <div class="form-section-title">Address</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="inspection_addr_region">Region</label>
+                    <input type="text" id="inspection_addr_region" value="X" readonly>
                   </div>
-                  <div class="form-section">
-                    <div class="form-section-title">Address</div>
-                    <div class="row g-3">
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_addr_region">Region</label>
-                        <input type="text" id="inspection_addr_region" class="form-control" value="X" readonly>
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_addr_province">Province</label>
-                        <input type="text" id="inspection_addr_province" class="form-control" value="Bukidnon" readonly>
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_addr_municipal">Municipal</label>
-                        <input type="text" id="inspection_addr_municipal" class="form-control" value="Manolo Fortich" readonly>
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_addr_barangay">Barangay</label>
-                        <select id="inspection_addr_barangay" class="form-select" aria-label="Select barangay">
-                          <option value="">Select barangay</option>
-                        </select>
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label" for="inspection_addr_line">House no. / Street / Zone</label>
-                        <input type="text" id="inspection_addr_line" class="form-control" placeholder="e.g. Purok 3, Zone 1, National Highway">
-                      </div>
-                    </div>
+                  <div class="form-group">
+                    <label for="inspection_addr_province">Province</label>
+                    <input type="text" id="inspection_addr_province" value="Bukidnon" readonly>
                   </div>
-                  <div class="form-section">
-                    <div class="form-section-title">Inspection</div>
-                    <div class="row g-3">
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_date_inspected">Date Inspected</label>
-                        <input type="date" id="inspection_date_inspected" class="form-control">
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_inspected_by">Inspected By</label>
-                        <select id="inspection_inspected_by" class="form-select" aria-label="Select fire personnel">
-                          <option value="">Select inspector</option>
-                        </select>
-                      </div>
-                    </div>
+                  <div class="form-group">
+                    <label for="inspection_addr_municipal">Municipal</label>
+                    <input type="text" id="inspection_addr_municipal" value="Manolo Fortich" readonly>
                   </div>
-                  <div class="form-section">
-                    <div class="form-section-title">Inspection Order (IO)</div>
-                    <div class="row g-3">
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_inspector_position">Inspector Position</label>
-                        <input type="text" id="inspection_inspector_position" class="form-control" placeholder="e.g. Fire Safety Inspector">
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_included_personnel_name">Included Personnel</label>
-                        <select id="inspection_included_personnel_name" class="form-select" aria-label="Select additional personnel">
-                          <option value="">Select personnel (optional)</option>
-                        </select>
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_included_personnel_position">Included Position</label>
-                        <input type="text" id="inspection_included_personnel_position" class="form-control"
-                          placeholder="Position of additional inspector">
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_duration_start">Duration &mdash; From</label>
-                        <input type="date" id="inspection_duration_start" class="form-control">
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label" for="inspection_duration_end">Duration &mdash; To</label>
-                        <input type="date" id="inspection_duration_end" class="form-control">
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label" for="inspection_remarks">Remarks on IO</label>
-                        <textarea id="inspection_remarks" class="form-control" rows="2"
-                          placeholder="Any special instructions or remarks to show on the Inspection Order"></textarea>
-                      </div>
-                    </div>
+                  <div class="form-group">
+                    <label for="inspection_addr_barangay">Barangay</label>
+                    <select id="inspection_addr_barangay" aria-label="Select barangay">
+                      <option value="">Select barangay</option>
+                    </select>
                   </div>
-                  <div class="form-section">
-                    <div class="form-section-title">Location &amp; photo</div>
-                    <div class="row g-3">
-                      <div class="col-12">
-                        <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
-                        <div class="photo-option-buttons">
-                          <label class="photo-option-btn">
-                            <input type="file" id="inspection_photo" accept="image/*" capture="environment"
-                              aria-label="Take photo with camera">
-                            <span class="photo-option-text">Take photo</span>
-                          </label>
-                          <label class="photo-option-btn">
-                            <input type="file" id="inspection_photo_library" accept="image/*"
-                              aria-label="Choose photo from gallery">
-                            <span class="photo-option-text">Choose from gallery</span>
-                          </label>
-                        </div>
-                      </div>
+                  <div class="form-group full">
+                    <label for="inspection_addr_line">House no. / Street / Zone</label>
+                    <input type="text" id="inspection_addr_line" placeholder="e.g. Purok 3, Zone 1, National Highway">
+                  </div>
+                </div>
+              </div>
+              <div class="form-section">
+                <div class="form-section-title">Inspection</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="inspection_date_inspected">Date Inspected</label>
+                    <input type="date" id="inspection_date_inspected">
+                  </div>
+                  <div class="form-group">
+                    <label for="inspection_inspected_by">Inspected By</label>
+                    <select id="inspection_inspected_by" aria-label="Select fire personnel">
+                      <option value="">Select inspector</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-section">
+                <div class="form-section-title">Inspection Order (IO)</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="inspection_inspector_position">Inspector Position</label>
+                    <input type="text" id="inspection_inspector_position" placeholder="e.g. Fire Safety Inspector">
+                  </div>
+                  <div class="form-group">
+                    <label for="inspection_included_personnel_name">Included Personnel</label>
+                    <select id="inspection_included_personnel_name" aria-label="Select additional personnel">
+                      <option value="">Select personnel (optional)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="inspection_included_personnel_position">Included Position</label>
+                    <input type="text" id="inspection_included_personnel_position"
+                      placeholder="Position of additional inspector">
+                  </div>
+                  <div class="form-group">
+                    <label for="inspection_duration_start">Duration — From</label>
+                    <input type="date" id="inspection_duration_start">
+                  </div>
+                  <div class="form-group">
+                    <label for="inspection_duration_end">Duration — To</label>
+                    <input type="date" id="inspection_duration_end">
+                  </div>
+                  <div class="form-group full">
+                    <label for="inspection_remarks">Remarks on IO</label>
+                    <textarea id="inspection_remarks" rows="2"
+                      placeholder="Any special instructions or remarks to show on the Inspection Order"></textarea>
+                  </div>
+                </div>
+              </div>
+              <div class="form-section">
+                <div class="form-section-title">Location &amp; photo</div>
+                <div class="form-grid">
+                  <div class="form-group full">
+                    <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
+                    <div class="photo-option-buttons">
+                      <label class="photo-option-btn">
+                        <input type="file" id="inspection_photo" accept="image/*" capture="environment"
+                          aria-label="Take photo with camera">
+                        <span class="photo-option-text">Take photo</span>
+                      </label>
+                      <label class="photo-option-btn">
+                        <input type="file" id="inspection_photo_library" accept="image/*"
+                          aria-label="Choose photo from gallery">
+                        <span class="photo-option-text">Choose from gallery</span>
+                      </label>
                     </div>
                   </div>
                 </div>
-              </form>
+              </div>
             </div>
-            <div class="modal-footer bfp-footer">
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="inspectionCloseModal()">Cancel</button>
-              <button type="submit" class="btn btn-sm btn-dark" id="inspection-btn-save" form="inspection-entry-form">Save Record</button>
-            </div>
-          </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
+          <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save
+            Record</button>
         </div>
       </div>
     </div>
@@ -847,72 +943,71 @@
          GLOBAL OCCUPANCY MODAL (map + occupancy views)
          ================================================================ -->
     <div class="modal-overlay" id="occupancy-modal-overlay" onclick="occupancyCloseOnOverlay(event)">
-      <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
-        <div class="modal-dialog modal-dialog-scrollable">
-          <div class="modal-content">
-            <div class="modal-header bfp-header">
-              <div>
-                <small id="occupancy-modal-subtitle">Occupancy Logbook</small>
-                <h5 class="mb-0" id="occupancy-modal-title">Add Occupancy Record</h5>
-              </div>
-              <button class="btn-close btn-close-white" onclick="occupancyCloseModal()" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <form id="occupancy-entry-form" onsubmit="occupancySaveEntry(event)">
-                <div class="form-section">
-                  <div class="form-section-title">Record details</div>
-                  <div class="row g-3">
-                    <div class="col-6">
-                      <label class="form-label" for="occupancy_date">Date</label>
-                      <input type="date" id="occupancy_date" class="form-control">
-                    </div>
-                    <div class="col-6">
-                      <label class="form-label" for="occupancy_io_number">IO Number</label>
-                      <input type="text" id="occupancy_io_number" class="form-control" placeholder="e.g. IO-2026-001">
-                    </div>
-                    <div class="col-12">
-                      <label class="form-label" for="occupancy_owner_name">Name of Owner</label>
-                      <input type="text" id="occupancy_owner_name" class="form-control" placeholder="Full name of owner">
-                    </div>
-                    <div class="col-12">
-                      <label class="form-label" for="occupancy_inspected_by">Inspected By</label>
-                      <select id="occupancy_inspected_by" class="form-select" aria-label="Select fire personnel">
-                        <option value="">Select inspector</option>
-                      </select>
-                    </div>
-                    <div class="col-12">
-                      <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
-                      <div class="photo-option-buttons">
-                        <label class="photo-option-btn">
-                          <input type="file" id="occupancy_photo" accept="image/*" aria-label="Take photo with camera">
-                          <span class="photo-option-text">Take photo</span>
-                        </label>
-                        <label class="photo-option-btn">
-                          <input type="file" id="occupancy_photo_library" accept="image/*"
-                            aria-label="Choose photo from gallery">
-                          <span class="photo-option-text">Choose from gallery</span>
-                        </label>
-                      </div>
-                    </div>
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <small id="occupancy-modal-subtitle">Occupancy Logbook</small>
+            <h2 id="occupancy-modal-title">Add Occupancy Record</h2>
+          </div>
+          <button class="btn-close" onclick="occupancyCloseModal()" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="occupancy-entry-form" onsubmit="occupancySaveEntry(event)">
+            <div class="form-section">
+              <div class="form-section-title">Record details</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="occupancy_date">Date</label>
+                  <input type="date" id="occupancy_date">
+                </div>
+                <div class="form-group">
+                  <label for="occupancy_io_number">IO Number</label>
+                  <input type="text" id="occupancy_io_number" placeholder="e.g. IO-2026-001">
+                </div>
+                <div class="form-group">
+                  <label for="occupancy_owner_name">Name of Owner</label>
+                  <input type="text" id="occupancy_owner_name" placeholder="Full name of owner">
+                </div>
+                <div class="form-group full">
+                  <label for="occupancy_inspected_by">Inspected By</label>
+                  <select id="occupancy_inspected_by" aria-label="Select fire personnel">
+                    <option value="">Select inspector</option>
+                  </select>
+                </div>
+                <div class="form-group full">
+                  <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
+                  <div class="photo-option-buttons">
+                    <label class="photo-option-btn">
+                      <input type="file" id="occupancy_photo" accept="image/*" aria-label="Take photo with camera">
+                      <span class="photo-option-text">Take photo</span>
+                    </label>
+                    <label class="photo-option-btn">
+                      <input type="file" id="occupancy_photo_library" accept="image/*"
+                        aria-label="Choose photo from gallery">
+                      <span class="photo-option-text">Choose from gallery</span>
+                    </label>
                   </div>
                 </div>
-              </form>
+              </div>
             </div>
-            <div class="modal-footer bfp-footer">
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="occupancyCloseModal()">Cancel</button>
-              <button type="submit" class="btn btn-sm btn-dark" id="occupancy-btn-save" form="occupancy-entry-form">Save Record</button>
-            </div>
-          </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-cancel" onclick="occupancyCloseModal()">Cancel</button>
+          <button type="submit" class="btn btn-save" id="occupancy-btn-save" form="occupancy-entry-form">Save
+            Record</button>
         </div>
       </div>
     </div>
-    <div class="toast bfp-toast position-fixed bottom-0 end-0 m-3" id="occupancy-toast" role="alert"></div>
+    <div class="toast" id="occupancy-toast"></div>
 
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <!-- Bootstrap 5.3 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"
+    defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
