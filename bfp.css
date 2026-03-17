@@ -17,6 +17,9 @@
   padding: 20px;
 }
 .modal-overlay.open { display: flex; }
+/* Bootstrap sets display:none on .modal globally — override it inside our overlay wrapper */
+.modal-overlay .modal { display: block; }
+
 
 /* Animate BS modal inside overlay */
 .modal-overlay .modal { animation: bsModalUp 0.22s ease-out; }
@@ -833,65 +836,131 @@ body.is-map-view [data-view="map"] { position: fixed; inset: 0; }
 }
 .btn-add-inline:hover { background: var(--navy-mid); }
 
-/* ── Responsive tables — mobile card-stack (≤640px) ── */
-@media screen and (max-width: 640px) {
-  .table-wrap { overflow-x: visible; }
-  #table-inspection, #table-fsec,
-  #table-inspection-nophoto,
-  #table-conveyance, #table-occupancy {
-    min-width: 0;
-  }
-  table, thead, tbody, tfoot, tr, th, td {
-    display: block; width: 100%;
-    min-width: 0 !important; box-sizing: border-box;
-  }
-  thead { display: none; }
-  tbody tr {
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    margin-bottom: 10px;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(13,27,42,0.07);
-    overflow: hidden;
-  }
-  tbody tr:hover td { background: transparent; }
-  td {
-    display: flex; align-items: flex-start; gap: 8px;
-    padding: 9px 14px;
-    border: none; border-bottom: 1px solid #f0ede8;
-    font-size: 0.85rem; line-height: 1.4;
-  }
-  td:last-child { border-bottom: none; }
-  td:first-child {
-    background: linear-gradient(135deg, var(--navy), var(--navy-light));
-    color: rgba(255,255,255,0.6);
-    font-size: 0.68rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    padding: 6px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-  }
-  td:first-child::before { display: none; }
-  td[data-label]::before {
-    content: attr(data-label);
-    flex-shrink: 0; width: 108px;
-    font-size: 0.67rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.07em;
-    color: var(--text-light); padding-top: 2px;
-  }
-  td.col-action { justify-content: flex-end; padding: 10px 14px; background: #fafaf8; }
-  td.col-action::before { display: none; }
-  .action-select { width: auto; min-width: 130px; }
+/* ── Responsive tables — horizontal scroll on ALL screen sizes ──
+   Tables stay in proper table format; scroll horizontally on small screens. */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;  /* smooth inertia scroll on iOS */
+  /* subtle fade-out on the right edge to hint at more content */
+  background:
+    linear-gradient(to right, white 30%, rgba(255,255,255,0)) left  / 24px 100% no-repeat,
+    linear-gradient(to left,  white 30%, rgba(255,255,255,0)) right / 24px 100% no-repeat,
+    radial-gradient(farthest-side at 0   50%, rgba(0,0,0,.08), transparent) left  / 10px 100% no-repeat,
+    radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.08), transparent) right / 10px 100% no-repeat;
+  background-color: white;
+  background-attachment: local, local, scroll, scroll;
 }
 
+/* Minimum widths so columns never crush on small screens */
+#table-inspection,
+#table-inspection-nophoto { min-width: 820px; }
+
+#table-fsec               { min-width: 640px; }
+#table-conveyance,
+#table-occupancy           { min-width: 680px; }
+
 /* Tablet */
-@media screen and (max-width: 1024px) and (min-width: 641px) {
-  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  #table-inspection, #table-fsec,
-  #table-inspection-nophoto,
-  #table-conveyance, #table-occupancy {
-    min-width: 720px;
-  }
+@media screen and (max-width: 1024px) {
+  /* Compact panel header on small screens */
+  .panel-header { padding: 12px 14px; }
 }
+
+
+
+
+
+/* ── Mobile compact table (≤640px)
+   Keep only the most essential columns; hide the rest.
+   The "Actions…" dropdown gives access to full record details via Edit.
+   ──────────────────────────────────────────────────────────────────── */
+@media screen and (max-width: 640px) {
+
+  /* Shrink table to viewport, no horizontal scroll */
+  #table-inspection,
+  #table-inspection-nophoto,
+  #table-fsec,
+  #table-conveyance,
+  #table-occupancy {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  /* Slightly smaller text and tighter padding */
+  .logbook-panel .table td,
+  .logbook-panel .table th { padding: 5px 7px !important; font-size: 0.75rem; }
+
+  /* ── Inspection / Inspection-nophoto (10 → 5 cols after hiding)
+     Keep: #(1) IO Number(2) Business/Estab(5) Date(7) Action(10)
+     Hide: Owner(3) Phone(4) Address(6) FSIC(8) Inspector(9)          */
+  #table-inspection th:nth-child(3), #table-inspection td:nth-child(3),
+  #table-inspection th:nth-child(4), #table-inspection td:nth-child(4),
+  #table-inspection th:nth-child(6), #table-inspection td:nth-child(6),
+  #table-inspection th:nth-child(8), #table-inspection td:nth-child(8),
+  #table-inspection th:nth-child(9), #table-inspection td:nth-child(9),
+  #table-inspection-nophoto th:nth-child(3), #table-inspection-nophoto td:nth-child(3),
+  #table-inspection-nophoto th:nth-child(4), #table-inspection-nophoto td:nth-child(4),
+  #table-inspection-nophoto th:nth-child(6), #table-inspection-nophoto td:nth-child(6),
+  #table-inspection-nophoto th:nth-child(8), #table-inspection-nophoto td:nth-child(8),
+  #table-inspection-nophoto th:nth-child(9), #table-inspection-nophoto td:nth-child(9) {
+    display: none !important;
+  }
+  /* Column widths: # | IO Number | Business | Date | Action */
+  #table-inspection th:nth-child(1),  #table-inspection td:nth-child(1),
+  #table-inspection-nophoto th:nth-child(1), #table-inspection-nophoto td:nth-child(1)  { width: 28px; }
+  #table-inspection th:nth-child(2),  #table-inspection td:nth-child(2),
+  #table-inspection-nophoto th:nth-child(2), #table-inspection-nophoto td:nth-child(2)  { width: 80px; }
+  #table-inspection th:nth-child(5),  #table-inspection td:nth-child(5),
+  #table-inspection-nophoto th:nth-child(5), #table-inspection-nophoto td:nth-child(5)  { width: auto; }
+  #table-inspection th:nth-child(7),  #table-inspection td:nth-child(7),
+  #table-inspection-nophoto th:nth-child(7), #table-inspection-nophoto td:nth-child(7)  { width: 70px; }
+  #table-inspection th:nth-child(10), #table-inspection td:nth-child(10),
+  #table-inspection-nophoto th:nth-child(10), #table-inspection-nophoto td:nth-child(10) { width: 90px; }
+  /* Business name: truncate long names */
+  #table-inspection td:nth-child(5),
+  #table-inspection-nophoto td:nth-child(5) {
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 0;
+  }
+
+  /* ── Conveyance / Occupancy (7 → 4 cols after hiding)
+     Keep: #(1) Date(2) IO Number(3) Action(7)
+     Hide: Owner(4) Inspectors(5) Remarks(6)                           */
+  #table-conveyance th:nth-child(4), #table-conveyance td:nth-child(4),
+  #table-conveyance th:nth-child(5), #table-conveyance td:nth-child(5),
+  #table-conveyance th:nth-child(6), #table-conveyance td:nth-child(6),
+  #table-occupancy  th:nth-child(4), #table-occupancy  td:nth-child(4),
+  #table-occupancy  th:nth-child(5), #table-occupancy  td:nth-child(5),
+  #table-occupancy  th:nth-child(6), #table-occupancy  td:nth-child(6) {
+    display: none !important;
+  }
+  /* Column widths: # | Date | IO Number | Action */
+  #table-conveyance th:nth-child(1), #table-conveyance td:nth-child(1),
+  #table-occupancy  th:nth-child(1), #table-occupancy  td:nth-child(1) { width: 28px; }
+  #table-conveyance th:nth-child(2), #table-conveyance td:nth-child(2),
+  #table-occupancy  th:nth-child(2), #table-occupancy  td:nth-child(2) { width: 80px; }
+  #table-conveyance th:nth-child(3), #table-conveyance td:nth-child(3),
+  #table-occupancy  th:nth-child(3), #table-occupancy  td:nth-child(3) { width: auto; }
+  #table-conveyance th:nth-child(7), #table-conveyance td:nth-child(7),
+  #table-occupancy  th:nth-child(7), #table-occupancy  td:nth-child(7) { width: 90px; }
+
+  /* ── FSEC (7 → 5 cols after hiding)
+     Keep: #(1) Owner(2) Project(3) Date(5) Action(7)
+     Hide: Address(4) Contact(6)                                        */
+  #table-fsec th:nth-child(4), #table-fsec td:nth-child(4),
+  #table-fsec th:nth-child(6), #table-fsec td:nth-child(6) {
+    display: none !important;
+  }
+  /* Column widths: # | Owner | Project | Date | Action */
+  #table-fsec th:nth-child(1), #table-fsec td:nth-child(1) { width: 28px; }
+  #table-fsec th:nth-child(2), #table-fsec td:nth-child(2) { width: 80px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 0; }
+  #table-fsec th:nth-child(3), #table-fsec td:nth-child(3) { width: auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 0; }
+  #table-fsec th:nth-child(5), #table-fsec td:nth-child(5) { width: 70px; }
+  #table-fsec th:nth-child(7), #table-fsec td:nth-child(7) { width: 90px; }
+
+  /* Tighten the action-select dropdown */
+  .action-select { font-size: 0.74rem; padding: 3px 4px; min-width: 82px; }
+}
+
 
 @media (max-width: 768px) {
   .form-section .form-grid { grid-template-columns: 1fr; }
@@ -904,6 +973,7 @@ body.is-map-view [data-view="map"] { position: fixed; inset: 0; }
   .modal-footer { padding: 10px 14px 18px; }
   .modal-header.bfp-header { padding: 16px; }
 }
+
 
 /* ── Toast (Bootstrap toast override) ── */
 /* Using Bootstrap's .toast; only ensure BFP header accent */
