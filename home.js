@@ -60,10 +60,22 @@ function getCurrentView() {
     hash === "fsec" ||
     hash === "conveyance" ||
     hash === "occupancy" ||
-    hash === "map"
-  )
+    hash === "occupancy"
+  ) {
     return hash;
+  }
   return "map";
+}
+
+function toggleFilters(logbookType) {
+  const filterPanel = document.getElementById(`filter-${logbookType}`);
+  if (!filterPanel) return;
+
+  if (filterPanel.style.display === "none") {
+    filterPanel.style.display = "flex";
+  } else {
+    filterPanel.style.display = "none";
+  }
 }
 
 const BARANGAYS = [
@@ -433,33 +445,27 @@ function startUserLocationTracking() {
 }
 
 function openNavSidebar() {
-  const sidebar = document.getElementById("navSidebar");
-  const overlay = document.getElementById("navSidebarOverlay");
-  const burger = document.getElementById("burgerBtn");
-  if (sidebar) sidebar.classList.add("is-open");
-  if (overlay) overlay.classList.add("is-open");
-  if (burger) {
-    burger.setAttribute("aria-expanded", "true");
-    burger.setAttribute("aria-label", "Close menu");
-  }
+  const el = document.getElementById("navSidebar");
+  if (!el) return;
+  // Bootstrap 5 Offcanvas API
+  let bsOffcanvas = bootstrap?.Offcanvas?.getInstance(el);
+  if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(el);
+  bsOffcanvas.show();
 }
 
 function closeNavSidebar() {
-  const sidebar = document.getElementById("navSidebar");
-  const overlay = document.getElementById("navSidebarOverlay");
-  const burger = document.getElementById("burgerBtn");
-  if (sidebar) sidebar.classList.remove("is-open");
-  if (overlay) overlay.classList.remove("is-open");
-  if (burger) {
-    burger.setAttribute("aria-expanded", "false");
-    burger.setAttribute("aria-label", "Open menu");
-  }
+  const el = document.getElementById("navSidebar");
+  if (!el) return;
+  const bsOffcanvas = bootstrap?.Offcanvas?.getInstance(el);
+  if (bsOffcanvas) bsOffcanvas.hide();
 }
 
 function toggleNavSidebar() {
-  const sidebar = document.getElementById("navSidebar");
-  if (sidebar?.classList.contains("is-open")) closeNavSidebar();
-  else openNavSidebar();
+  const el = document.getElementById("navSidebar");
+  if (!el) return;
+  let bsOffcanvas = bootstrap?.Offcanvas?.getInstance(el);
+  if (!bsOffcanvas) bsOffcanvas = new bootstrap.Offcanvas(el);
+  bsOffcanvas.toggle();
 }
 
 function populateModalDropdowns() {
@@ -628,10 +634,8 @@ function init() {
     window.location.replace("./index.html");
   });
 
-  const burgerBtn = document.getElementById("burgerBtn");
-  burgerBtn?.addEventListener("click", toggleNavSidebar);
-  const navOverlay = document.getElementById("navSidebarOverlay");
-  navOverlay?.addEventListener("click", closeNavSidebar);
+  // Burger button open/close is handled by Bootstrap Offcanvas (data-bs-toggle).
+  // We only need to close the sidebar when a nav overlay is clicked — BS handles that via its own backdrop.
 
   // Inspection sub‑nav (With location / No location yet)
   document.addEventListener("click", (e) => {
