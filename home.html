@@ -4,1112 +4,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BFP Inspection Management System — Home</title>
+  <title>BFP Inspection Management System &mdash; Home</title>
+  <!-- Bootstrap 5.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Google Fonts -->
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet">
+  <!-- BFP Brand skin (loads after Bootstrap so overrides apply) -->
   <link rel="stylesheet" href="./bfp.css">
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <style>
-    :root {
-      --fire: #C1272D;
-      --fire-dark: #8B0000;
-      --fire-light: #E8424A;
-      --gold: #D4A843;
-      --gold-light: #F0C96A;
-      --navy: #0D1B2A;
-      --navy-mid: #162234;
-      --navy-light: #1E2F42;
-      --cream: #FAF7F2;
-      --cream-dark: #F0EBE1;
-      --text: #1A1A1A;
-      --text-mid: #4A4A4A;
-      --text-light: #888;
-      --white: #FFFFFF;
-      --shadow: 0 4px 24px rgba(13, 27, 42, 0.12);
-      --shadow-lg: 0 12px 48px rgba(13, 27, 42, 0.2);
-      --radius: 12px;
-      --radius-sm: 8px;
-    }
-
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html,
-    body {
-      height: 100%;
-    }
-
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--cream);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    body.is-map-view {
-      overflow: hidden;
-    }
-
-    /* Floating burger + right nav sidebar (no header) */
-    .burger-btn {
-      position: fixed;
-      top: 16px;
-      left: 16px;
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      border: none;
-      background: var(--navy);
-      color: var(--white);
-      box-shadow: var(--shadow-lg);
-      z-index: 150;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 1.5rem;
-      line-height: 1;
-      padding: 0;
-      transition: background 0.2s, transform 0.2s;
-    }
-
-    .burger-btn:hover {
-      background: var(--navy-mid);
-      transform: scale(1.02);
-    }
-
-    .burger-btn:focus-visible {
-      outline: 2px solid var(--gold);
-      outline-offset: 2px;
-    }
-
-    .nav-sidebar-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.4);
-      z-index: 1050;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.25s ease, visibility 0.25s ease;
-    }
-
-    .nav-sidebar-overlay.is-open {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .nav-sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: auto;
-      bottom: 0;
-      width: 280px;
-      max-width: 90vw;
-      background: var(--navy);
-      color: var(--white);
-      box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
-      z-index: 1060;
-      transform: translateX(-100%);
-      transition: transform 0.25s ease-out;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .nav-sidebar.is-open {
-      transform: translateX(0);
-    }
-
-    .nav-sidebar-header {
-      padding: 20px 20px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
-    .nav-sidebar-header h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-
-    .nav-sidebar-header p {
-      font-size: 0.7rem;
-      color: var(--gold-light);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-top: 2px;
-    }
-
-    .nav-sidebar-nav {
-      padding: 16px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-    }
-
-    .nav-sidebar-nav a {
-      display: block;
-      text-decoration: none;
-      padding: 12px 14px;
-      border-radius: 10px;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 0.9rem;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      transition: background 0.2s, color 0.2s;
-    }
-
-    .nav-sidebar-nav a:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--white);
-    }
-
-    .nav-sidebar-nav a.is-active {
-      background: rgba(240, 201, 106, 0.2);
-      color: #FFF8E5;
-      border: 1px solid rgba(240, 201, 106, 0.5);
-    }
-
-    .nav-sidebar-footer {
-      padding: 16px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .user-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      font-size: 0.85rem;
-    }
-
-    .user-pill span.dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: #12B981;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
-    }
-
-    .user-pill>span:last-child {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      align-items: flex-start;
-    }
-
-    .last-login {
-      display: block;
-      font-size: 0.65rem;
-      color: rgba(255, 255, 255, 0.7);
-      font-weight: 400;
-    }
-
-    .nav-sidebar-footer .logout-btn {
-      width: 100%;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      background: transparent;
-      color: var(--white);
-      padding: 10px 16px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .nav-sidebar-footer .logout-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    .nav-sidebar-footer .storage-badge {
-      align-self: flex-start;
-    }
-
-    /* Multi-line cells for inspectors/signature fields */
-    .cell-pre {
-      white-space: pre-line;
-    }
-
-    /* MAIN */
-    main {
-      flex: 1;
-      width: 100%;
-      max-width: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .section-label {
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-light);
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-
-    h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.35rem;
-      margin-bottom: 6px;
-      color: var(--navy);
-    }
-
-    .muted {
-      font-size: 0.9rem;
-      color: var(--text-light);
-      margin-bottom: 18px;
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 18px;
-      margin-top: 10px;
-    }
-
-    .card {
-      background: var(--white);
-      border-radius: var(--radius);
-      box-shadow: 0 6px 20px rgba(13, 27, 42, 0.12);
-      border: 1px solid rgba(212, 168, 67, 0.18);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-height: 160px;
-    }
-
-    .card-title {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--cream-dark);
-      font-weight: 600;
-      font-size: 0.92rem;
-      color: var(--navy);
-      background: linear-gradient(135deg, #FAF5E9, #FDF0D8);
-    }
-
-    .card-body {
-      padding: 14px 16px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 0.9rem;
-    }
-
-    .kpi {
-      display: grid;
-      gap: 4px;
-    }
-
-    .kpi-label {
-      font-size: 0.8rem;
-      color: var(--text-light);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 600;
-    }
-
-    .kpi-value {
-      font-weight: 600;
-      color: var(--navy);
-    }
-
-    .btn-link {
-      align-self: flex-start;
-      border-radius: 999px;
-      border: 1px solid rgba(193, 39, 45, 0.4);
-      background: rgba(193, 39, 45, 0.05);
-      color: var(--fire-dark);
-      padding: 7px 12px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-link.primary {
-      border-color: rgba(193, 39, 45, 0.7);
-      background: rgba(193, 39, 45, 0.12);
-    }
-
-    .btn-link:hover {
-      background: rgba(193, 39, 45, 0.18);
-    }
-
-    .small {
-      font-size: 0.86rem;
-    }
-
-    /* Inspection sub‑navigation inside Inspection view */
-    .inspection-subnav {
-      display: inline-flex;
-      gap: 4px;
-      margin: 0;
-      border-radius: 999px;
-      padding: 3px;
-      background: rgba(0, 0, 0, 0.3);
-    }
-
-    .inspection-subnav-btn {
-      border: none;
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.7);
-      cursor: pointer;
-      transition: background 0.18s, color 0.18s;
-      min-height: 36px;
-      white-space: nowrap;
-    }
-
-    .inspection-subnav-btn.is-active {
-      background: rgba(240, 201, 106, 0.22);
-      color: var(--gold-light);
-      border: 1px solid rgba(240, 201, 106, 0.45);
-    }
-
-    .inspection-subnav-btn:not(.is-active):hover {
-      background: rgba(255, 255, 255, 0.12);
-      color: #fff;
-    }
-
-    @media (max-width: 900px) {
-      .cards {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 640px) {
-      .cards {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Map */
-    [data-view="map"] {
-      padding: 0;
-      margin: 0;
-      flex: 1;
-      display: flex;
-      height: 100vh;
-    }
-
-    body.is-map-view [data-view="map"] {
-      position: fixed;
-      inset: 0;
-    }
-
-    .map-layout {
-      position: relative;
-      display: flex;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    #map {
-      flex: 1;
-      width: 100%;
-      height: 100%;
-      z-index: 100;
-    }
-
-    .save-indicator {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-8px);
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, 0.96);
-      color: #f9fafb;
-      font-size: 0.8rem;
-      font-weight: 600;
-      box-shadow: var(--shadow-lg);
-      z-index: 1300;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-    }
-
-    .save-indicator.is-visible {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* Floating action button for new inspection */
-    .fab-add-inspection {
-      position: fixed;
-      right: 24px;
-      bottom: 24px;
-      width: 56px;
-      height: 56px;
-      border-radius: 999px;
-      border: none;
-      background: var(--fire);
-      color: var(--white);
-      font-size: 32px;
-      line-height: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-      cursor: pointer;
-      z-index: 1200;
-      /* above map tiles, controls, and detail panel */
-      pointer-events: auto;
-    }
-
-    .fab-add-inspection:hover {
-      background: var(--fire-light);
-      transform: translateY(-1px);
-    }
-
-    /* Map search and filters — compact, touch-friendly, responsive */
-    .map-search-wrap {
-      position: fixed;
-      top: 64px;
-      right: 16px;
-      left: 16px;
-      max-width: 420px;
-      margin-left: auto;
-      z-index: 200;
-      pointer-events: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    @media (min-width: 540px) {
-      .map-search-wrap {
-        left: auto;
-      }
-    }
-
-    .map-search-input {
-      flex: 1;
-      min-width: 0;
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(13, 27, 42, 0.2);
-      background: var(--white);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.95rem;
-      box-shadow: var(--shadow-lg);
-      outline: none;
-    }
-
-    .map-search-input::placeholder {
-      color: var(--text-light);
-    }
-
-    .map-search-input:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.25);
-    }
-
-    .map-filter {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 8px 0 0;
-    }
-
-    .map-filter-btn {
-      appearance: none;
-      border: 1px solid rgba(13, 27, 42, 0.2);
-      background: var(--white);
-      color: var(--text);
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .map-filter-btn:hover {
-      background: var(--cream-dark);
-      border-color: rgba(13, 27, 42, 0.3);
-    }
-
-    .map-filter-btn.is-active {
-      background: var(--navy);
-      color: var(--white);
-      border-color: var(--navy);
-    }
-
-    .map-filter-btn:focus-visible {
-      outline: 2px solid var(--gold);
-      outline-offset: 2px;
-    }
-
-    .map-search-results {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      margin-top: 8px;
-      max-height: min(280px, 50vh);
-      overflow-y: auto;
-      background: var(--white);
-      border-radius: 12px;
-      border: 1px solid rgba(13, 27, 42, 0.12);
-      box-shadow: var(--shadow-lg);
-      z-index: 201;
-    }
-
-    .map-search-results:not([hidden]) {
-      display: block;
-    }
-
-    .map-search-result-item {
-      display: block;
-      width: 100%;
-      padding: 12px 16px;
-      text-align: left;
-      border: none;
-      background: none;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.88rem;
-      color: var(--text);
-      cursor: pointer;
-      border-bottom: 1px solid rgba(13, 27, 42, 0.06);
-      transition: background 0.15s;
-    }
-
-    .map-search-result-item:last-child {
-      border-bottom: none;
-    }
-
-    .map-search-result-item:hover,
-    .map-search-result-item:focus {
-      background: var(--cream-dark);
-    }
-
-    .map-search-result-item strong {
-      display: block;
-      color: var(--navy);
-      margin-bottom: 2px;
-    }
-
-    .map-search-result-item span {
-      font-size: 0.78rem;
-      color: var(--text-light);
-    }
-
-    .map-search-result-empty {
-      padding: 16px;
-      text-align: center;
-      color: var(--text-light);
-      font-size: 0.88rem;
-    }
-
-    /* Logbook sections: listing, add entry, print layout */
-    [data-view="inspection"],
-    [data-view="fsec"],
-    [data-view="conveyance"],
-    [data-view="occupancy"] {
-      padding: 28px 20px 40px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    [data-view="inspection"] .home-hero,
-    [data-view="fsec"] .home-hero,
-    [data-view="conveyance"] .home-hero,
-    [data-view="occupancy"] .home-hero {
-      margin-bottom: 20px;
-    }
-
-    [data-view="inspection"] .home-embed,
-    [data-view="fsec"] .home-embed,
-    [data-view="conveyance"] .home-embed,
-    [data-view="occupancy"] .home-embed {
-      margin-bottom: 24px;
-      max-width: 1200px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    [data-view="inspection"] #inspection_list,
-    [data-view="fsec"] #fsec_list,
-    [data-view="conveyance"] #conveyance_list,
-    [data-view="occupancy"] #occupancy_list {
-      padding: 0;
-    }
-
-    /* Table action column and empty state in logbook */
-    #table-inspection .col-action,
-    #table-fsec .col-action,
-    #table-conveyance .col-action,
-    #table-occupancy .col-action {
-      white-space: nowrap;
-      width: 1%;
-    }
-
-    #empty-inspection,
-    #empty-fsec,
-    #empty-conveyance,
-    #empty-occupancy {
-      text-align: center;
-      padding: 48px 24px;
-    }
-
-    /* Map detail panel (right-side metadata sidebar) */
-    .map-detail-panel {
-      position: absolute;
-      right: 0;
-      left: auto;
-      top: 0;
-      bottom: 0;
-      width: 360px;
-      max-width: 95vw;
-      background: rgba(13, 27, 42, 0.96);
-      color: var(--white);
-      box-shadow: -8px 0 30px rgba(0, 0, 0, 0.45);
-      z-index: 400;
-      transform: translateX(100%);
-      opacity: 0;
-      transition: transform 0.25s ease-out, opacity 0.25s ease-out;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .map-detail-panel.is-open {
-      transform: translateX(0);
-      opacity: 1;
-    }
-
-    .map-detail-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-      background: linear-gradient(135deg, #111827, #1f2937);
-    }
-
-    .map-detail-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 0.98rem;
-    }
-
-    .map-detail-body {
-      padding: 12px 16px 16px;
-      overflow-y: auto;
-      display: grid;
-      gap: 10px;
-      font-size: 0.86rem;
-    }
-
-    .map-detail-photo-wrapper {
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid rgba(156, 163, 175, 0.6);
-      background: radial-gradient(circle at top, rgba(248, 250, 252, 0.12), transparent 55%);
-      min-height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .map-detail-photo-wrapper img {
-      width: 100%;
-      height: auto;
-      display: block;
-      object-fit: cover;
-    }
-
-    .map-detail-meta h3 {
-      font-size: 0.98rem;
-      margin-bottom: 4px;
-      letter-spacing: 0.01em;
-    }
-
-    .map-detail-meta p {
-      margin: 0 0 8px;
-      color: rgba(209, 213, 219, 0.9);
-      line-height: 1.35;
-    }
-
-    .map-detail-meta dl {
-      margin: 10px 0 0;
-      display: grid;
-      grid-template-columns: 110px 1fr;
-      gap: 8px 10px;
-      font-size: 0.82rem;
-      padding: 12px 12px;
-      border-radius: 12px;
-      background: rgba(17, 24, 39, 0.55);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-    }
-
-    .map-detail-meta dt {
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: rgba(156, 163, 175, 1);
-      font-size: 0.72rem;
-      align-self: center;
-    }
-
-    .map-detail-meta dd {
-      margin: 0;
-      color: rgba(243, 244, 246, 0.96);
-      font-weight: 600;
-      line-height: 1.25;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .map-detail-meta .meta-muted {
-      font-weight: 500;
-      color: rgba(209, 213, 219, 0.9);
-    }
-
-    .map-detail-action-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(248, 250, 252, 0.18);
-      background: rgba(31, 41, 55, 0.9);
-      color: #e5e7eb;
-      font-size: 0.78rem;
-      text-decoration: none;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .map-detail-action-btn:hover {
-      background: rgba(55, 65, 81, 0.95);
-      border-color: rgba(248, 250, 252, 0.35);
-      color: #f9fafb;
-    }
-
-    .map-detail-directions-link::after {
-      content: "↗";
-      font-size: 0.8rem;
-    }
-
-    @media (max-width: 420px) {
-      .map-detail-meta dl {
-        grid-template-columns: 1fr;
-      }
-
-      .map-detail-meta dt {
-        margin-top: 6px;
-      }
-
-      .map-detail-meta dd {
-        justify-content: flex-start;
-      }
-    }
-
-    .map-detail-close-btn {
-      background: rgba(31, 41, 55, 0.9);
-      border: 1px solid rgba(75, 85, 99, 0.9);
-      color: #e5e7eb;
-      width: 30px;
-      height: 30px;
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 1rem;
-      line-height: 1;
-      padding: 0;
-    }
-
-    .map-detail-close-btn:hover {
-      background: rgba(55, 65, 81, 0.95);
-    }
-
-    /* Custom map markers with EXIF thumbnails */
-    .inspection-marker {
-      border: none;
-      background: none;
-    }
-
-    .inspection-marker-thumb {
-      width: 40px;
-      height: 40px;
-      border-radius: 999px;
-      border: 3px solid #fbbf24;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
-      background-size: cover;
-      background-position: center;
-      background-color: #111827;
-      position: relative;
-      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
-    }
-
-    .inspection-marker-thumb::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      bottom: -6px;
-      width: 12px;
-      height: 12px;
-      background: #fbbf24;
-      border-radius: 2px;
-      transform: translateX(-50%) rotate(45deg);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    }
-
-    .inspection-marker-pin {
-      width: 18px;
-      height: 18px;
-      border-radius: 999px;
-      background: #dc2626;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
-      position: relative;
-      transition: transform 160ms ease, box-shadow 160ms ease;
-    }
-
-    .inspection-marker-pin::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      bottom: -6px;
-      width: 10px;
-      height: 10px;
-      background: #b91c1c;
-      border-radius: 2px;
-      transform: translateX(-50%) rotate(45deg);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    }
-
-    .inspection-marker-tooltip {
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 6px 10px;
-      background: rgba(13, 27, 42, 0.95);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-      white-space: nowrap;
-      max-width: 220px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      pointer-events: none;
-      transition: opacity 160ms ease, transform 160ms ease;
-      transform: translateY(4px);
-    }
-
-    /* Smooth expand on hover */
-    .inspection-marker.is-hover .inspection-marker-thumb {
-      transform: scale(1.22);
-      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
-      border-color: #fde68a;
-    }
-
-    .inspection-marker.is-hover .inspection-marker-pin {
-      transform: scale(1.35);
-      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
-    }
-
-    /* Occupancy markers (blue) */
-    .occupancy-marker {
-      border: none;
-      background: none;
-    }
-
-    .occupancy-marker-thumb {
-      width: 40px;
-      height: 40px;
-      border-radius: 999px;
-      border: 3px solid #60a5fa;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
-      background-size: cover;
-      background-position: center;
-      background-color: #111827;
-      position: relative;
-      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
-    }
-
-    .occupancy-marker-thumb::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      bottom: -6px;
-      width: 12px;
-      height: 12px;
-      background: #60a5fa;
-      border-radius: 2px;
-      transform: translateX(-50%) rotate(45deg);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    }
-
-    .occupancy-marker-pin {
-      width: 18px;
-      height: 18px;
-      border-radius: 999px;
-      background: #2563eb;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
-      position: relative;
-      transition: transform 160ms ease, box-shadow 160ms ease;
-    }
-
-    .occupancy-marker-pin::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      bottom: -6px;
-      width: 10px;
-      height: 10px;
-      background: #1d4ed8;
-      border-radius: 2px;
-      transform: translateX(-50%) rotate(45deg);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    }
-
-    /* When Leaflet fades tooltip in, also slide it smoothly */
-    .leaflet-tooltip.inspection-marker-tooltip {
-      will-change: opacity, transform;
-    }
-
-    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-right,
-    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-left,
-    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-top,
-    .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-bottom {
-      transform: translateY(0);
-    }
-
-    @media (max-width: 900px) {
-      .map-layout {
-        height: 100vh;
-      }
-
-      .map-detail-panel {
-        right: 0;
-        left: auto;
-        width: 100%;
-        max-width: 100%;
-        transform: translateX(100%);
-      }
-
-      .map-detail-panel.is-open {
-        transform: translateX(0);
-      }
-    }
-
-    /* Print: show only the visible logbook section */
-    @media print {
-      section[hidden] {
-        display: none !important;
-      }
-
-      .burger-btn,
-      .nav-sidebar-overlay,
-      .nav-sidebar {
-        display: none !important;
-      }
-
-      .home-hero {
-        display: none !important;
-      }
-    }
-  </style>
 </head>
 
 <body>
 
-  <button type="button" class="burger-btn" id="burgerBtn" aria-label="Open menu" aria-expanded="false">☰</button>
-  <div class="nav-sidebar-overlay" id="navSidebarOverlay" aria-hidden="true"></div>
-  <aside class="nav-sidebar" id="navSidebar" aria-label="Main navigation">
-    <div class="nav-sidebar-header">
-      <h2>BFP — Manolo Fortich</h2>
-      <p>Inspection Management System</p>
+  <!-- Burger button (opens nav offcanvas) -->
+  <button type="button" class="burger-btn" id="burgerBtn" aria-label="Open menu" data-bs-toggle="offcanvas"
+    data-bs-target="#navSidebar" aria-controls="navSidebar">&#9776;</button>
+
+  <!-- Navigation Offcanvas sidebar -->
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="navSidebar" aria-labelledby="navSidebarLabel">
+    <div class="offcanvas-header">
+      <div>
+        <div class="offcanvas-title" id="navSidebarLabel">BFP &mdash; Manolo Fortich</div>
+        <div class="offcanvas-subtitle">Inspection Management System</div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
-    <nav class="nav-sidebar-nav">
-      <a href="#map" data-view-link="map">Map</a>
-      <a href="#inspection" data-view-link="inspection">Inspection Logbook</a>
-      <a href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
-      <a href="#conveyance" data-view-link="conveyance">Conveyance Logbook</a>
-      <a href="#occupancy" data-view-link="occupancy">Occupancy Logbook</a>
-    </nav>
-    <div class="nav-sidebar-footer">
+    <div class="offcanvas-body p-2">
+      <nav class="nav flex-column">
+        <a class="nav-link" href="#map" data-view-link="map">Map</a>
+        <a class="nav-link" href="#inspection" data-view-link="inspection">Inspection Logbook</a>
+        <a class="nav-link" href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
+        <a class="nav-link" href="#conveyance" data-view-link="conveyance">Conveyance Logbook</a>
+        <a class="nav-link" href="#occupancy" data-view-link="occupancy">Occupancy Logbook</a>
+      </nav>
+    </div>
+    <div class="offcanvas-footer">
       <div class="user-pill" aria-label="Signed in user">
         <span class="dot" aria-hidden="true"></span>
-        <span>
+        <div class="user-info">
           <span id="userName">User</span>
           <span id="lastLogin" class="last-login" aria-hidden="true"></span>
-        </span>
+        </div>
       </div>
       <span id="storageBadge" class="storage-badge local" title="Storage mode">LOCAL</span>
-      <button id="logoutBtn" class="logout-btn" type="button">Log out</button>
+      <button id="logoutBtn" class="btn btn-sm btn-outline-light w-100" type="button">Log out</button>
     </div>
-  </aside>
+  </div>
 
   <main role="main">
+    <!-- ================================================================
+         MAP VIEW
+         ================================================================ -->
     <section data-view="map">
       <button type="button" class="fab-add-inspection" onclick="handleFabAddInspection()" aria-label="Add entry"
         title="Add entry">
         +
       </button>
 
+      <!-- Map add-type chooser modal -->
       <div class="modal-overlay" id="map-add-modal-overlay" style="display:none" onclick="mapAddCloseOnOverlay(event)">
-        <div class="modal" style="max-width:420px">
-          <div class="modal-header">
-            <div>
-              <small>New entry</small>
-              <h2>Add record</h2>
-            </div>
-            <button class="btn-close" onclick="closeMapAddChooser()" aria-label="Close">×</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-section">
-              <div class="form-section-title">Choose type</div>
-              <div class="form-grid">
-                <button type="button" class="btn btn-save" onclick="mapAddChoose('inspection')">Inspection
-                  (Business)</button>
-                <button type="button" class="btn btn-save" onclick="mapAddChoose('occupancy')">Occupancy
-                  (Residential)</button>
+        <div class="modal fade show d-block" style="position:relative; z-index:auto;" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+            <div class="modal-content">
+              <div class="modal-header bfp-header">
+                <div>
+                  <small>New entry</small>
+                  <h5 class="mb-0">Add record</h5>
+                </div>
+                <button class="btn-close btn-close-white" onclick="closeMapAddChooser()" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="form-section">
+                  <div class="form-section-title">Choose type</div>
+                  <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-dark" onclick="mapAddChoose('inspection')">Inspection
+                      (Business)</button>
+                    <button type="button" class="btn btn-dark" onclick="mapAddChoose('occupancy')">Occupancy
+                      (Residential)</button>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer bfp-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="closeMapAddChooser()">Cancel</button>
               </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-cancel" onclick="closeMapAddChooser()">Cancel</button>
-          </div>
         </div>
       </div>
+
       <div class="map-search-wrap">
         <input type="search" id="map-search-input" class="map-search-input"
-          placeholder="Search marked locations (business, IO, address, owner…)" aria-label="Search marked locations"
-          autocomplete="off">
+          placeholder="Search marked locations (business, IO, address, owner&hellip;)"
+          aria-label="Search marked locations" autocomplete="off">
         <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
         <div class="map-filter" role="group" aria-label="Map markers filter">
           <button type="button" class="map-filter-btn is-active" data-map-filter="all">All</button>
@@ -1123,7 +117,7 @@
             <div class="map-detail-title">Inspection details</div>
             <button type="button" class="map-detail-close-btn" onclick="closeInspectionDetailPanel()"
               aria-label="Close details panel">
-              ×
+              &times;
             </button>
           </div>
           <div class="map-detail-body">
@@ -1131,22 +125,22 @@
               <img id="map-detail-photo" alt="Inspection photo preview" />
             </div>
             <div class="map-detail-meta">
-              <h3 id="map-detail-business">—</h3>
-              <p id="map-detail-address">—</p>
+              <h3 id="map-detail-business">&mdash;</h3>
+              <p id="map-detail-address">&mdash;</p>
               <dl>
                 <dt>Coordinates</dt>
                 <dd>
-                  <span id="map-detail-coords">—</span>
+                  <span id="map-detail-coords">&mdash;</span>
                   <button type="button" id="map-detail-copy-coords" class="map-detail-action-btn" style="display:none">
                     Copy
                   </button>
                 </dd>
                 <dt>Date inspected</dt>
-                <dd id="map-detail-date">—</dd>
+                <dd id="map-detail-date">&mdash;</dd>
                 <dt>Photo taken</dt>
-                <dd id="map-detail-taken" class="meta-muted">—</dd>
+                <dd id="map-detail-taken" class="meta-muted">&mdash;</dd>
                 <dt>Inspected by</dt>
-                <dd id="map-detail-inspector">—</dd>
+                <dd id="map-detail-inspector">&mdash;</dd>
                 <dt>Directions</dt>
                 <dd>
                   <a id="map-detail-directions" class="map-detail-action-btn map-detail-directions-link" href="#"
@@ -1171,6 +165,9 @@
       </div>
     </section>
 
+    <!-- ================================================================
+         CONVEYANCE LOGBOOK
+         ================================================================ -->
     <section data-view="conveyance" hidden>
       <div class="home-hero">
         <h1>Conveyance Logbook</h1>
@@ -1182,40 +179,50 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>Conveyance Logbook</strong> — Conveyance inspections</p>
+              <p class="print-subtitle"><strong>Conveyance Logbook</strong> &mdash; Conveyance inspections</p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
-                  id="conveyance-print-date">—</span></p>
+                  id="conveyance-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
                 <span>Supplemental Logbook</span>
                 Conveyance Logbook
               </div>
-              <button class="btn btn-print" onclick="conveyancePrintPanel()">Print</button>
-              <button class="btn btn-add" onclick="conveyanceOpenModal()">Add Entry</button>
+              <button class="btn-panel-print" onclick="conveyancePrintPanel()">
+                <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-filter" onclick="toggleFilters('conveyance')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filter
+              </button>
+              <button class="btn-panel-add" onclick="conveyanceOpenModal()">+ Add Entry</button>
             </div>
-            <div class="table-controls" aria-label="Conveyance filters">
+            <div class="table-controls" id="filter-conveyance" aria-label="Conveyance filters" style="display: none;">
               <div class="control">
                 <label for="conveyance-filter-q">Search</label>
-                <input id="conveyance-filter-q" type="search"
+                <input id="conveyance-filter-q" type="search" class="form-control form-control-sm"
                   placeholder="Search IO, owner, inspectors, remarks/signature">
               </div>
               <div class="control">
                 <label for="conveyance-filter-from">From</label>
-                <input id="conveyance-filter-from" type="date">
+                <input id="conveyance-filter-from" type="date" class="form-control form-control-sm">
               </div>
               <div class="control">
                 <label for="conveyance-filter-to">To</label>
-                <input id="conveyance-filter-to" type="date">
+                <input id="conveyance-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-cancel" onclick="conveyanceClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="conveyanceClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
-              <table id="table-conveyance">
-                <thead>
+              <table id="table-conveyance" class="table table-hover table-bordered table-sm align-middle mb-0">
+                <thead class="table-dark">
                   <tr>
                     <th>#</th>
                     <th class="th-date">Date</th>
@@ -1230,7 +237,7 @@
               </table>
             </div>
             <div id="empty-conveyance" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">🚗</div>
+              <div class="empty-icon" aria-hidden="true">&#x1F697;</div>
               <strong>No Conveyance Records Yet</strong>
               <p>Use this logbook to track conveyance-related inspections based on IO numbers.</p>
             </div>
@@ -1238,66 +245,77 @@
         </div>
       </div>
 
-      <footer>
+      <footer class="text-center text-muted py-3 border-top small mt-4">
         Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
       </footer>
 
       <div class="modal-overlay" id="conveyance-modal-overlay" onclick="conveyanceCloseOnOverlay(event)">
-        <div class="modal">
-          <div class="modal-header">
-            <div>
-              <small id="conveyance-modal-subtitle">Conveyance Logbook</small>
-              <h2 id="conveyance-modal-title">Add Conveyance Record</h2>
-            </div>
-            <button class="btn-close" onclick="conveyanceCloseModal()" aria-label="Close">×</button>
-          </div>
-          <div class="modal-body">
-            <form id="conveyance-entry-form" onsubmit="conveyanceSaveEntry(event)">
-              <div class="form-section">
-                <div class="form-section-title">Record details</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="conveyance_date">Date</label>
-                    <input type="date" id="conveyance_date">
-                  </div>
-                  <div class="form-group">
-                    <label for="conveyance_io_number">IO Number</label>
-                    <input type="text" id="conveyance_io_number" placeholder="e.g. IO-2026-001">
-                  </div>
-                  <div class="form-group">
-                    <label for="conveyance_owner_name">Name of Owner</label>
-                    <input type="text" id="conveyance_owner_name" placeholder="Full name of owner">
-                  </div>
-                  <div class="form-group full">
-                    <label for="conveyance_inspectors">Name of Inspectors (2 or more)</label>
-                    <div class="form-row-with-add">
-                      <select id="conveyance_inspector_select" aria-label="Select inspector to add">
-                        <option value="">Select inspector</option>
-                      </select>
-                      <button type="button" class="btn btn-add-inline" onclick="conveyanceAddInspector()">Add</button>
-                    </div>
-                    <textarea id="conveyance_inspectors" rows="2"
-                      placeholder="Enter names separated by commas or new lines"></textarea>
-                  </div>
-                  <div class="form-group full">
-                    <label for="conveyance_remarks_signature">Remarks / Signature</label>
-                    <textarea id="conveyance_remarks_signature" rows="2"
-                      placeholder="Remarks and/or signature"></textarea>
-                  </div>
+        <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
+          <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header bfp-header">
+                <div>
+                  <small id="conveyance-modal-subtitle">Conveyance Logbook</small>
+                  <h5 class="mb-0" id="conveyance-modal-title">Add Conveyance Record</h5>
                 </div>
+                <button class="btn-close btn-close-white" onclick="conveyanceCloseModal()" aria-label="Close"></button>
               </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-cancel" onclick="conveyanceCloseModal()">Cancel</button>
-            <button type="submit" class="btn btn-save" id="conveyance-btn-save" form="conveyance-entry-form">Save
-              Record</button>
+              <div class="modal-body">
+                <form id="conveyance-entry-form" onsubmit="conveyanceSaveEntry(event)">
+                  <div class="form-section">
+                    <div class="form-section-title">Record details</div>
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label class="form-label" for="conveyance_date">Date</label>
+                        <input type="date" id="conveyance_date" class="form-control">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="conveyance_io_number">IO Number</label>
+                        <input type="text" id="conveyance_io_number" class="form-control"
+                          placeholder="e.g. IO-2026-001">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="conveyance_owner_name">Name of Owner</label>
+                        <input type="text" id="conveyance_owner_name" class="form-control"
+                          placeholder="Full name of owner">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="conveyance_inspectors">Name of Inspectors (2 or more)</label>
+                        <div class="input-group mb-2">
+                          <select id="conveyance_inspector_select" class="form-select"
+                            aria-label="Select inspector to add">
+                            <option value="">Select inspector</option>
+                          </select>
+                          <button type="button" class="btn-add-inline" onclick="conveyanceAddInspector()">Add</button>
+                        </div>
+                        <textarea id="conveyance_inspectors" class="form-control" rows="2"
+                          placeholder="Enter names separated by commas or new lines"></textarea>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="conveyance_remarks_signature">Remarks / Signature</label>
+                        <textarea id="conveyance_remarks_signature" class="form-control" rows="2"
+                          placeholder="Remarks and/or signature"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer bfp-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="conveyanceCloseModal()">Cancel</button>
+                <button type="submit" class="btn btn-sm btn-dark" id="conveyance-btn-save"
+                  form="conveyance-entry-form">Save Record</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="toast" id="conveyance-toast"></div>
+      <div class="toast bfp-toast position-fixed bottom-0 end-0 m-3" id="conveyance-toast" role="alert"></div>
     </section>
 
+    <!-- ================================================================
+         OCCUPANCY LOGBOOK
+         ================================================================ -->
     <section data-view="occupancy" hidden>
       <div class="home-hero">
         <h1>Occupancy Logbook</h1>
@@ -1309,40 +327,50 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>Occupancy Logbook</strong> — Occupancy inspections</p>
+              <p class="print-subtitle"><strong>Occupancy Logbook</strong> &mdash; Occupancy inspections</p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
-                  id="occupancy-print-date">—</span></p>
+                  id="occupancy-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
                 <span>Supplemental Logbook</span>
                 Occupancy Logbook
               </div>
-              <button class="btn btn-print" onclick="occupancyPrintPanel()">Print</button>
-              <button class="btn btn-add" onclick="occupancyOpenModal()">Add Entry</button>
+              <button class="btn-panel-print" onclick="occupancyPrintPanel()">
+                <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-filter" onclick="toggleFilters('occupancy')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filter
+              </button>
+              <button class="btn-panel-add" onclick="occupancyOpenModal()">+ Add Entry</button>
             </div>
-            <div class="table-controls" aria-label="Occupancy filters">
+            <div class="table-controls" id="filter-occupancy" aria-label="Occupancy filters" style="display: none;">
               <div class="control">
                 <label for="occupancy-filter-q">Search</label>
-                <input id="occupancy-filter-q" type="search"
+                <input id="occupancy-filter-q" type="search" class="form-control form-control-sm"
                   placeholder="Search IO, owner, inspectors, remarks/signature">
               </div>
               <div class="control">
                 <label for="occupancy-filter-from">From</label>
-                <input id="occupancy-filter-from" type="date">
+                <input id="occupancy-filter-from" type="date" class="form-control form-control-sm">
               </div>
               <div class="control">
                 <label for="occupancy-filter-to">To</label>
-                <input id="occupancy-filter-to" type="date">
+                <input id="occupancy-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-cancel" onclick="occupancyClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="occupancyClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
-              <table id="table-occupancy">
-                <thead>
+              <table id="table-occupancy" class="table table-hover table-bordered table-sm align-middle mb-0">
+                <thead class="table-dark">
                   <tr>
                     <th>#</th>
                     <th class="th-date">Date</th>
@@ -1357,7 +385,7 @@
               </table>
             </div>
             <div id="empty-occupancy" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">🏠</div>
+              <div class="empty-icon" aria-hidden="true">&#x1F3E0;</div>
               <strong>No Occupancy Records Yet</strong>
               <p>Use this logbook to track occupancy-related inspections based on IO numbers.</p>
             </div>
@@ -1365,7 +393,7 @@
         </div>
       </div>
 
-      <footer>
+      <footer class="text-center text-muted py-3 border-top small mt-4">
         Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
       </footer>
 
@@ -1429,6 +457,9 @@
       <div class="toast" id="occupancy-toast"></div>
     </section>
 
+    <!-- ================================================================
+         INSPECTION LOGBOOK
+         ================================================================ -->
     <section data-view="inspection" hidden>
       <div class="home-hero">
         <h1>Inspection Logbook</h1>
@@ -1442,16 +473,18 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>Inspection Logbook</strong> — Fire Safety Inspection Certificates</p>
+              <p class="print-subtitle"><strong>Inspection Logbook</strong> &mdash; Fire Safety Inspection Certificates
+              </p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
-                  id="inspection-print-date">—</span></p>
+                  id="inspection-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
                 <span>Active Logbook</span>
-                Inspection Logbook <span class="badge" id="inspection-record-count">0</span>
+                Inspection Logbook <span class="record-badge" id="inspection-record-count">0</span>
               </div>
               <div class="inspection-subnav" role="tablist" aria-label="Inspection categories">
                 <button type="button" class="inspection-subnav-btn is-active" data-inspection-tab="with-location"
@@ -1463,40 +496,51 @@
                   No location yet
                 </button>
               </div>
-              <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
+              <button class="btn-panel-print" onclick="inspectionPrintPanel()">
+                <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-filter" onclick="toggleFilters('inspection')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filter
+              </button>
             </div>
-            <div class="table-controls" aria-label="Inspection filters">
+            <div class="table-controls" id="filter-inspection" aria-label="Inspection filters" style="display: none;">
               <div class="control">
                 <label for="inspection-filter-q">Search</label>
-                <input id="inspection-filter-q" type="search"
+                <input id="inspection-filter-q" type="search" class="form-control form-control-sm"
                   placeholder="Search IO, owner, business, address, FSIC, inspector">
               </div>
               <div class="control">
                 <label for="inspection-filter-barangay">Barangay</label>
-                <select id="inspection-filter-barangay" aria-label="Filter by barangay">
+                <select id="inspection-filter-barangay" class="form-select form-select-sm"
+                  aria-label="Filter by barangay">
                   <option value="">All barangays</option>
                 </select>
               </div>
               <div class="control">
                 <label for="inspection-filter-personnel">Personnel</label>
-                <select id="inspection-filter-personnel" aria-label="Filter by personnel">
+                <select id="inspection-filter-personnel" class="form-select form-select-sm"
+                  aria-label="Filter by personnel">
                   <option value="">All personnel</option>
                 </select>
               </div>
               <div class="control">
                 <label for="inspection-filter-from">From</label>
-                <input id="inspection-filter-from" type="date">
+                <input id="inspection-filter-from" type="date" class="form-control form-control-sm">
               </div>
               <div class="control">
                 <label for="inspection-filter-to">To</label>
-                <input id="inspection-filter-to" type="date">
+                <input id="inspection-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-cancel" onclick="inspectionClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="inspectionClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
-              <table id="table-inspection">
-                <thead>
+              <table id="table-inspection" class="table table-hover table-bordered table-sm align-middle mb-0">
+                <thead class="table-dark">
                   <tr>
                     <th>#</th>
                     <th>IO Number</th>
@@ -1514,7 +558,7 @@
               </table>
             </div>
             <div id="empty-inspection" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">🗄️</div>
+              <div class="empty-icon" aria-hidden="true">&#x1F5C4;&#xFE0F;</div>
               <strong>No Inspection Records Yet</strong>
               <p>Use the red + button on the map to log a new inspection.</p>
             </div>
@@ -1525,22 +569,27 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>Inspection Logbook</strong> — Inspected buildings without photo</p>
+              <p class="print-subtitle"><strong>Inspection Logbook</strong> &mdash; Inspected buildings without photo
+              </p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
-                  id="inspection-print-date-nophoto">—</span></p>
+                  id="inspection-print-date-nophoto">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
                 <span>Pending photos</span>
-                Inspected buildings without photo <span class="badge" id="inspection-nophoto-record-count">0</span>
+                Inspected buildings without photo <span class="record-badge"
+                  id="inspection-nophoto-record-count">0</span>
               </div>
-              <button class="btn btn-print" onclick="inspectionPrintPanel()">Print</button>
+              <button class="btn-panel-print" onclick="inspectionPrintPanel()">
+                <i class="bi bi-printer"></i> Print
+              </button>
             </div>
             <div class="table-wrap">
-              <table id="table-inspection-nophoto">
-                <thead>
+              <table id="table-inspection-nophoto" class="table table-hover table-bordered table-sm align-middle mb-0">
+                <thead class="table-dark">
                   <tr>
                     <th>#</th>
                     <th>IO Number</th>
@@ -1558,7 +607,7 @@
               </table>
             </div>
             <div id="empty-inspection-nophoto" class="empty-state">
-              <div class="empty-icon" aria-hidden="true">🖼️</div>
+              <div class="empty-icon" aria-hidden="true">&#x1F5BC;&#xFE0F;</div>
               <strong>No pending building photos</strong>
               <p>All inspection records already have an attached building photo.</p>
             </div>
@@ -1566,11 +615,14 @@
         </div>
       </div>
 
-      <footer>
+      <footer class="text-center text-muted py-3 border-top small mt-4">
         Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
       </footer>
     </section>
 
+    <!-- ================================================================
+         FSEC BUILDING PLAN LOGBOOK
+         ================================================================ -->
     <section data-view="fsec" hidden>
       <div class="home-hero">
         <h1>FSEC Building Plan Logbook</h1>
@@ -1582,40 +634,51 @@
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>FSEC Building Plan Logbook</strong> — Fire Safety Evaluation Clearances
-              </p>
+              <p class="print-subtitle"><strong>FSEC Building Plan Logbook</strong> &mdash; Fire Safety Evaluation
+                Clearances</p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
-                  id="fsec-print-date">—</span></p>
+                  id="fsec-print-date">&mdash;</span></p>
             </div>
-            <div class="print-footer">Official logbook record. Bureau of Fire Protection — Manolo Fortich. This document
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
                 <span>Active Logbook</span>
                 FSEC Building Plan Logbook
               </div>
-              <button class="btn btn-print" onclick="fsecPrintPanel()">Print</button>
-              <button class="btn btn-add" onclick="fsecOpenModal()">Add Entry</button>
+              <button class="btn-panel-print" onclick="fsecPrintPanel()">
+                <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-filter" onclick="toggleFilters('fsec')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filter
+              </button>
+              <button class="btn-panel-add" onclick="fsecOpenModal()">+ Add Entry</button>
             </div>
-            <div class="table-controls" aria-label="FSEC filters">
+            <div class="table-controls" id="filter-fsec" aria-label="FSEC filters" style="display: none;">
               <div class="control">
                 <label for="fsec-filter-q">Search</label>
-                <input id="fsec-filter-q" type="search" placeholder="Search owner, project, address, contact">
+                <input id="fsec-filter-q" type="search" class="form-control form-control-sm"
+                  placeholder="Search owner, project, address, contact">
               </div>
               <div class="control">
                 <label for="fsec-filter-from">From</label>
-                <input id="fsec-filter-from" type="date">
+                <input id="fsec-filter-from" type="date" class="form-control form-control-sm">
               </div>
               <div class="control">
                 <label for="fsec-filter-to">To</label>
-                <input id="fsec-filter-to" type="date">
+                <input id="fsec-filter-to" type="date" class="form-control form-control-sm">
               </div>
               <div class="spacer"></div>
-              <button type="button" class="btn btn-cancel" onclick="fsecClearFilters()">Clear</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="fsecClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
-              <table id="table-fsec">
-                <thead>
+              <table id="table-fsec" class="table table-hover table-bordered table-sm align-middle mb-0">
+                <thead class="table-dark">
                   <tr>
                     <th>#</th>
                     <th>Name of Owner</th>
@@ -1630,7 +693,7 @@
               </table>
             </div>
             <div id="empty-fsec" class="empty-state" style="display:none;">
-              <div class="empty-icon" aria-hidden="true">🏗️</div>
+              <div class="empty-icon" aria-hidden="true">&#x1F3D7;&#xFE0F;</div>
               <strong>No FSEC Records Yet</strong>
               <p>Click "Add Entry" to log a new building plan.</p>
             </div>
@@ -1638,86 +701,98 @@
         </div>
       </div>
 
-      <footer>
+      <footer class="text-center text-muted py-3 border-top small mt-4">
         Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
       </footer>
 
       <div class="modal-overlay" id="fsec-modal-overlay" onclick="fsecCloseOnOverlay(event)">
-        <div class="modal">
-          <div class="modal-header">
-            <div>
-              <small id="fsec-modal-subtitle">FSEC Building Plan Logbook</small>
-              <h2 id="fsec-modal-title">Add FSEC Building Plan Record</h2>
+        <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
+          <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header bfp-header">
+                <div>
+                  <small id="fsec-modal-subtitle">FSEC Building Plan Logbook</small>
+                  <h5 class="mb-0" id="fsec-modal-title">Add FSEC Building Plan Record</h5>
+                </div>
+                <button class="btn-close btn-close-white" onclick="fsecCloseModal()" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form id="fsec-entry-form" onsubmit="fsecSaveEntry(event)">
+                  <div class="form-section">
+                    <div class="form-section-title">Record details</div>
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <label class="form-label" for="fsec_owner">Name of Owner</label>
+                        <input type="text" id="fsec_owner" class="form-control" placeholder="Full name of owner">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="proposed_project">Proposed Project</label>
+                        <input type="text" id="proposed_project" class="form-control"
+                          placeholder="Name or description of proposed project">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-section">
+                    <div class="form-section-title">Address</div>
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label class="form-label" for="fsec_addr_region">Region</label>
+                        <input type="text" id="fsec_addr_region" class="form-control" value="X" readonly>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="fsec_addr_province">Province</label>
+                        <input type="text" id="fsec_addr_province" class="form-control" value="Bukidnon" readonly>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="fsec_addr_municipal">Municipal</label>
+                        <input type="text" id="fsec_addr_municipal" class="form-control" value="Manolo Fortich"
+                          readonly>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="fsec_addr_barangay">Barangay</label>
+                        <select id="fsec_addr_barangay" class="form-select" aria-label="Select barangay">
+                          <option value="">Select barangay</option>
+                        </select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="fsec_addr_line">House no. / Street / Zone</label>
+                        <input type="text" id="fsec_addr_line" class="form-control"
+                          placeholder="e.g. Purok 3, Zone 1, National Highway">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-section">
+                    <div class="form-section-title">Date and contact</div>
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label class="form-label" for="fsec_date">Date</label>
+                        <input type="date" id="fsec_date" class="form-control">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="contact_number">Contact Number</label>
+                        <input type="tel" id="contact_number" class="form-control" placeholder="e.g. 09XX-XXX-XXXX">
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer bfp-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="fsecCloseModal()">Cancel</button>
+                <button type="submit" class="btn btn-sm btn-dark" id="fsec-btn-save" form="fsec-entry-form">Save
+                  Record</button>
+              </div>
             </div>
-            <button class="btn-close" onclick="fsecCloseModal()" aria-label="Close">×</button>
-          </div>
-          <div class="modal-body">
-            <form id="fsec-entry-form" onsubmit="fsecSaveEntry(event)">
-              <div class="form-section">
-                <div class="form-section-title">Record details</div>
-                <div class="form-grid">
-                  <div class="form-group full">
-                    <label for="fsec_owner">Name of Owner</label>
-                    <input type="text" id="fsec_owner" placeholder="Full name of owner">
-                  </div>
-                  <div class="form-group full">
-                    <label for="proposed_project">Proposed Project</label>
-                    <input type="text" id="proposed_project" placeholder="Name or description of proposed project">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Address</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="fsec_addr_region">Region</label>
-                    <input type="text" id="fsec_addr_region" value="X" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="fsec_addr_province">Province</label>
-                    <input type="text" id="fsec_addr_province" value="Bukidnon" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="fsec_addr_municipal">Municipal</label>
-                    <input type="text" id="fsec_addr_municipal" value="Manolo Fortich" readonly>
-                  </div>
-                  <div class="form-group">
-                    <label for="fsec_addr_barangay">Barangay</label>
-                    <select id="fsec_addr_barangay" aria-label="Select barangay">
-                      <option value="">Select barangay</option>
-                    </select>
-                  </div>
-                  <div class="form-group full">
-                    <label for="fsec_addr_line">House no. / Street / Zone</label>
-                    <input type="text" id="fsec_addr_line" placeholder="e.g. Purok 3, Zone 1, National Highway">
-                  </div>
-                </div>
-              </div>
-              <div class="form-section">
-                <div class="form-section-title">Date and contact</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="fsec_date">Date</label>
-                    <input type="date" id="fsec_date">
-                  </div>
-                  <div class="form-group">
-                    <label for="contact_number">Contact Number</label>
-                    <input type="tel" id="contact_number" placeholder="e.g. 09XX-XXX-XXXX">
-                  </div>
-                </div>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-cancel" onclick="fsecCloseModal()">Cancel</button>
-            <button type="submit" class="btn btn-save" id="fsec-btn-save" form="fsec-entry-form">Save Record</button>
           </div>
         </div>
       </div>
 
-      <div class="toast" id="fsec-toast"></div>
+      <div class="toast bfp-toast position-fixed bottom-0 end-0 m-3" id="fsec-toast" role="alert"></div>
     </section>
-    <!-- Global inspection modal so it can be opened from the map or inspection views -->
+
+    <!-- ================================================================
+         GLOBAL INSPECTION MODAL (map + inspection views)
+         ================================================================ -->
     <div class="modal-overlay" id="inspection-modal-overlay" onclick="inspectionCloseOnOverlay(event)">
       <div class="modal">
         <div class="modal-header">
@@ -1842,9 +917,9 @@
                         <span class="photo-option-text">Take photo</span>
                       </label>
                       <label class="photo-option-btn">
-                        <input type="file" id="inspection_photo_library" accept=".jpg,.jpeg,.png,image/jpeg,image/png,*/*"
-                          aria-label="Choose photo from files">
-                        <span class="photo-option-text">Browse files</span>
+                        <input type="file" id="inspection_photo_library" accept="image/*"
+                          aria-label="Choose photo from gallery">
+                        <span class="photo-option-text">Choose from gallery</span>
                       </label>
                     </div>
                   </div>
@@ -1855,16 +930,18 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-cancel" onclick="inspectionCloseModal()">Cancel</button>
-          <button type="button" class="btn btn-save" id="inspection-btn-save" onclick="inspectionSaveEntry(event)"
-            ontouchend="event.preventDefault(); inspectionSaveEntry(event);">Save Record</button>
+          <button type="submit" class="btn btn-save" id="inspection-btn-save" form="inspection-entry-form">Save
+            Record</button>
         </div>
       </div>
     </div>
 
-    <div class="toast" id="inspection-toast"></div>
+    <div class="toast bfp-toast position-fixed bottom-0 end-0 m-3" id="inspection-toast" role="alert"></div>
     <div class="save-indicator" id="saveIndicator" aria-hidden="true">Record saved</div>
 
-    <!-- Global occupancy modal so it can be opened from the map or occupancy views -->
+    <!-- ================================================================
+         GLOBAL OCCUPANCY MODAL (map + occupancy views)
+         ================================================================ -->
     <div class="modal-overlay" id="occupancy-modal-overlay" onclick="occupancyCloseOnOverlay(event)">
       <div class="modal">
         <div class="modal-header">
@@ -1905,9 +982,9 @@
                       <span class="photo-option-text">Take photo</span>
                     </label>
                     <label class="photo-option-btn">
-                      <input type="file" id="occupancy_photo_library" accept=".jpg,.jpeg,.png,image/jpeg,image/png,*/*"
-                        aria-label="Choose photo from files">
-                      <span class="photo-option-text">Browse files</span>
+                      <input type="file" id="occupancy_photo_library" accept="image/*"
+                        aria-label="Choose photo from gallery">
+                      <span class="photo-option-text">Choose from gallery</span>
                     </label>
                   </div>
                 </div>
@@ -1927,6 +1004,10 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <!-- Bootstrap 5.3 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"
+    defer></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
