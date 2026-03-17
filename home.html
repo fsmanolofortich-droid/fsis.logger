@@ -1369,64 +1369,7 @@
         Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
       </footer>
 
-      <div class="modal-overlay" id="occupancy-modal-overlay" onclick="occupancyCloseOnOverlay(event)">
-        <div class="modal">
-          <div class="modal-header">
-            <div>
-              <small id="occupancy-modal-subtitle">Occupancy Logbook</small>
-              <h2 id="occupancy-modal-title">Add Occupancy Record</h2>
-            </div>
-            <button class="btn-close" onclick="occupancyCloseModal()" aria-label="Close">×</button>
-          </div>
-          <div class="modal-body">
-            <form id="occupancy-entry-form" onsubmit="occupancySaveEntry(event)">
-              <div class="form-section">
-                <div class="form-section-title">Record details</div>
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="occupancy_date">Date</label>
-                    <input type="date" id="occupancy_date">
-                  </div>
-                  <div class="form-group">
-                    <label for="occupancy_io_number">IO Number</label>
-                    <input type="text" id="occupancy_io_number" placeholder="e.g. IO-2026-001">
-                  </div>
-                  <div class="form-group">
-                    <label for="occupancy_owner_name">Name of Owner</label>
-                    <input type="text" id="occupancy_owner_name" placeholder="Full name of owner">
-                  </div>
-                  <div class="form-group full">
-                    <label for="occupancy_inspectors">Name of Inspectors (2 or more)</label>
-                    <div class="form-row-with-add">
-                      <select id="occupancy_inspector_select" aria-label="Select inspector to add">
-                        <option value="">Select inspector</option>
-                      </select>
-                      <button type="button" class="btn btn-add-inline" onclick="occupancyAddInspector()">Add</button>
-                    </div>
-                    <textarea id="occupancy_inspectors" rows="2"
-                      placeholder="Enter names separated by commas or new lines"></textarea>
-                  </div>
-                  <div class="form-group full">
-                    <label for="occupancy_remarks_signature">Remarks / Signature</label>
-                    <textarea id="occupancy_remarks_signature" rows="2"
-                      placeholder="Remarks and/or signature"></textarea>
-                  </div>
-                  <div class="form-group full">
-                    <label for="occupancy_photo">Attach photo (uses GPS from EXIF if available)</label>
-                    <input type="file" id="occupancy_photo" accept="image/*" capture="environment">
-                  </div>
-                </div>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-cancel" onclick="occupancyCloseModal()">Cancel</button>
-            <button type="submit" class="btn btn-save" id="occupancy-btn-save" form="occupancy-entry-form">Save
-              Record</button>
-          </div>
-        </div>
-      </div>
-      <div class="toast" id="occupancy-toast"></div>
+<div id="occupancy-toast-placeholder" style="display:none;"></div>
     </section>
 
     <section data-view="inspection" hidden>
@@ -1901,7 +1844,7 @@
                   <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
                   <div class="photo-option-buttons">
                     <label class="photo-option-btn">
-                      <input type="file" id="occupancy_photo" accept="image/*" aria-label="Take photo with camera">
+                      <input type="file" id="occupancy_photo" accept="image/*" capture="environment" aria-label="Take photo with camera">
                       <span class="photo-option-text">Take photo</span>
                     </label>
                     <label class="photo-option-btn">

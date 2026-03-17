@@ -510,6 +510,59 @@ tr:hover td { background: #FAFAF8; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group.full { grid-column: 1 / -1; }
 
+/* Photo Upload Option Buttons */
+.photo-option-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  margin-bottom: 4px;
+}
+.photo-option-buttons {
+  display: flex;
+  gap: 12px;
+}
+.photo-option-btn {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: var(--white);
+  border: 1px solid #e2e0dc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  box-shadow: 0 1px 2px rgba(13, 27, 42, 0.04);
+}
+.photo-option-btn:hover {
+  border-color: var(--navy);
+  background: #fcfcfb;
+}
+.photo-option-btn:focus-within {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(13, 27, 42, 0.06);
+}
+.photo-option-btn input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.photo-option-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--navy);
+  text-align: center;
+}
+
 .form-row-with-add {
   display: flex;
   gap: 8px;
