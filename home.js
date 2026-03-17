@@ -148,6 +148,7 @@ let occupancyExifLng = null;
 let occupancyExifPreviewUrl = null;
 let occupancyExifTakenAt = null;
 let occupancyExifFile = null;
+let occupancyExifProcessingPromise = null;
 
 let inspectionMarkersLayer = null;
 let occupancyMarkersLayer = null;
@@ -2510,41 +2511,65 @@ function initOccupancyPhotoExif() {
     const file = sourceInput?.files?.[0];
     if (!file) return;
 
-    occupancyExifLat = null;
-    occupancyExifLng = null;
-    occupancyExifPreviewUrl = null;
-    occupancyExifTakenAt = null;
-    occupancyExifFile = file;
+    occupancyExifProcessingPromise = (async () => {
+      occupancyExifLat = null;
+      occupancyExifLng = null;
+      occupancyExifPreviewUrl = null;
+      occupancyExifTakenAt = null;
+      occupancyExifFile = file;
 
-    // Clear the other input so only one is active.
-    if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
-    if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
+      // Clear the other input so only one is active.
+      if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
+      if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
 
-    try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = () => reject(new Error("FileReader failed"));
-        r.readAsDataURL(file);
-      });
-      if (typeof dataUrl === "string") occupancyExifPreviewUrl = dataUrl;
-    } catch (e) {
-      console.warn("Occupancy preview read failed:", e);
-    }
-
-    try {
-      const gps = await readGpsFromFile(file);
-      if (gps) {
-        occupancyExifLat = gps.lat;
-        occupancyExifLng = gps.lng;
-        logbookShowToast("occupancy-toast", `GPS found: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`);
-      } else {
-        logbookShowToast("occupancy-toast", "No GPS data found in this photo file. Your device may be stripping it.");
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = () => reject(new Error("FileReader failed"));
+          r.readAsDataURL(file);
+        });
+        if (typeof dataUrl === "string") occupancyExifPreviewUrl = dataUrl;
+      } catch (e) {
+        console.warn("Occupancy preview read failed:", e);
       }
-    } catch (e) {
-      console.warn("Occupancy GPS read failed:", e);
-      logbookShowToast("occupancy-toast", "Error reading photo EXIF data.");
-    }
+
+      try {
+        const gps = await readGpsFromFile(file);
+        if (gps) {
+          occupancyExifLat = gps.lat;
+          occupancyExifLng = gps.lng;
+          logbookShowToast("occupancy-toast", `GPS found: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`);
+        } else {
+          logbookShowToast("occupancy-toast", "No GPS data found in this photo file. Your device may be stripping it.");
+        }
+      } catch (e) {
+        console.warn("Occupancy GPS read failed:", e);
+        logbookShowToast("occupancy-toast", "Error reading photo EXIF data.");
+      }
+
+      if ((occupancyExifLat == null || occupancyExifLng == null) && navigator.geolocation) {
+        try {
+          await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const { latitude, longitude } = pos.coords || {};
+                if (latitude != null && longitude != null) {
+                  occupancyExifLat = latitude;
+                  occupancyExifLng = longitude;
+                }
+                resolve();
+              },
+              () => resolve(),
+              { enableHighAccuracy: true, timeout: 6000, maximumAge: 30_000 }
+            );
+          });
+        } catch {
+          // ignore
+        }
+      }
+    })();
+    void occupancyExifProcessingPromise;
   }
 
   inputCamera?.addEventListener("change", () => void onPhotoChange(inputCamera));
@@ -3911,8 +3936,12 @@ function occupancyDeleteEntry(idx) {
   })();
 }
 
-function occupancySaveEntry(e) {
+async function occupancySaveEntry(e) {
   if (e?.preventDefault) e.preventDefault();
+
+  if (occupancyExifProcessingPromise) {
+    await occupancyExifProcessingPromise;
+  }
 
   const entry = {
     log_date: (document.getElementById("occupancy_date") || { value: "" }).value,
