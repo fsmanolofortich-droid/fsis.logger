@@ -463,24 +463,46 @@
     const includedName = entry.included_personnel_name || "";
     const includedPosition = entry.included_personnel_position || "";
     // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
-    // Merged format: "Region X, Province, Municipal, Barangay Name, Street/Line"
+    // Merged format (legacy): "Region X, Province, Municipal, Barangay Name, Street/Line"
     let business_name = entry.business_name || "";
     let addrLine = entry.addr_line || "";
     let addrBarangay = entry.addr_barangay || "";
+    let addrMunicipal = entry.addr_municipal || "";
+    let addrProvince = entry.addr_province || "";
+    let addrRegion = entry.addr_region || "";
     const fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
-    if ((!addrLine || !addrBarangay) && fullAddr) {
-      const parts = fullAddr.split(/,\s*/);
+    if ((!addrLine || !addrBarangay || !addrMunicipal || !addrProvince || !addrRegion) && fullAddr) {
+      const parts = fullAddr.split(/,\s*/).map((p) => String(p || "").trim()).filter(Boolean);
+
+      // Try to locate "Barangay ___" anywhere in the merged address.
+      if (!addrBarangay) {
+        const brgyPart = parts.find((p) => /^barangay\s+/i.test(p));
+        if (brgyPart) addrBarangay = brgyPart.replace(/^Barangay\s+/i, "").trim();
+      }
+
+      // If we have the legacy 5-part format, map positions directly.
+      // "Region X, Province, Municipal, Barangay Name, Street/Line"
       if (parts.length >= 5) {
-        addrLine = parts[4].trim();
-        addrBarangay = (parts[3] || "").replace(/^Barangay\s+/i, "").trim();
+        addrRegion = addrRegion || parts[0];
+        addrProvince = addrProvince || parts[1];
+        addrMunicipal = addrMunicipal || parts[2];
+        if (!addrBarangay) addrBarangay = (parts[3] || "").replace(/^Barangay\s+/i, "").trim();
+        addrLine = addrLine || (parts[4] || "").trim();
+      } else if (parts.length >= 4) {
+        // Common case when "line/street" is blank:
+        // "Region X, Province, Municipal, Barangay Name"
+        addrRegion = addrRegion || parts[0];
+        addrProvince = addrProvince || parts[1];
+        addrMunicipal = addrMunicipal || parts[2];
+        if (!addrBarangay) addrBarangay = (parts[3] || "").replace(/^Barangay\s+/i, "").trim();
       }
     }
     const addressParts = [
       addrLine,
       addrBarangay ? "Barangay " + addrBarangay : "",
-      "Manolo Fortich",
-      "Bukidnon",
-      "Region X",
+      addrMunicipal || "Manolo Fortich",
+      addrProvince || "Bukidnon",
+      addrRegion || "Region X",
     ].filter(Boolean);
     const address =
       addressParts.length > 0
