@@ -1470,6 +1470,12 @@ function inspectionOpenModal() {
   if (photoInput) photoInput.value = "";
   const photoLibraryInput = document.getElementById("inspection_photo_library");
   if (photoLibraryInput) photoLibraryInput.value = "";
+
+  const indicator = document.getElementById("inspection-photo-indicator");
+  if (indicator) {
+    indicator.className = "photo-attach-indicator";
+    indicator.textContent = "";
+  }
 }
 
 function inspectionCloseModal() {
@@ -2188,6 +2194,7 @@ function initInspectionPhotoExif() {
   const inputCamera = document.getElementById("inspection_photo");
   const inputLibrary = document.getElementById("inspection_photo_library");
   if (!inputCamera && !inputLibrary) return;
+  const indicator = document.getElementById("inspection-photo-indicator");
 
   async function onPhotoChange(sourceInput) {
     const file = sourceInput?.files?.[0];
@@ -2201,10 +2208,16 @@ function initInspectionPhotoExif() {
       currentExifPreviewUrl = null;
       currentExifTakenAt = null;
       currentExifFile = file;
+      if (indicator) {
+        indicator.className = "photo-attach-indicator";
+        indicator.textContent = `Photo attached: ${file.name || "image"}. Reading GPS...`;
+      }
 
       // Clear the other input so only one is active.
       if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
       if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
+      if (sourceInput !== inputLibrary && inputLibrary) inputLibrary.value = "";
+      if (sourceInput !== inputCamera && inputCamera) inputCamera.value = "";
 
       // Set preview URL (for immediate UI feedback); upload uses the File.
       try {
@@ -2226,12 +2239,24 @@ function initInspectionPhotoExif() {
           currentExifLat = gps.lat;
           currentExifLng = gps.lng;
           logbookShowToast("inspection-toast", `GPS found: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`);
+          if (indicator) {
+            indicator.classList.add("is-attached");
+            indicator.textContent = `Photo attached: ${file.name || "image"} (GPS: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)})`;
+          }
         } else {
           logbookShowToast("inspection-toast", "No GPS data found in this photo file. Your device may be stripping it.");
+          if (indicator) {
+            indicator.classList.add("is-missing-gps");
+            indicator.textContent = `Photo attached: ${file.name || "image"} (No GPS in file)`;
+          }
         }
       } catch (e) {
         console.warn("GPS read failed:", e);
         logbookShowToast("inspection-toast", "Error reading photo EXIF data.");
+        if (indicator) {
+          indicator.classList.add("is-missing-gps");
+          indicator.textContent = `Photo attached: ${file.name || "image"} (EXIF read error)`;
+        }
       }
 
       // If EXIF GPS is not available, fall back to the device's current location.
@@ -2506,6 +2531,7 @@ function initOccupancyPhotoExif() {
   const inputCamera = document.getElementById("occupancy_photo");
   const inputLibrary = document.getElementById("occupancy_photo_library");
   if (!inputCamera && !inputLibrary) return;
+  const indicator = document.getElementById("occupancy-photo-indicator");
 
   async function onPhotoChange(sourceInput) {
     const file = sourceInput?.files?.[0];
@@ -2517,10 +2543,16 @@ function initOccupancyPhotoExif() {
       occupancyExifPreviewUrl = null;
       occupancyExifTakenAt = null;
       occupancyExifFile = file;
+      if (indicator) {
+        indicator.className = "photo-attach-indicator";
+        indicator.textContent = `Photo attached: ${file.name || "image"}. Reading GPS...`;
+      }
 
       // Clear the other input so only one is active.
       if (sourceInput === inputCamera && inputLibrary) inputLibrary.value = "";
       if (sourceInput === inputLibrary && inputCamera) inputCamera.value = "";
+      if (sourceInput !== inputLibrary && inputLibrary) inputLibrary.value = "";
+      if (sourceInput !== inputCamera && inputCamera) inputCamera.value = "";
 
       try {
         const dataUrl = await new Promise((resolve, reject) => {
@@ -2540,12 +2572,24 @@ function initOccupancyPhotoExif() {
           occupancyExifLat = gps.lat;
           occupancyExifLng = gps.lng;
           logbookShowToast("occupancy-toast", `GPS found: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`);
+          if (indicator) {
+            indicator.classList.add("is-attached");
+            indicator.textContent = `Photo attached: ${file.name || "image"} (GPS: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)})`;
+          }
         } else {
           logbookShowToast("occupancy-toast", "No GPS data found in this photo file. Your device may be stripping it.");
+          if (indicator) {
+            indicator.classList.add("is-missing-gps");
+            indicator.textContent = `Photo attached: ${file.name || "image"} (No GPS in file)`;
+          }
         }
       } catch (e) {
         console.warn("Occupancy GPS read failed:", e);
         logbookShowToast("occupancy-toast", "Error reading photo EXIF data.");
+        if (indicator) {
+          indicator.classList.add("is-missing-gps");
+          indicator.textContent = `Photo attached: ${file.name || "image"} (EXIF read error)`;
+        }
       }
 
       if ((occupancyExifLat == null || occupancyExifLng == null) && navigator.geolocation) {
@@ -3891,6 +3935,12 @@ function occupancyOpenModal() {
   if (photoInput) photoInput.value = "";
   const photoLibraryInput = document.getElementById("occupancy_photo_library");
   if (photoLibraryInput) photoLibraryInput.value = "";
+
+  const indicator = document.getElementById("occupancy-photo-indicator");
+  if (indicator) {
+    indicator.className = "photo-attach-indicator";
+    indicator.textContent = "";
+  }
 
   const overlay = document.getElementById("occupancy-modal-overlay");
   overlay?.classList.add("open");
