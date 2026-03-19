@@ -669,6 +669,20 @@ table#table-fsec {
   gap: 12px;
 }
 
+.photo-attach-indicator {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-mid);
+}
+
+.photo-attach-indicator.is-attached {
+  color: #0f5132; /* bootstrap-ish success dark */
+}
+
+.photo-attach-indicator.is-missing-gps {
+  color: #856404; /* bootstrap-ish warning dark */
+}
+
 .photo-option-btn {
   flex: 1;
   position: relative;
@@ -1718,6 +1732,13 @@ body.is-map-view [data-view="map"] {
 /* Using Bootstrap's .toast; only ensure BFP header accent */
 .toast.bfp-toast {
   border-left: 4px solid var(--fire);
+}
+
+/* Ensure toasts appear above custom modal overlays (z-index: 1055). */
+.toast,
+.toast.bfp-toast {
+  position: fixed;
+  z-index: 2000;
 }
 
 /* ── Logbook section action columns ── */
