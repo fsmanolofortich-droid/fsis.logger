@@ -3970,8 +3970,12 @@ async function occupancySaveEntry(e) {
     entry.lng = null;
   }
 
-  if (!entry.log_date || !entry.io_number || !entry.inspectors) {
-    logbookShowToast("occupancy-toast", "⚠️ Please fill in Date, IO Number, and Inspectors.");
+  const isPlaceholderInspector =
+    !entry.inspectors || /^select\s+inspector$/i.test(String(entry.inspectors).trim());
+  if (isPlaceholderInspector) entry.inspectors = "";
+
+  if (!entry.log_date || !entry.io_number) {
+    logbookShowToast("occupancy-toast", "⚠️ Please fill in Date and IO Number.");
     return;
   }
 
