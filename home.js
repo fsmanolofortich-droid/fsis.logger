@@ -1027,7 +1027,6 @@ function inspectionRenderTable() {
 
     if (emptyNoPhoto) emptyNoPhoto.style.display = "block";
     if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
-    if (panelNoPhoto) panelNoPhoto.style.display = "none";
 
     // Update count badges so the UI matches.
     const countBadge = document.getElementById("inspection-record-count");
@@ -1113,11 +1112,9 @@ function inspectionRenderTable() {
     if (noLocationCount === 0) {
       emptyNoPhoto.style.display = "block";
       if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
-      panelNoPhoto.style.display = "none";
     } else {
       emptyNoPhoto.style.display = "none";
       if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "";
-      panelNoPhoto.style.display = "";
     }
   }
 
