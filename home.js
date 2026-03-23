@@ -1258,14 +1258,67 @@ function inspectionOpenIoHtml(idx) {
   window.open("./inspection_io_fsis.html", "_blank");
 }
 
+let clearanceEditingIdx = null;
+
 function inspectionOpenClearanceHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
+  clearanceEditingIdx = idx;
+
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+
+  setVal("clearance_fsic_number", row.fsic_number);
+  setVal("clearance_purpose", row.fsic_purpose);
+  setVal("clearance_valid_until", row.fsic_valid_until);
+  setVal("clearance_fee_amount", row.fsic_fee_amount);
+  setVal("clearance_fee_or_number", row.fsic_fee_or_number);
+  setVal("clearance_fee_date", row.fsic_fee_date);
+
+  const overlay = document.getElementById("clearance-modal-overlay");
+  if (overlay) overlay.classList.add("open");
+}
+
+function clearanceCloseModal() {
+  const overlay = document.getElementById("clearance-modal-overlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
+function clearanceCloseOnOverlay(e) {
+  const overlay = document.getElementById("clearance-modal-overlay");
+  if (e.target === overlay) clearanceCloseModal();
+}
+
+function clearanceProceed(e) {
+  if (e?.preventDefault) e.preventDefault();
+  
+  if (clearanceEditingIdx === null) return;
+  const row = inspectionData[clearanceEditingIdx];
+  if (!row) return;
+
+  const getVal = (id) => (document.getElementById(id) || {value: ""}).value.trim();
+
+  // We save the inputs back to the row object that gets passed to the template
+  const payload = {
+    ...row,
+    fsic_number: getVal("clearance_fsic_number"),
+    fsic_purpose: getVal("clearance_purpose"),
+    fsic_valid_from: row.business_name, // Hardcoded to business_name per user request
+    fsic_valid_until: getVal("clearance_valid_until"),
+    fsic_fee_amount: getVal("clearance_fee_amount"),
+    fsic_fee_or_number: getVal("clearance_fee_or_number"),
+    fsic_fee_date: getVal("clearance_fee_date"),
+  };
+
   try {
-    sessionStorage.setItem("fsis.clearance.current", JSON.stringify(row));
+    sessionStorage.setItem("fsis.clearance.current", JSON.stringify(payload));
   } catch {
     // If sessionStorage is unavailable, we still open the template.
   }
+  
+  clearanceCloseModal();
   window.open("./fsis_clearance.html", "_blank");
 }
 
@@ -1335,13 +1388,6 @@ window.addEventListener("message", (ev) => {
 
   // FSIC clearance / fees
   if (has("fsic_number")) updates.fsic_number = (payload.fsic_number || "").toString().trim();
-  if (has("fsic_purpose")) updates.fsic_purpose = payload.fsic_purpose || null;
-  if (has("fsic_permit_type")) updates.fsic_permit_type = payload.fsic_permit_type || null;
-  if (has("fsic_valid_from")) updates.fsic_valid_from = normalizeDate(payload.fsic_valid_from);
-  if (has("fsic_valid_until")) updates.fsic_valid_until = normalizeDate(payload.fsic_valid_until);
-  if (has("fsic_fee_amount")) updates.fsic_fee_amount = normalizeAmount(payload.fsic_fee_amount);
-  if (has("fsic_fee_or_number")) updates.fsic_fee_or_number = payload.fsic_fee_or_number || null;
-  if (has("fsic_fee_date")) updates.fsic_fee_date = normalizeDate(payload.fsic_fee_date);
 
   // Update in-memory + local cache immediately for responsiveness
   // Update in-memory fields using app naming (insp_owner / insp_address).
@@ -1568,11 +1614,11 @@ async function inspectionSaveEntry(e) {
   ).value.trim();
 
   const mergedAddress = [
-    `Region ${region}`,
-    province,
-    municipal,
-    `Barangay ${barangay}`,
     line,
+    barangay ? `Barangay ${barangay}` : null,
+    municipal,
+    province,
+    `Region ${region}`
   ]
     .filter((p) => String(p || "").trim())
     .join(", ");
@@ -3265,11 +3311,11 @@ function fsecSaveEntry(e) {
   ).value.trim();
 
   const mergedAddress = [
-    `Region ${region}`,
-    province,
-    municipal,
-    `Barangay ${barangay}`,
     line,
+    barangay ? `Barangay ${barangay}` : null,
+    municipal,
+    province,
+    `Region ${region}`
   ]
     .filter((p) => String(p || "").trim())
     .join(", ");

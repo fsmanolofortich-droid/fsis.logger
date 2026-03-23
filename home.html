@@ -959,6 +959,67 @@
     </div>
     <div class="toast" id="occupancy-toast"></div>
 
+    <!-- ================================================================
+         GLOBAL CLEARANCE MODAL
+         ================================================================ -->
+    <div class="modal-overlay" id="clearance-modal-overlay" onclick="clearanceCloseOnOverlay(event)">
+      <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
+        <div class="modal-dialog modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header bfp-header">
+              <div>
+                <small id="clearance-modal-subtitle">Clearance (FSIC)</small>
+                <h5 class="mb-0" id="clearance-modal-title">Release Clearance</h5>
+              </div>
+              <button type="button" class="btn-close btn-close-white" onclick="clearanceCloseModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="clearance-entry-form" onsubmit="clearanceProceed(event)">
+                <div class="form-section">
+                  <div class="form-section-title">Missing Data</div>
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label" for="clearance_fsic_number">FSIC Number</label>
+                      <input type="text" id="clearance_fsic_number" class="form-control" placeholder="e.g. FSIC-2026-001">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="clearance_purpose">Purpose</label>
+                      <select id="clearance_purpose" class="form-select">
+                        <option value="">Select purpose</option>
+                        <option value="FOR CERTIFICATE OF OCCUPANCY">Occupancy Permit</option>
+                        <option value="FOR BUSINESS PERMIT (NEW/RENEWAL)">Business Permit</option>
+                        <option value="OTHERS">Others</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="clearance_valid_until">Valid Until</label>
+                      <input type="date" id="clearance_valid_until" class="form-control">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="clearance_fee_amount">Fee Amount (PHP)</label>
+                      <input type="number" step="0.01" id="clearance_fee_amount" class="form-control" placeholder="e.g. 500.00">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="clearance_fee_or_number">O.R. Number</label>
+                      <input type="text" id="clearance_fee_or_number" class="form-control" placeholder="O.R. Number">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="clearance_fee_date">O.R. Date</label>
+                      <input type="date" id="clearance_fee_date" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer bfp-footer">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearanceCloseModal()">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-dark" id="clearance-btn-proceed" form="clearance-entry-form">Proceed to Print</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
