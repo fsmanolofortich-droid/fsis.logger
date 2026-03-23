@@ -992,7 +992,12 @@ function inspectionRenderTable() {
         if (!inDateRange(row.date_inspected, from, to)) return false;
       }
       if (brgy) {
-        const rowBrgy = (row.addr_barangay || "").toString().trim();
+        // Supabase-loaded rows may not have addr_barangay populated.
+        // Fall back to parsing from insp_address (e.g. "..., Barangay X, ...").
+        const rowBrgy =
+          (row.addr_barangay || "").toString().trim() ||
+          ((row.insp_address || "").toString().match(/Barangay\s+([^,]+)/i)?.[1] ||
+            "").trim();
         if (rowBrgy !== brgy) return false;
       }
       if (personnel) {
@@ -1013,6 +1018,25 @@ function inspectionRenderTable() {
       );
       return hay.includes(q);
     });
+
+  // If there are inspection records but the current filters hide everything,
+  // show the empty state (otherwise it looks like "search/filter not working").
+  if (inspectionData.length > 0 && filtered.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+
+    if (emptyNoPhoto) emptyNoPhoto.style.display = "block";
+    if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
+    if (panelNoPhoto) panelNoPhoto.style.display = "none";
+
+    // Update count badges so the UI matches.
+    const countBadge = document.getElementById("inspection-record-count");
+    if (countBadge) countBadge.textContent = "0";
+    const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
+    if (noPhotoBadge) noPhotoBadge.textContent = "0";
+
+    return;
+  }
 
   if (inspectionData.length === 0) {
     empty.style.display = "block";
