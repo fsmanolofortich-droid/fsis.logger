@@ -500,9 +500,6 @@ function populateModalDropdowns() {
   fillSelect("inspection_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
   fillSelect("conveyance_inspector_select", FIRE_PERSONNEL, "Select inspector");
   fillSelect("occupancy_inspected_by", FIRE_PERSONNEL, "Select inspector");
-  fillSelect("inspection-filter-barangay", BARANGAYS, "All barangays");
-  fillSelect("inspection-filter-personnel", FIRE_PERSONNEL, "All personnel");
-
   // Auto-fill rank/position when fire personnel is selected
   bindInspectionPersonnelAutoFill();
 }
@@ -864,13 +861,7 @@ function initTableFilters() {
   };
 
   bind(
-    [
-      "inspection-filter-q",
-      "inspection-filter-barangay",
-      "inspection-filter-personnel",
-      "inspection-filter-from",
-      "inspection-filter-to",
-    ],
+    ["inspection-filter-q", "inspection-filter-from", "inspection-filter-to"],
     () => inspectionRenderTable()
   );
   bind(["fsec-filter-q", "fsec-filter-from", "fsec-filter-to"], () =>
@@ -1024,31 +1015,22 @@ function inspectionRenderTable() {
   if (tbodyNoPhoto) tbodyNoPhoto.innerHTML = "";
   let withLocationCount = 0;
   let noLocationCount = 0;
+  const totalWithLocation = inspectionData.filter((r) => r.lat != null && r.lng != null).length;
+  const totalNoLocation = inspectionData.filter((r) => r.lat == null || r.lng == null).length;
+
+  const countBadge = document.getElementById("inspection-record-count");
+  if (countBadge) countBadge.textContent = String(totalWithLocation);
+  const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
+  if (noPhotoBadge) noPhotoBadge.textContent = String(totalNoLocation);
 
   const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
-  const brgy = (document.getElementById("inspection-filter-barangay")?.value || "").trim();
-  const personnel = (document.getElementById("inspection-filter-personnel")?.value || "").trim();
   const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
   const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
-
   const filtered = inspectionData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => {
       if (from || to) {
         if (!inDateRange(row.date_inspected, from, to)) return false;
-      }
-      if (brgy) {
-        // Supabase-loaded rows may not have addr_barangay populated.
-        // Fall back to parsing from insp_address (e.g. "..., Barangay X, ...").
-        const rowBrgy =
-          (row.addr_barangay || "").toString().trim() ||
-          ((row.insp_address || "").toString().match(/Barangay\s+([^,]+)/i)?.[1] ||
-            "").trim();
-        if (rowBrgy !== brgy) return false;
-      }
-      if (personnel) {
-        const rowP = (row.inspected_by || "").toString().trim();
-        if (rowP !== personnel) return false;
       }
       if (!q) return true;
       const hay = normalizeQuery(
@@ -1073,12 +1055,6 @@ function inspectionRenderTable() {
 
     if (emptyNoPhoto) emptyNoPhoto.style.display = "block";
     if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
-
-    // Update count badges so the UI matches.
-    const countBadge = document.getElementById("inspection-record-count");
-    if (countBadge) countBadge.textContent = "0";
-    const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
-    if (noPhotoBadge) noPhotoBadge.textContent = "0";
 
     return;
   }
@@ -1164,20 +1140,13 @@ function inspectionRenderTable() {
     }
   }
 
-  // ── Record count badges ──────────────────────────────────────────────
-  const countBadge = document.getElementById("inspection-record-count");
-  if (countBadge) countBadge.textContent = withLocationCount;
-
-  const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
-  if (noPhotoBadge) noPhotoBadge.textContent = noLocationCount;
-
   // ── Filter result info bars ──────────────────────────────────────────
-  const isFiltered = !!(q || brgy || personnel || from || to);
+  const isFiltered = !!(q || from || to);
   const resultsBadge = document.getElementById("inspection-results-badge");
   if (resultsBadge) {
     if (isFiltered && inspectionData.length > 0) {
       resultsBadge.textContent =
-        `Showing ${withLocationCount} of ${inspectionData.filter(r => r.lat != null && r.lng != null).length} records (with location)`;
+        `Showing ${withLocationCount} of ${totalWithLocation} records (with location)`;
       resultsBadge.removeAttribute("hidden");
     } else {
       resultsBadge.setAttribute("hidden", "");
@@ -1188,7 +1157,7 @@ function inspectionRenderTable() {
   if (noPhotoResultsBadge) {
     if (isFiltered && inspectionData.length > 0) {
       noPhotoResultsBadge.textContent =
-        `Showing ${noLocationCount} of ${inspectionData.filter(r => r.lat == null || r.lng == null).length} records (no location)`;
+        `Showing ${noLocationCount} of ${totalNoLocation} records (no location)`;
       noPhotoResultsBadge.removeAttribute("hidden");
     } else {
       noPhotoResultsBadge.setAttribute("hidden", "");
@@ -2067,13 +2036,9 @@ function inspectionSetPrintDate() {
 
 function inspectionClearFilters() {
   const q = document.getElementById("inspection-filter-q");
-  const brgy = document.getElementById("inspection-filter-barangay");
-  const personnel = document.getElementById("inspection-filter-personnel");
   const from = document.getElementById("inspection-filter-from");
   const to = document.getElementById("inspection-filter-to");
   if (q) q.value = "";
-  if (brgy) brgy.value = "";
-  if (personnel) personnel.value = "";
   if (from) from.value = "";
   if (to) to.value = "";
   inspectionRenderTable();
@@ -2859,6 +2824,27 @@ function addOccupancyMarkerFromEntry(entry) {
 
   const title = entry.owner_name || entry.io_number || "Occupancy";
   const marker = L.marker([entry.lat, entry.lng], { icon }).addTo(occupancyMarkersLayer);
+
+  const tooltipText = entry.owner_name || entry.io_number || "Occupancy";
+  marker.bindTooltip(tooltipText, {
+    permanent: false,
+    direction: "top",
+    offset: [0, -36],
+    opacity: 0.95,
+    className: "occupancy-marker-tooltip",
+  });
+
+  marker.on("mouseover", () => {
+    marker.setZIndexOffset(1000);
+    const el = marker.getElement?.();
+    if (el) el.classList.add("is-hover");
+  });
+  marker.on("mouseout", () => {
+    marker.setZIndexOffset(0);
+    const el = marker.getElement?.();
+    if (el) el.classList.remove("is-hover");
+  });
+
   marker.bindPopup(`<strong>${logbookEsc(title)}</strong><br>${logbookEsc(entry.io_number || "")}`);
   marker.on("click", () => {
     openOccupancyDetailPanel(entry);
@@ -3169,7 +3155,9 @@ function fsecRenderTable() {
   const tbody = document.getElementById("tbody-fsec");
   const empty = document.getElementById("empty-fsec");
   const tableWrap = document.getElementById("table-fsec")?.closest(".table-wrap");
+  const countBadge = document.getElementById("fsec-record-count");
   if (!tbody || !empty) return;
+  if (countBadge) countBadge.textContent = String(fsecData.length || 0);
 
   const q = normalizeQuery(document.getElementById("fsec-filter-q")?.value);
   const from = (document.getElementById("fsec-filter-from")?.value || "").trim();
@@ -3609,7 +3597,9 @@ function conveyanceRenderTable() {
   const tbody = document.getElementById("tbody-conveyance");
   const empty = document.getElementById("empty-conveyance");
   const tableWrap = document.getElementById("table-conveyance")?.closest(".table-wrap");
+  const countBadge = document.getElementById("conveyance-record-count");
   if (!tbody || !empty) return;
+  if (countBadge) countBadge.textContent = String(conveyanceData.length || 0);
 
   const q = normalizeQuery(document.getElementById("conveyance-filter-q")?.value);
   const from = (document.getElementById("conveyance-filter-from")?.value || "").trim();
@@ -3887,7 +3877,9 @@ function occupancyRenderTable() {
   const tbody = document.getElementById("tbody-occupancy");
   const empty = document.getElementById("empty-occupancy");
   const tableWrap = document.getElementById("table-occupancy")?.closest(".table-wrap");
+  const countBadge = document.getElementById("occupancy-record-count");
   if (!tbody || !empty) return;
+  if (countBadge) countBadge.textContent = String(occupancyData.length || 0);
 
   const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
   const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
