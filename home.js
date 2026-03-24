@@ -796,7 +796,15 @@ function logbookEsc(str) {
 
 function logbookFormatDate(d) {
   if (!d) return "—";
-  return new Date(d + "T00:00:00").toLocaleDateString("en-PH", {
+  let dateObj;
+  if (typeof d === 'string' && !d.includes('T')) {
+    dateObj = new Date(d + "T00:00:00");
+  } else {
+    dateObj = new Date(d);
+  }
+  if (isNaN(dateObj.getTime())) return "Invalid Date";
+
+  return dateObj.toLocaleDateString("en-PH", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -817,14 +825,20 @@ function normalizeQuery(s) {
 
 function inDateRange(dateStr, fromStr, toStr) {
   if (!dateStr) return false;
-  const t = new Date(dateStr + "T00:00:00").getTime();
+  let t;
+  if (typeof dateStr === 'string' && !dateStr.includes('T')) {
+    t = new Date(dateStr + "T00:00:00").getTime();
+  } else {
+    t = new Date(dateStr).getTime();
+  }
   if (!isFinite(t)) return false;
+
   if (fromStr) {
     const f = new Date(fromStr + "T00:00:00").getTime();
     if (isFinite(f) && t < f) return false;
   }
   if (toStr) {
-    const to = new Date(toStr + "T00:00:00").getTime();
+    const to = new Date(toStr + "T23:59:59").getTime();
     if (isFinite(to) && t > to) return false;
   }
   return true;
