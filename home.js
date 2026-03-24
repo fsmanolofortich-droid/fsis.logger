@@ -325,7 +325,13 @@ function mapAddChoose(type) {
   inspectionOpenModal?.();
 }
 
+// Used so a second showView(sameName) from hashchange does not scroll to top
+// (e.g. after "View in inspection logbook" scrolls the matching row into view).
+let lastAppliedViewName = null;
+
 function showView(name) {
+  const viewChanged = lastAppliedViewName !== name;
+
   const views = Array.from(document.querySelectorAll("[data-view]"));
   for (const v of views) {
     const viewName = v.getAttribute("data-view");
@@ -377,8 +383,12 @@ function showView(name) {
     if (layout) layout.style.height = "";
   }
 
-  // Always reset scroll to top when changing main views
-  window.scrollTo({ top: 0, behavior: "auto" });
+  // Reset scroll only when switching to a different main view — not when hashchange
+  // re-applies the same view (that would cancel scrollIntoView on a logbook row).
+  if (viewChanged) {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+  lastAppliedViewName = name;
 }
 
 function startUserLocationTracking() {
@@ -1014,7 +1024,12 @@ function inspectionRenderTable() {
         if (!inDateRange(row.date_inspected, from, to)) return false;
       }
       if (brgy) {
-        const rowBrgy = (row.addr_barangay || "").toString().trim();
+        // Supabase-loaded rows may not have addr_barangay populated.
+        // Fall back to parsing from insp_address (e.g. "..., Barangay X, ...").
+        const rowBrgy =
+          (row.addr_barangay || "").toString().trim() ||
+          ((row.insp_address || "").toString().match(/Barangay\s+([^,]+)/i)?.[1] ||
+            "").trim();
         if (rowBrgy !== brgy) return false;
       }
       if (personnel) {
@@ -1035,6 +1050,24 @@ function inspectionRenderTable() {
       );
       return hay.includes(q);
     });
+
+  // If there are inspection records but the current filters hide everything,
+  // show the empty state (otherwise it looks like "search/filter not working").
+  if (inspectionData.length > 0 && filtered.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+
+    if (emptyNoPhoto) emptyNoPhoto.style.display = "block";
+    if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
+
+    // Update count badges so the UI matches.
+    const countBadge = document.getElementById("inspection-record-count");
+    if (countBadge) countBadge.textContent = "0";
+    const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
+    if (noPhotoBadge) noPhotoBadge.textContent = "0";
+
+    return;
+  }
 
   if (inspectionData.length === 0) {
     empty.style.display = "block";
@@ -1111,11 +1144,9 @@ function inspectionRenderTable() {
     if (noLocationCount === 0) {
       emptyNoPhoto.style.display = "block";
       if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
-      panelNoPhoto.style.display = "none";
     } else {
       emptyNoPhoto.style.display = "none";
       if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "";
-      panelNoPhoto.style.display = "";
     }
   }
 
@@ -2186,18 +2217,10 @@ function viewInspectionInLogbook(entry) {
   showView("inspection");
   if (getCurrentView() !== "inspection") window.location.hash = "inspection";
 
-  // Prefill filters to narrow results to the selected entry.
-  const qEl = document.getElementById("inspection-filter-q");
-  if (qEl) qEl.value = (entry.io_number || entry.business_name || "").trim();
-
-  const brgyEl = document.getElementById("inspection-filter-barangay");
-  if (brgyEl) brgyEl.value = (entry.addr_barangay || "").trim();
-
-  const pEl = document.getElementById("inspection-filter-personnel");
-  if (pEl) pEl.value = (entry.inspected_by || "").trim();
+  // Clear filters (do not prefill search — IO numbers like "0" looked like a broken default).
+  inspectionClearFilters();
 
   setInspectionTab(entry.lat != null && entry.lng != null ? "with-location" : "no-location");
-  inspectionRenderTable();
 
   const idx = inspectionData.findIndex((r) => {
     if (entry.id && r.id) return r.id === entry.id;
