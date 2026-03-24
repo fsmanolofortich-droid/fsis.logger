@@ -529,7 +529,7 @@ function conveyanceAddInspector() {
 }
 
 // Legacy helper kept for compatibility; no longer used by the current UI.
-function occupancyAddInspector() {}
+function occupancyAddInspector() { }
 
 function initViewRouting() {
   const applyFromHash = () => showView(getCurrentView());
@@ -670,7 +670,7 @@ function init() {
     saveBtn.addEventListener(
       "touchend",
       (ev) => {
-        try { ev.preventDefault(); } catch {}
+        try { ev.preventDefault(); } catch { }
         void inspectionSaveEntry(ev);
       },
       { passive: false }
@@ -709,20 +709,46 @@ function init() {
 document.addEventListener("DOMContentLoaded", init);
 
 // -----------------------------
-// Shared Supabase + utilities
+// Shared GAS client + utilities
 // -----------------------------
 
-const SUPABASE_URL = "https://ezpwbgpbveazutmrnzlf.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6cHdiZ3BidmVhenV0bXJuemxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4Nzk2NDksImV4cCI6MjA4NzQ1NTY0OX0.C5118CQPYAqay0FhtmKdJyl9LKUHFzMnN5ecnAx1NU8";
+// Paste your deployed Google Apps Script Web App URL here
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyciiKsA8h82z8VdJHM1NFfFgdSxjWJ8kSfLHw9F6MmShYxXyJmf7qZbbLfWY3hkJyn/exec";
 
-const supabaseClient =
-  window.supabase?.createClient && SUPABASE_URL && SUPABASE_ANON_KEY
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+function isGasEnabled() {
+  return Boolean(GAS_URL);
+}
 
+// Alias so existing callers (isSupabaseEnabled) still work
 function isSupabaseEnabled() {
-  return !!supabaseClient;
+  return isGasEnabled();
+}
+
+/**
+ * Send a request to the GAS Web App backend.
+ * All actions go via HTTP POST with JSON body.
+ */
+async function gasRequest(action, payload) {
+  const res = await fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify({ action, ...(payload || {}) }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+
+/**
+ * Convert a File or Blob to a base64 string (without the data: prefix)
+ * for sending to the GAS upload action.
+ */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function setStorageBadge(mode) {
@@ -736,20 +762,16 @@ function setStorageBadge(mode) {
 }
 
 async function refreshStorageBadge() {
-  if (!supabaseClient) {
+  if (!isGasEnabled()) {
     setStorageBadge("local");
     return;
   }
 
   try {
-    const { error } = await supabaseClient
-      .from("inspection_logbook")
-      .select("id")
-      .limit(1);
-    if (error) throw error;
+    await gasRequest("ping");
     setStorageBadge("db");
   } catch (err) {
-    console.warn("Database check failed, using local mode:", err);
+    console.warn("GAS ping failed, using local mode:", err);
     setStorageBadge("local");
   }
 }
@@ -1198,7 +1220,7 @@ function inspectionHandleAction(action, idx) {
     inspectionOpenIoHtml(idx);
     return;
   }
-   if (action === "open_clearance_html") {
+  if (action === "open_clearance_html") {
     inspectionOpenClearanceHtml(idx);
     return;
   }
@@ -1272,12 +1294,12 @@ function clearanceCloseOnOverlay(e) {
 
 function clearanceProceed(e) {
   if (e?.preventDefault) e.preventDefault();
-  
+
   if (clearanceEditingIdx === null) return;
   const row = inspectionData[clearanceEditingIdx];
   if (!row) return;
 
-  const getVal = (id) => (document.getElementById(id) || {value: ""}).value.trim();
+  const getVal = (id) => (document.getElementById(id) || { value: "" }).value.trim();
 
   // We save the inputs back to the row object that gets passed to the template
   const payload = {
@@ -1296,7 +1318,7 @@ function clearanceProceed(e) {
   } catch {
     // If sessionStorage is unavailable, we still open the template.
   }
-  
+
   clearanceCloseModal();
   window.open("./fsis_clearance.html", "_blank");
 }
@@ -1398,8 +1420,7 @@ window.addEventListener("message", (ev) => {
 
   (async () => {
     try {
-      const { error } = await supabaseClient.from("inspection_logbook").update(updates).eq("id", row.id);
-      if (error) throw error;
+      await gasRequest("update", { table: "inspection_logbook", id: row.id, row: updates });
       logbookShowToast?.("inspection-toast", "Saved to database.");
       respond(true, "");
     } catch (err) {
@@ -1469,11 +1490,7 @@ function inspectionDeleteEntry(idx) {
 
   (async () => {
     try {
-      const { error } = await supabaseClient
-        .from("inspection_logbook")
-        .delete()
-        .eq("id", row.id);
-      if (error) throw error;
+      await gasRequest("delete", { table: "inspection_logbook", id: row.id });
       await inspectionLoadFromSupabase();
       inspectionRenderTable();
       logbookShowToast("inspection-toast", "Record deleted.");
@@ -1510,7 +1527,7 @@ function inspectionOpenModal() {
   inspectionClearForm();
   const date = document.getElementById("inspection_date_inspected");
   if (date) date.value = new Date().toISOString().slice(0, 10);
-  
+
   // Clear photo input
   const photoInput = document.getElementById("inspection_photo");
   if (photoInput) photoInput.value = "";
@@ -1765,42 +1782,25 @@ async function inspectionSaveEntry(e) {
 
   (async () => {
     try {
-      // If we have a file and Supabase Storage, upload to the 'storage' bucket
-      if (currentExifFile && supabaseClient?.storage) {
+      // If we have a file and GAS is enabled, upload to Google Drive via GAS
+      if (currentExifFile && isGasEnabled()) {
         let uploadFile = currentExifFile;
         try {
-          // Always pass through the sanitization module so EXIF/metadata
-          // are stripped before the image can ever be embedded into PDFs.
           uploadFile = await sanitizeInspectionImage(uploadFile);
         } catch (sanitizeErr) {
           console.warn("Image sanitization failed, using original file:", sanitizeErr);
           uploadFile = currentExifFile;
         }
 
-        const fileExt =
-          (currentExifFile.name && currentExifFile.name.split(".").pop()) ||
-          "jpg";
-        const safeExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-        const path = `inspection-photos/${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}.${safeExt}`;
         try {
-          const { error: uploadError } = await supabaseClient.storage
-            .from("storage")
-            .upload(path, uploadFile, {
-              cacheControl: "3600",
-              upsert: false,
-              contentType: uploadFile.type || currentExifFile.type || "image/jpeg",
-            });
-          if (!uploadError) {
-            const { data: urlData } = supabaseClient.storage
-              .from("storage")
-              .getPublicUrl(path);
-            if (urlData?.publicUrl) {
-              entry.photo_url = urlData.publicUrl;
-            }
-          } else {
-            console.warn("Photo upload failed:", uploadError);
+          const base64Data = await fileToBase64(uploadFile);
+          const uploadResult = await gasRequest("upload", {
+            filename: `inspection-${Date.now()}.${(uploadFile.name || "photo.jpg").split(".").pop() || "jpg"}`,
+            mimeType: uploadFile.type || "image/jpeg",
+            base64Data,
+          });
+          if (uploadResult?.data?.url) {
+            entry.photo_url = uploadResult.data.url;
           }
         } catch (uploadErr) {
           console.warn("Photo upload threw error:", uploadErr);
@@ -1852,26 +1852,10 @@ async function inspectionSaveEntry(e) {
           else if (typeof v === "string" && v.trim() === "") delete payload[k];
         });
       }
-      const q = supabaseClient.from("inspection_logbook");
-
-      const runWrite = async (data) =>
-        inspectionEditingId
-          ? await q.update(data).eq("id", inspectionEditingId)
-          : await q.insert(data);
-
-      let { error } = await runWrite(payload);
-      if (error) {
-        const msg = (error?.message || String(error)).toLowerCase();
-        const missingGeo = msg.includes("latitude") || msg.includes("longitude");
-        if (missingGeo) {
-          const payloadNoGeo = { ...payload };
-          delete payloadNoGeo.latitude;
-          delete payloadNoGeo.longitude;
-          const retry = await runWrite(payloadNoGeo);
-          if (retry.error) throw retry.error;
-        } else {
-          throw error;
-        }
+      if (inspectionEditingId) {
+        await gasRequest("update", { table: "inspection_logbook", id: inspectionEditingId, row: payload });
+      } else {
+        await gasRequest("insert", { table: "inspection_logbook", row: payload });
       }
       await inspectionLoadFromSupabase();
       inspectionRenderTable();
@@ -1900,7 +1884,7 @@ async function inspectionSaveEntry(e) {
         window.location.hash = "inspection";
         setInspectionTab("no-location");
         inspectionRenderTable();
-        
+
         setTimeout(() => {
           // Find the newly saved row based on io_number or highest id
           const idx = inspectionData.findIndex((r) => r.io_number === entry.io_number);
@@ -1918,8 +1902,8 @@ async function inspectionSaveEntry(e) {
       const msg = err?.message || String(err);
       const hint =
         msg.includes("policy") ||
-        msg.includes("RLS") ||
-        err?.code === "42501"
+          msg.includes("RLS") ||
+          err?.code === "42501"
           ? " Check Supabase: add anon RLS policy (see fsis.logger.sql)."
           : "";
       logbookShowToast(
@@ -2053,7 +2037,7 @@ function openInspectionDetailPanel(entry) {
     openIoBtn.onclick = () => {
       try {
         sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
-      } catch {}
+      } catch { }
       window.open("./inspection_io_fsis.html", "_blank");
     };
   }
@@ -2166,7 +2150,7 @@ function openOccupancyDetailPanel(entry) {
     openIoBtn.onclick = () => {
       try {
         sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
-      } catch {}
+      } catch { }
       window.open("./occupancy_io_fsis.html", "_blank");
     };
   }
@@ -2470,7 +2454,7 @@ function dmsToDecimal(dms, ref) {
 // Shared GPS extraction (used by both inspection and occupancy) to ensure consistent behavior.
 async function readGpsFromFile(file) {
   const exifrApi = window.exifr?.default || window.exifr;
-  
+
   const toFinite = (v) => {
     if (v == null) return null;
     if (typeof v === "number") return Number.isFinite(v) ? v : null;
@@ -2493,7 +2477,7 @@ async function readGpsFromFile(file) {
           if (plat != null && plng != null) return { lat: plat, lng: plng };
         }
       }
-      
+
       // Fallback to the dedicated gps() method if parse() didn't find it or wasn't available
       if (typeof exifrApi.gps === "function") {
         const gps = await exifrApi.gps(input);
@@ -2534,7 +2518,7 @@ async function readGpsFromFile(file) {
     try {
       objectUrl = URL.createObjectURL(file);
       const img = new Image();
-      
+
       await new Promise((resolve) => {
         img.onload = resolve;
         img.onerror = resolve;
@@ -2800,31 +2784,31 @@ function searchMapLocations(query) {
   const filtered = !q
     ? candidates
     : candidates.filter(({ type, r }) => {
-        const hay =
-          type === "inspection"
-            ? normalizeQuery(
-                [
-                  r.io_number,
-                  r.insp_owner,
-                  r.insp_owner_phone,
-                  r.business_name,
-                  inspectionFormatAddressDisplay(r),
-                  r.fsic_number,
-                  r.inspected_by,
-                ].join(" | ")
-              )
-            : normalizeQuery(
-                [
-                  r.io_number,
-                  r.owner_name,
-                  r.inspectors,
-                  r.remarks_signature,
-                  r.lat,
-                  r.lng,
-                ].join(" | ")
-              );
-        return hay.includes(q);
-      });
+      const hay =
+        type === "inspection"
+          ? normalizeQuery(
+            [
+              r.io_number,
+              r.insp_owner,
+              r.insp_owner_phone,
+              r.business_name,
+              inspectionFormatAddressDisplay(r),
+              r.fsic_number,
+              r.inspected_by,
+            ].join(" | ")
+          )
+          : normalizeQuery(
+            [
+              r.io_number,
+              r.owner_name,
+              r.inspectors,
+              r.remarks_signature,
+              r.lat,
+              r.lng,
+            ].join(" | ")
+          );
+      return hay.includes(q);
+    });
 
   // Convert back to a unified shape used by the UI list.
   return filtered
@@ -2833,13 +2817,13 @@ function searchMapLocations(query) {
       type === "inspection"
         ? { ...r, _mapType: "inspection" }
         : {
-            ...r,
-            insp_owner: r.owner_name,
-            business_name: "Residential",
-            fsic_number: "",
-            inspected_by: r.inspectors,
-            _mapType: "occupancy",
-          }
+          ...r,
+          insp_owner: r.owner_name,
+          business_name: "Residential",
+          fsic_number: "",
+          inspected_by: r.inspectors,
+          _mapType: "occupancy",
+        }
     );
 }
 
@@ -2929,45 +2913,9 @@ function inspectionPrintPanel() {
 }
 
 async function inspectionLoadFromSupabase() {
-  const baseSelect =
-    "id, io_number, owner_name, owner_phone, business_name, address, date_inspected, fsic_number, inspected_by, inspector_position, included_personnel_name, included_personnel_position, duration_start, duration_end, remarks, fsic_purpose, fsic_permit_type, fsic_valid_for, fsic_valid_until, fsic_fee_amount, fsic_fee_or_number, fsic_fee_date, photo_url, photo_taken_at, created_at";
-  // Geo columns vary across deployments:
-  // - New schema: latitude/longitude
-  // - Legacy schema: lat/lng
-  const selectWithGeo = `${baseSelect}, latitude, longitude`;
-  const selectWithGeoLegacy = `${baseSelect}, lat, lng`;
-  const selectWithoutGeo = baseSelect;
-
-  const INSPECTION_FETCH_LIMIT = 2000;
-  const run = async (select) =>
-    await supabaseClient
-      .from("inspection_logbook")
-      .select(select)
-      .order("created_at", { ascending: true })
-      .limit(INSPECTION_FETCH_LIMIT);
-
-  let rows;
-  {
-    const { data, error } = await run(selectWithGeo);
-    if (!error) rows = data;
-    else {
-      const msg = (error?.message || String(error)).toLowerCase();
-      const missingNewGeo = msg.includes("latitude") || msg.includes("longitude");
-      if (!missingNewGeo) throw error;
-
-      // Backward compatibility: try legacy lat/lng columns
-      const legacy = await run(selectWithGeoLegacy);
-      if (!legacy.error) rows = legacy.data;
-      else {
-        // Last fallback: no geo columns at all
-        const retry = await run(selectWithoutGeo);
-        if (retry.error) throw retry.error;
-        rows = retry.data;
-      }
-    }
-  }
-
-  inspectionData = (rows || []).map((r) => ({
+  const result = await gasRequest("read", { table: "inspection_logbook" });
+  const rows = result.data || [];
+  inspectionData = rows.map((r) => ({
     id: r.id,
     io_number: r.io_number,
     fsic_number: r.fsic_number,
@@ -2983,7 +2931,6 @@ async function inspectionLoadFromSupabase() {
     duration_start: r.duration_start || null,
     duration_end: r.duration_end || null,
     remarks: r.remarks || "",
-    // FSIC clearance / fees
     fsic_purpose: r.fsic_purpose ?? null,
     fsic_permit_type: r.fsic_permit_type ?? null,
     fsic_valid_for: r.fsic_valid_for ?? null,
@@ -2991,8 +2938,8 @@ async function inspectionLoadFromSupabase() {
     fsic_fee_amount: r.fsic_fee_amount ?? null,
     fsic_fee_or_number: r.fsic_fee_or_number ?? null,
     fsic_fee_date: r.fsic_fee_date ?? null,
-    lat: r.latitude ?? r.lat ?? null,
-    lng: r.longitude ?? r.lng ?? null,
+    lat: r.latitude ?? null,
+    lng: r.longitude ?? null,
     photo_url: r.photo_url ?? null,
     photo_taken_at: r.photo_taken_at ?? null,
     created_at: r.created_at,
@@ -3003,16 +2950,15 @@ function inspectionInitData() {
   if (inspectionDataLoaded) return;
   inspectionDataLoaded = true;
 
-  // Show cached data immediately so map and table feel instant
-  inspectionLoadFromLocal();
+  // Clear any stale cache from the old Supabase backend
+  localStorage.removeItem(INSPECTION_STORAGE_KEY);
   inspectionSetPrintDate();
   inspectionRenderTable();
   renderInspectionMarkersBatched();
   setInspectionTab(inspectionActiveTab);
 
-  if (!isSupabaseEnabled()) return;
+  if (!isGasEnabled()) return;
 
-  // Refresh from database in background; update UI when done
   (async () => {
     try {
       await inspectionLoadFromSupabase();
@@ -3021,8 +2967,8 @@ function inspectionInitData() {
       renderInspectionMarkersBatched();
       setInspectionTab(inspectionActiveTab);
     } catch (err) {
-      console.warn("Inspection refresh from database failed:", err);
-      logbookShowToast("inspection-toast", "Using cached data. Could not refresh from server.");
+      console.warn("Inspection load from GAS failed:", err);
+      logbookShowToast("inspection-toast", "Could not load data from server.");
     }
   })();
 }
@@ -3214,11 +3160,7 @@ function fsecDeleteEntry(idx) {
 
   (async () => {
     try {
-      const { error } = await supabaseClient
-        .from("fsec_building_plan_logbook")
-        .delete()
-        .eq("id", row.id);
-      if (error) throw error;
+      await gasRequest("delete", { table: "fsec_building_plan_logbook", id: row.id });
       await fsecLoadFromSupabase();
       fsecRenderTable();
       logbookShowToast("fsec-toast", "Record deleted.");
@@ -3374,8 +3316,8 @@ function fsecSaveEntry(e) {
       const msg = err?.message || String(err);
       const hint =
         msg.includes("policy") ||
-        msg.includes("RLS") ||
-        err?.code === "42501"
+          msg.includes("RLS") ||
+          err?.code === "42501"
           ? " Check Supabase: add anon RLS policy (see fsis.logger.sql)."
           : "";
       logbookShowToast("fsec-toast", "Save failed: " + msg + hint);
@@ -3483,14 +3425,8 @@ function occupancyClearFilters() {
 }
 
 async function fsecLoadFromSupabase() {
-  const { data: rows, error } = await supabaseClient
-    .from("fsec_building_plan_logbook")
-    .select(
-      "id, owner_name, proposed_project, address, date, contact_number, created_at"
-    )
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  fsecData = (rows || []).map((r) => ({
+  const result = await gasRequest("read", { table: "fsec_building_plan_logbook" });
+  fsecData = (result.data || []).map((r) => ({
     id: r.id,
     fsec_owner: r.owner_name,
     proposed_project: r.proposed_project,
@@ -3504,21 +3440,17 @@ async function fsecLoadFromSupabase() {
 async function fsecInitData() {
   if (fsecDataLoaded) return;
   fsecDataLoaded = true;
+  localStorage.removeItem("bfp_fsec");
+  fsecSetPrintDate();
+  fsecRenderTable();
+  if (!isGasEnabled()) return;
   try {
-    fsecLoadFromLocal();
+    await fsecLoadFromSupabase();
     fsecSetPrintDate();
     fsecRenderTable();
-    if (isSupabaseEnabled()) {
-      await fsecLoadFromSupabase();
-      fsecSetPrintDate();
-      fsecRenderTable();
-    }
   } catch (err) {
-    fsecLoadFromLocal();
-    console.warn("FSEC load failed, using local storage:", err);
-    logbookShowToast("fsec-toast", "Using data stored on this device.");
-    fsecSetPrintDate();
-    fsecRenderTable();
+    console.warn("FSEC load from GAS failed:", err);
+    logbookShowToast("fsec-toast", "Could not load data from server.");
   }
 }
 
@@ -3683,11 +3615,7 @@ function conveyanceDeleteEntry(idx) {
 
   (async () => {
     try {
-      const { error } = await supabaseClient
-        .from("conveyance_logbook")
-        .delete()
-        .eq("id", row.id);
-      if (error) throw error;
+      await gasRequest("delete", { table: "conveyance_logbook", id: row.id });
     } catch (err) {
       logbookShowToast("conveyance-toast", "⚠️ Delete failed: " + (err?.message || err));
     }
@@ -3748,31 +3676,22 @@ function conveyanceSaveEntry(e) {
       if (conveyanceEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
         delete payload.owner_name;
       }
-      const q = supabaseClient.from("conveyance_logbook");
-      const { error } = conveyanceEditingId
-        ? await q.update(payload).eq("id", conveyanceEditingId)
-        : await q.insert(payload);
-      if (error) throw error;
+      if (conveyanceEditingId) {
+        await gasRequest("update", { table: "conveyance_logbook", id: conveyanceEditingId, row: payload });
+      } else {
+        await gasRequest("insert", { table: "conveyance_logbook", row: payload });
+      }
       logbookShowToast("conveyance-toast", "Saved to database.");
     } catch (err) {
       const msg = err?.message || String(err);
-      const hint =
-        msg.includes("policy") || msg.includes("RLS") || err?.code === "42501"
-          ? " Check Supabase: add anon RLS policy (see fsis.logger.sql)."
-          : "";
-      logbookShowToast("conveyance-toast", "Save failed: " + msg + hint);
+      logbookShowToast("conveyance-toast", "Save failed: " + msg);
     }
   })();
 }
 
 async function conveyanceLoadFromSupabase() {
-  const { data: rows, error } = await supabaseClient
-    .from("conveyance_logbook")
-    .select("id, log_date, io_number, owner_name, inspectors, remarks_signature, created_at")
-    .order("created_at", { ascending: true })
-    .limit(2000);
-  if (error) throw error;
-  conveyanceData = (rows || []).map((r) => ({
+  const result = await gasRequest("read", { table: "conveyance_logbook" });
+  conveyanceData = (result.data || []).map((r) => ({
     id: r.id,
     log_date: r.log_date,
     io_number: r.io_number,
@@ -3787,17 +3706,15 @@ async function conveyanceLoadFromSupabase() {
 async function conveyanceInitData() {
   if (conveyanceDataLoaded) return;
   conveyanceDataLoaded = true;
+  localStorage.removeItem(CONVEYANCE_STORAGE_KEY);
+  conveyanceRenderTable();
+  if (!isGasEnabled()) return;
   try {
-    conveyanceLoadFromLocal();
+    await conveyanceLoadFromSupabase();
     conveyanceRenderTable();
-    if (isSupabaseEnabled()) {
-      await conveyanceLoadFromSupabase();
-      conveyanceRenderTable();
-    }
   } catch (err) {
-    conveyanceLoadFromLocal();
-    console.warn("Conveyance load failed, using local storage:", err);
-    logbookShowToast("conveyance-toast", "Using data stored on this device.");
+    console.warn("Conveyance load from GAS failed:", err);
+    logbookShowToast("conveyance-toast", "Could not load data from server.");
     conveyanceRenderTable();
   }
 }
@@ -4021,11 +3938,7 @@ function occupancyDeleteEntry(idx) {
 
   (async () => {
     try {
-      const { error } = await supabaseClient
-        .from("occupancy_logbook")
-        .delete()
-        .eq("id", row.id);
-      if (error) throw error;
+      await gasRequest("delete", { table: "occupancy_logbook", id: row.id });
     } catch (err) {
       logbookShowToast("occupancy-toast", "⚠️ Delete failed: " + (err?.message || err));
     }
@@ -4102,8 +4015,8 @@ async function occupancySaveEntry(e) {
 
   (async () => {
     try {
-      // If we have a photo file and Supabase Storage, upload and set entry.photo_url to public URL
-      if (occupancyExifFile && supabaseClient?.storage) {
+      // If we have a photo file and GAS is enabled, upload to Google Drive via GAS
+      if (occupancyExifFile && isGasEnabled()) {
         let uploadFile = occupancyExifFile;
         try {
           uploadFile = await sanitizeInspectionImage(uploadFile);
@@ -4111,24 +4024,14 @@ async function occupancySaveEntry(e) {
           console.warn("Occupancy image sanitization failed, using original:", sanitizeErr);
           uploadFile = occupancyExifFile;
         }
-        const fileExt =
-          (occupancyExifFile.name && occupancyExifFile.name.split(".").pop()) || "jpg";
-        const safeExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-        const path = `occupancy-photos/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
         try {
-          const { error: uploadError } = await supabaseClient.storage
-            .from("storage")
-            .upload(path, uploadFile, {
-              cacheControl: "3600",
-              upsert: false,
-              contentType: uploadFile.type || occupancyExifFile.type || "image/jpeg",
-            });
-          if (!uploadError) {
-            const { data: urlData } = supabaseClient.storage.from("storage").getPublicUrl(path);
-            if (urlData?.publicUrl) entry.photo_url = urlData.publicUrl;
-          } else {
-            console.warn("Occupancy photo upload failed:", uploadError);
-          }
+          const base64Data = await fileToBase64(uploadFile);
+          const uploadResult = await gasRequest("upload", {
+            filename: `occupancy-${Date.now()}.${(uploadFile.name || "photo.jpg").split(".").pop() || "jpg"}`,
+            mimeType: uploadFile.type || "image/jpeg",
+            base64Data,
+          });
+          if (uploadResult?.data?.url) entry.photo_url = uploadResult.data.url;
         } catch (uploadErr) {
           console.warn("Occupancy photo upload threw:", uploadErr);
         }
@@ -4145,39 +4048,13 @@ async function occupancySaveEntry(e) {
         photo_url: entry.photo_url ?? null,
         photo_taken_at: entry.photo_taken_at ?? null,
       };
-      // On UPDATE, don't overwrite optional owner_name with null/blank.
       if (occupancyEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
         delete payload.owner_name;
       }
-      const q = supabaseClient.from("occupancy_logbook");
-      const { error } = occupancyEditingId
-        ? await q.update(payload).eq("id", occupancyEditingId)
-        : await q.insert(payload);
-      if (error) {
-        const msg = (error?.message || String(error)).toLowerCase();
-        const missingGeo =
-          msg.includes("latitude") ||
-          msg.includes("longitude") ||
-          msg.includes("photo_url") ||
-          msg.includes("photo_taken_at");
-        if (!missingGeo) throw error;
-
-        // Backward compatibility: database exists but hasn't been migrated yet
-        const payloadCompat = { ...payload };
-        delete payloadCompat.latitude;
-        delete payloadCompat.longitude;
-        delete payloadCompat.photo_url;
-        delete payloadCompat.photo_taken_at;
-        if (
-          occupancyEditingId &&
-          (!payloadCompat.owner_name || String(payloadCompat.owner_name).trim() === "")
-        ) {
-          delete payloadCompat.owner_name;
-        }
-        const retry = occupancyEditingId
-          ? await q.update(payloadCompat).eq("id", occupancyEditingId)
-          : await q.insert(payloadCompat);
-        if (retry.error) throw retry.error;
+      if (occupancyEditingId) {
+        await gasRequest("update", { table: "occupancy_logbook", id: occupancyEditingId, row: payload });
+      } else {
+        await gasRequest("insert", { table: "occupancy_logbook", row: payload });
       }
       await occupancyLoadFromSupabase();
       occupancyRenderTable();
@@ -4212,48 +4089,15 @@ async function occupancySaveEntry(e) {
       }
     } catch (err) {
       const msg = err?.message || String(err);
-      const hint =
-        msg.includes("policy") || msg.includes("RLS") || err?.code === "42501"
-          ? " Check Supabase: add anon RLS policy (see fsis.logger.sql)."
-          : "";
-      logbookShowToast("occupancy-toast", "Save failed: " + msg + hint);
+      logbookShowToast("occupancy-toast", "Save failed: " + msg);
     }
   })();
 }
 
 async function occupancyLoadFromSupabase() {
-  const selectWithGeo =
-    "id, log_date, io_number, owner_name, inspectors, remarks_signature, latitude, longitude, photo_url, photo_taken_at, created_at";
-  const selectWithoutGeo =
-    "id, log_date, io_number, owner_name, inspectors, remarks_signature, created_at";
-
-  const run = async (select) =>
-    await supabaseClient
-      .from("occupancy_logbook")
-      .select(select)
-      .order("created_at", { ascending: true })
-      .limit(2000);
-
-  let rows;
-  {
-    const { data, error } = await run(selectWithGeo);
-    if (!error) rows = data;
-    else {
-      const msg = (error?.message || String(error)).toLowerCase();
-      const missingGeo =
-        msg.includes("latitude") ||
-        msg.includes("longitude") ||
-        msg.includes("photo_url") ||
-        msg.includes("photo_taken_at");
-      if (!missingGeo) throw error;
-
-      const retry = await run(selectWithoutGeo);
-      if (retry.error) throw retry.error;
-      rows = retry.data;
-    }
-  }
-
-  occupancyData = (rows || []).map((r) => ({
+  const result = await gasRequest("read", { table: "occupancy_logbook" });
+  const rows = result.data || [];
+  occupancyData = rows.map((r) => ({
     id: r.id,
     log_date: r.log_date,
     io_number: r.io_number,
@@ -4262,10 +4106,8 @@ async function occupancyLoadFromSupabase() {
     remarks_signature: r.remarks_signature,
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
-    photo_url:
-      r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
-    photo_taken_at:
-      r.latitude != null && r.longitude != null ? r.photo_taken_at ?? null : null,
+    photo_url: r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
+    photo_taken_at: r.latitude != null && r.longitude != null ? r.photo_taken_at ?? null : null,
     created_at: r.created_at,
   }));
   occupancySaveToLocal();
@@ -4274,19 +4116,17 @@ async function occupancyLoadFromSupabase() {
 async function occupancyInitData() {
   if (occupancyDataLoaded) return;
   occupancyDataLoaded = true;
+  localStorage.removeItem(OCCUPANCY_STORAGE_KEY);
+  occupancyRenderTable();
+  renderOccupancyMarkersBatched();
+  if (!isGasEnabled()) return;
   try {
-    occupancyLoadFromLocal();
+    await occupancyLoadFromSupabase();
     occupancyRenderTable();
     renderOccupancyMarkersBatched();
-    if (isSupabaseEnabled()) {
-      await occupancyLoadFromSupabase();
-      occupancyRenderTable();
-      renderOccupancyMarkersBatched();
-    }
   } catch (err) {
-    occupancyLoadFromLocal();
-    console.warn("Occupancy load failed, using local storage:", err);
-    logbookShowToast("occupancy-toast", "Using data stored on this device.");
+    console.warn("Occupancy load from GAS failed:", err);
+    logbookShowToast("occupancy-toast", "Could not load data from server.");
     occupancyRenderTable();
     renderOccupancyMarkersBatched();
   }

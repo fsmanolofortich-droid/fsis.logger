@@ -1,12 +1,22 @@
 const SESSION_KEY = "fsis.session";
-const SUPABASE_URL = "https://ezpwbgpbveazutmrnzlf.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6cHdiZ3BidmVhenV0bXJuemxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4Nzk2NDksImV4cCI6MjA4NzQ1NTY0OX0.C5118CQPYAqay0FhtmKdJyl9LKUHFzMnN5ecnAx1NU8";
 
-const supabaseClient =
-  window.supabase?.createClient && SUPABASE_URL && SUPABASE_ANON_KEY
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+// ── Google Apps Script backend ────────────────────────────────────────────────
+// Paste your deployed Web App URL below after deploying Code.gs
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyciiKsA8h82z8VdJHM1NFfFgdSxjWJ8kSfLHw9F6MmShYxXyJmf7qZbbLfWY3hkJyn/exec";
+
+async function gasRequest(action, payload) {
+  const res = await fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify({ action, ...(payload || {}) }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+
+function isGasEnabled() {
+  return Boolean(GAS_URL);
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -82,24 +92,15 @@ function init() {
       return;
     }
 
-    if (!supabaseClient) {
-      setError("Login service not available. Please try again later.");
+    if (!isGasEnabled()) {
+      setError("Login service not available. Please configure the GAS_URL.");
       return;
     }
 
     try {
-      const { data, error } = await supabaseClient.rpc("app_login", {
-        p_username: u,
-        p_password: p,
-      });
+      const result = await gasRequest("login", { username: u, password: p });
 
-      if (error) {
-        console.error(error);
-        setError("Login failed. Please try again.");
-        return;
-      }
-
-      const user = Array.isArray(data) ? data[0] : null;
+      const user = Array.isArray(result.data) ? result.data[0] : null;
       if (!user) {
         setError("Invalid username or password.");
         return;
@@ -117,7 +118,7 @@ function init() {
       redirectToHome();
     } catch (err) {
       console.error(err);
-      setError("Login failed. Please check your connection and try again.");
+      setError(err.message || "Login failed. Please check your connection and try again.");
     }
   });
 
@@ -140,7 +141,7 @@ function init() {
       }
       try {
         sessionStorage.setItem("fsis.admin.secret", secret);
-      } catch (_) {}
+      } catch (_) { }
       window.location.href = "./admin.html";
     });
   }
