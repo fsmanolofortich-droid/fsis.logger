@@ -243,13 +243,6 @@ function init() {
       if (loadingToast) loadingToast();
       showToast(`Welcome, ${user.display_name || user.username}!`, "success", 3000);
 
-      try {
-        const audio = new Audio('./fahhhhhhhhhhhhhh.mp3');
-        audio.play().catch(e => console.warn("Audio play failed:", e));
-      } catch (e) {
-        console.warn("Audio initialization failed:", e);
-      }
-
       setSession({
         userId: user.id,
         username: user.username,
@@ -259,8 +252,20 @@ function init() {
         rememberMe: remember,
       });
 
-      // Short delay so user sees the success toast
-      setTimeout(redirectToHome, 900);
+      // Play the success audio and wait for it to finish before redirecting.
+      try {
+        const audio = new Audio('./fahhhhhhhhhhhhhh.mp3');
+        audio.onended = redirectToHome; // Redirect when audio naturally finishes
+        
+        audio.play().catch(e => {
+          console.warn("Audio play failed:", e);
+          setTimeout(redirectToHome, 900); // Fallback if audio fails (browser block)
+        });
+      } catch (e) {
+        console.warn("Audio initialization failed:", e);
+        setTimeout(redirectToHome, 900);
+      }
+
 
     } catch (err) {
       console.error(err);
