@@ -1749,6 +1749,13 @@ body.is-map-view [data-view="map"] {
 
 
 @media (max-width: 768px) {
+  /* Keep logbook titles clear of the fixed burger button. */
+  .home-hero {
+    padding-left: 74px;
+    padding-top: 8px;
+    min-height: 54px;
+  }
+
   .form-section .form-grid {
     grid-template-columns: 1fr;
   }
