@@ -189,7 +189,7 @@
             <div class="panel-header">
               <div class="panel-title">
                 <span>Supplemental Logbook</span>
-                Conveyance Logbook
+                Conveyance Logbook <span class="record-badge" id="conveyance-record-count">0</span>
               </div>
               <button class="btn-panel-print" onclick="conveyancePrintPanel()">
                 <i class="bi bi-printer"></i> Print
@@ -197,15 +197,9 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-conveyance', 'conveyance_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-filter" onclick="toggleFilters('conveyance')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filter
-              </button>
               <button class="btn-panel-add" onclick="conveyanceOpenModal()">+ Add Entry</button>
             </div>
-            <div class="table-controls" id="filter-conveyance" aria-label="Conveyance filters" style="display: none;">
+            <div class="table-controls" id="filter-conveyance" aria-label="Conveyance filters">
               <div class="control">
                 <label for="conveyance-filter-q">Search</label>
                 <input id="conveyance-filter-q" type="search" class="form-control form-control-sm"
@@ -340,7 +334,7 @@
             <div class="panel-header">
               <div class="panel-title">
                 <span>Supplemental Logbook</span>
-                Occupancy Logbook
+                Occupancy Logbook <span class="record-badge" id="occupancy-record-count">0</span>
               </div>
               <button class="btn-panel-print" onclick="occupancyPrintPanel()">
                 <i class="bi bi-printer"></i> Print
@@ -348,15 +342,9 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-occupancy', 'occupancy_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-filter" onclick="toggleFilters('occupancy')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filter
-              </button>
               <button class="btn-panel-add" onclick="occupancyOpenModal()">+ Add Entry</button>
             </div>
-            <div class="table-controls" id="filter-occupancy" aria-label="Occupancy filters" style="display: none;">
+            <div class="table-controls" id="filter-occupancy" aria-label="Occupancy filters">
               <div class="control">
                 <label for="occupancy-filter-q">Search</label>
                 <input id="occupancy-filter-q" type="search" class="form-control form-control-sm"
@@ -418,25 +406,11 @@
       <div class="home-embed">
         <div id="inspection_list">
           <!-- Shared inspection filters (must stay accessible across tabs) -->
-          <div class="table-controls" id="filter-inspection" aria-label="Inspection filters" style="display: none;">
+          <div class="table-controls" id="filter-inspection" aria-label="Inspection filters">
             <div class="control">
               <label for="inspection-filter-q">Search</label>
               <input id="inspection-filter-q" type="search" class="form-control form-control-sm"
                 placeholder="Search IO, owner, business, address, FSIC, inspector">
-            </div>
-            <div class="control">
-              <label for="inspection-filter-barangay">Barangay</label>
-              <select id="inspection-filter-barangay" class="form-select form-select-sm"
-                aria-label="Filter by barangay">
-                <option value="">All barangays</option>
-              </select>
-            </div>
-            <div class="control">
-              <label for="inspection-filter-personnel">Personnel</label>
-              <select id="inspection-filter-personnel" class="form-select form-select-sm"
-                aria-label="Filter by personnel">
-                <option value="">All personnel</option>
-              </select>
             </div>
             <div class="control">
               <label for="inspection-filter-from">From</label>
@@ -483,12 +457,6 @@
               </button>
               <button class="btn-panel-print" onclick="exportTableToCSV('table-inspection', 'inspection_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
-              </button>
-              <button class="btn-panel-filter" onclick="toggleFilters('inspection')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filter
               </button>
               <button class="btn-panel-add" onclick="inspectionOpenModal()">+ Add Entry</button>
             </div>
@@ -553,12 +521,6 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-inspection-nophoto', 'inspection_nophoto_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-filter" onclick="toggleFilters('inspection')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filter
-              </button>
               <button class="btn-panel-add" onclick="inspectionOpenModal()">+ Add Entry</button>
             </div>
             <div class="table-wrap">
@@ -619,7 +581,7 @@
             <div class="panel-header">
               <div class="panel-title">
                 <span>Active Logbook</span>
-                FSEC Building Plan Logbook
+                FSEC Building Plan Logbook <span class="record-badge" id="fsec-record-count">0</span>
               </div>
               <button class="btn-panel-print" onclick="fsecPrintPanel()">
                 <i class="bi bi-printer"></i> Print
@@ -627,15 +589,9 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-fsec', 'fsec_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-filter" onclick="toggleFilters('fsec')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filter
-              </button>
               <button class="btn-panel-add" onclick="fsecOpenModal()">+ Add Entry</button>
             </div>
-            <div class="table-controls" id="filter-fsec" aria-label="FSEC filters" style="display: none;">
+            <div class="table-controls" id="filter-fsec" aria-label="FSEC filters">
               <div class="control">
                 <label for="fsec-filter-q">Search</label>
                 <input id="fsec-filter-q" type="search" class="form-control form-control-sm"

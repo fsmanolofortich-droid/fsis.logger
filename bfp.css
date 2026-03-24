@@ -530,19 +530,21 @@ table#table-fsec {
 
 /* Record-count badge (Inspection panel) */
 .record-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(193, 39, 45, 0.12);
-  color: var(--fire-dark);
-  border: 1px solid rgba(193, 39, 45, 0.25);
-  border-radius: 999px;
-  font-size: 0.68rem;
+  display: inline;
+  background: transparent;
+  color: #fff;
+  border: none;
+  border-radius: 0;
+  font-size: 0.88rem;
   font-weight: 700;
-  padding: 2px 8px;
-  letter-spacing: 0.04em;
+  padding: 0;
+  letter-spacing: 0.02em;
   vertical-align: middle;
-  margin-left: 6px;
+  margin-left: 2px;
+}
+
+.record-badge::before {
+  content: "Total ";
 }
 
 /* Filter result count bar */
