@@ -452,33 +452,45 @@ h2,
 .action-select {
   -webkit-appearance: none;
   appearance: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--navy);
-  background: rgba(13, 27, 42, 0.04);
-  border: 1px solid rgba(13, 27, 42, 0.18);
-  border-radius: 8px;
-  padding: 7px 32px 7px 10px;
-  min-height: 38px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: #2f6f2f;
+  border: 1px solid #3f8a3f;
+  border-radius: 6px;
+  padding: 9px 36px 9px 14px;
+  min-height: 42px;
+  min-width: 110px;
   cursor: pointer;
-  transition: background 0.18s, border-color 0.18s;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
   background-image:
-    linear-gradient(45deg, transparent 50%, rgba(13, 27, 42, 0.7) 50%),
-    linear-gradient(135deg, rgba(13, 27, 42, 0.7) 50%, transparent 50%);
-  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
-  background-size: 5px 5px, 5px 5px;
+    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.92) 50%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 50%, calc(100% - 10px) 50%;
+  background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
 }
 
 .action-select:hover {
-  background-color: rgba(13, 27, 42, 0.07);
-  border-color: rgba(13, 27, 42, 0.28);
+  background-color: #3a843a;
+  border-color: #4ea44e;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(47, 111, 47, 0.24);
 }
 
 .action-select:focus {
-  outline: 2px solid rgba(212, 168, 67, 0.7);
+  outline: 2px solid rgba(124, 223, 124, 0.5);
   outline-offset: 2px;
+}
+
+.action-select:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(47, 111, 47, 0.2);
 }
 
 /* ── Table extras ── */
@@ -1782,6 +1794,7 @@ body.is-map-view [data-view="map"] {
 
 /* ── Logbook section action columns ── */
 #table-inspection .col-action,
+#table-inspection-nophoto .col-action,
 #table-fsec .col-action,
 #table-conveyance .col-action,
 #table-occupancy .col-action {
