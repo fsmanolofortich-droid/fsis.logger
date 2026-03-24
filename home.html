@@ -411,6 +411,39 @@
 
       <div class="home-embed">
         <div id="inspection_list">
+          <!-- Shared inspection filters (must stay accessible across tabs) -->
+          <div class="table-controls" id="filter-inspection" aria-label="Inspection filters" style="display: none;">
+            <div class="control">
+              <label for="inspection-filter-q">Search</label>
+              <input id="inspection-filter-q" type="search" class="form-control form-control-sm"
+                placeholder="Search IO, owner, business, address, FSIC, inspector">
+            </div>
+            <div class="control">
+              <label for="inspection-filter-barangay">Barangay</label>
+              <select id="inspection-filter-barangay" class="form-select form-select-sm"
+                aria-label="Filter by barangay">
+                <option value="">All barangays</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="inspection-filter-personnel">Personnel</label>
+              <select id="inspection-filter-personnel" class="form-select form-select-sm"
+                aria-label="Filter by personnel">
+                <option value="">All personnel</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="inspection-filter-from">From</label>
+              <input id="inspection-filter-from" type="date" class="form-control form-control-sm">
+            </div>
+            <div class="control">
+              <label for="inspection-filter-to">To</label>
+              <input id="inspection-filter-to" type="date" class="form-control form-control-sm">
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+              onclick="inspectionClearFilters()">Clear</button>
+          </div>
           <!-- Inspection Logbook Panel -->
           <div class="logbook-panel visible" id="panel-inspection">
             <div class="print-header">
@@ -449,38 +482,6 @@
                 Filter
               </button>
               <button class="btn-panel-add" onclick="inspectionOpenModal()">+ Add Entry</button>
-            </div>
-            <div class="table-controls" id="filter-inspection" aria-label="Inspection filters" style="display: none;">
-              <div class="control">
-                <label for="inspection-filter-q">Search</label>
-                <input id="inspection-filter-q" type="search" class="form-control form-control-sm"
-                  placeholder="Search IO, owner, business, address, FSIC, inspector">
-              </div>
-              <div class="control">
-                <label for="inspection-filter-barangay">Barangay</label>
-                <select id="inspection-filter-barangay" class="form-select form-select-sm"
-                  aria-label="Filter by barangay">
-                  <option value="">All barangays</option>
-                </select>
-              </div>
-              <div class="control">
-                <label for="inspection-filter-personnel">Personnel</label>
-                <select id="inspection-filter-personnel" class="form-select form-select-sm"
-                  aria-label="Filter by personnel">
-                  <option value="">All personnel</option>
-                </select>
-              </div>
-              <div class="control">
-                <label for="inspection-filter-from">From</label>
-                <input id="inspection-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="inspection-filter-to">To</label>
-                <input id="inspection-filter-to" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
-                onclick="inspectionClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-inspection" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -539,6 +540,12 @@
               </div>
               <button class="btn-panel-print" onclick="inspectionPrintPanel()">
                 <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-filter" onclick="toggleFilters('inspection')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filter
               </button>
               <button class="btn-panel-add" onclick="inspectionOpenModal()">+ Add Entry</button>
             </div>
