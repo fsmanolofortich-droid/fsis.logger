@@ -504,6 +504,103 @@
     setText("io_duration_end", formatDateISOToLong(durationEnd));
     // Don't override the template's default Occupancy remarks block unless a custom value is provided.
     if (entry.io_remarks) setText("io_remarks", String(entry.io_remarks));
+
+    // Save Logic
+    function getById(id) {
+      const el = document.getElementById(id);
+      return el ? el.textContent.trim() : "";
+    }
+
+    function sendSave() {
+      if (!entry) return;
+      const payload = {
+        io_number: getById("io_number"),
+        log_date: getById("io_date"), // Re-map formatted date if desired or just let DB keep original
+        inspectors: getById("io_to_name"),
+        inspector_position: getById("io_to_position"),
+        included_personnel_name: getById("io_included_name"),
+        included_personnel_position: getById("io_included_position"),
+        duration_start: getById("io_duration_start"),
+        duration_end: getById("io_duration_end"),
+        io_remarks: getById("io_remarks")
+      };
+
+      try {
+        window.opener?.postMessage({
+          type: "fsis_io_save",
+          table: "occupancy_logbook",
+          entryId: entry.id || null,
+          io_number: entry.io_number || null,
+          payload: payload
+        }, "*");
+        showInlineNotice("Saving…");
+      } catch (err) {
+        showInlineNotice("Save failed: " + (err?.message || err));
+      }
+    }
+
+    function showInlineNotice(msg) {
+      const st = document.getElementById("fsisSaveStatus");
+      if (!st) return;
+      if (!msg) {
+        st.style.display = "none";
+      } else {
+        st.textContent = msg;
+        st.style.display = "block";
+      }
+    }
+
+    // Add a fixed save button
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "fsisSaveBtn";
+    btn.textContent = "Save to Database";
+    btn.style.position = "fixed";
+    btn.style.right = "16px";
+    btn.style.bottom = "16px";
+    btn.style.zIndex = "9999";
+    btn.style.padding = "10px 14px";
+    btn.style.borderRadius = "10px";
+    btn.style.border = "1px solid rgba(0,0,0,0.25)";
+    btn.style.background = "#0D1B2A";
+    btn.style.color = "#fff";
+    btn.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+    btn.style.fontSize = "14px";
+    btn.style.cursor = "pointer";
+    btn.onclick = sendSave;
+
+    const status = document.createElement("div");
+    status.id = "fsisSaveStatus";
+    status.style.position = "fixed";
+    status.style.right = "16px";
+    status.style.bottom = "58px";
+    status.style.zIndex = "9999";
+    status.style.maxWidth = "280px";
+    status.style.padding = "8px 10px";
+    status.style.borderRadius = "10px";
+    status.style.border = "1px solid rgba(0,0,0,0.12)";
+    status.style.background = "rgba(255,255,255,0.95)";
+    status.style.color = "#111827";
+    status.style.fontFamily = btn.style.fontFamily;
+    status.style.fontSize = "12px";
+    status.style.display = "none";
+
+    document.body.appendChild(btn);
+    document.body.appendChild(status);
+
+    window.addEventListener("message", function (ev) {
+      const d = ev?.data;
+      if (!d || d.type !== "fsis_io_save_result") return;
+      if (d.ok) showInlineNotice("Saved.");
+      else showInlineNotice("Save failed: " + (d.message || ""));
+      setTimeout(() => showInlineNotice(""), 2000);
+    });
+
+    // Hide controls in print
+    const style = document.createElement("style");
+    style.textContent = "@media print { #fsisSaveBtn, #fsisSaveStatus { display: none !important; } }";
+    document.head.appendChild(style);
+
   })();
 
   // When opened with ?download=pdf, generate PDF from this page and download.

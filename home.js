@@ -1434,6 +1434,11 @@ window.addEventListener("message", (ev) => {
 
   // FSIC clearance / fees
   if (has("fsic_number")) updates.fsic_number = (payload.fsic_number || "").toString().trim();
+  if (has("fsic_purpose")) updates.fsic_purpose = (payload.fsic_purpose || "").toString().trim();
+  if (has("fsic_valid_until")) updates.fsic_valid_until = normalizeDate(payload.fsic_valid_until);
+  if (has("fsic_fee_amount")) updates.fsic_fee_amount = normalizeAmount(payload.fsic_fee_amount);
+  if (has("fsic_fee_or_number")) updates.fsic_fee_or_number = (payload.fsic_fee_or_number || "").toString().trim();
+  if (has("fsic_fee_date")) updates.fsic_fee_date = normalizeDate(payload.fsic_fee_date);
 
   // Update in-memory + local cache immediately for responsiveness
   // Update in-memory fields using app naming (insp_owner / insp_address).
@@ -1474,6 +1479,97 @@ window.addEventListener("message", (ev) => {
       respond(false, msg);
     }
   })();
+});
+
+// Receive IO edits from `inspection_io_fsis.html` and `occupancy_io_fsis.html` and persist them.
+window.addEventListener("message", (ev) => {
+  const d = ev?.data;
+  if (!d || d.type !== "fsis_io_save") return;
+
+  const payload = d.payload || {};
+  const entryId = d.entryId || null;
+  const ioNumber = d.io_number || null;
+  const table = d.table || "inspection_logbook"; 
+
+  function respond(ok, message) {
+    try {
+      ev.source?.postMessage({ type: "fsis_io_save_result", ok, message }, "*");
+    } catch {
+      // ignore
+    }
+  }
+
+  function normalizeDate(value) {
+    if (!value) return null;
+    const s = String(value).trim();
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const dt = new Date(s);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt.toISOString().slice(0, 10);
+  }
+
+  let ds, idx;
+  if (table === "occupancy_logbook") {
+    ds = occupancyData;
+    idx = Array.isArray(ds) ? ds.findIndex((r) => (entryId && r?.id === entryId) || (ioNumber && r?.io_number === ioNumber)) : -1;
+  } else {
+    ds = inspectionData;
+    idx = Array.isArray(ds) ? ds.findIndex((r) => (entryId && r?.id === entryId) || (ioNumber && r?.io_number === ioNumber)) : -1;
+  }
+
+  if (idx < 0) {
+    respond(false, "Cannot find matching IO record.");
+    return;
+  }
+
+  const updates = {};
+  const has = (k) => Object.prototype.hasOwnProperty.call(payload, k);
+
+  if (has("io_number")) updates.io_number = (payload.io_number || "").toString().trim();
+  if (has("date_inspected") && table === "inspection_logbook") updates.date_inspected = normalizeDate(payload.date_inspected);
+  if (has("log_date") && table === "occupancy_logbook") updates.log_date = normalizeDate(payload.log_date);
+  
+  if (has("inspectors")) updates.inspectors = (payload.inspectors || "").toString().trim();
+  if (has("inspector_position")) updates.inspector_position = (payload.inspector_position || "").toString().trim();
+  if (has("included_personnel_name")) updates.included_personnel_name = (payload.included_personnel_name || "").toString().trim();
+  if (has("included_personnel_position")) updates.included_personnel_position = (payload.included_personnel_position || "").toString().trim();
+  if (has("duration_start")) updates.duration_start = normalizeDate(payload.duration_start);
+  if (has("duration_end")) updates.duration_end = normalizeDate(payload.duration_end);
+  if (has("io_remarks")) updates.io_remarks = (payload.io_remarks || "").toString().trim();
+
+  // Update in-memory + local cache
+  ds[idx] = { ...ds[idx], ...updates };
+  
+  if (table === "occupancy_logbook") {
+    occupancySaveToLocal();
+    occupancyRenderTable?.();
+  } else {
+    inspectionSaveToLocal();
+    inspectionRenderTable?.();
+  }
+
+  if (!isSupabaseEnabled()) {
+    logbookShowToast?.("inspection-toast", "Saved on this device only (offline mode).");
+    respond(true, "Saved locally (offline mode).");
+    return;
+  }
+
+  const row = ds[idx];
+  if (!row?.id) {
+    respond(false, "No valid ID for cloud update.");
+    return;
+  }
+
+  app_save(row.id, updates, table)
+    .then((res) => {
+      if (res?.error) throw new Error(res.error);
+      respond(true, "Saved to database!");
+    })
+    .catch((err) => {
+      console.error("IO Save error:", err);
+      respond(false, err?.message || "Failed to save to cloud");
+    });
 });
 
 async function inspectionDownloadPdf(idx) {
