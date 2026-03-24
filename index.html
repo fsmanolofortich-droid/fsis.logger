@@ -17,14 +17,14 @@
     :root {
       --navy:        #0D1B2A;
       --navy-mid:    #162234;
-      --navy-border: rgba(255,255,255,0.07);
+      --navy-border: rgba(13,27,42,0.1);
       --fire:        #C1272D;
       --fire-light:  #E8424A;
       --gold:        #D4A843;
       --gold-light:  #F0C96A;
       --cream:       #FAF7F2;
       --bs-primary:  #C1272D;
-      --bs-body-bg:  #0D1B2A;
+      --bs-body-bg:  #FAF7F2;
       --bs-body-font-family: 'DM Sans', system-ui, sans-serif;
     }
 
@@ -33,30 +33,16 @@
     html, body { height: 100%; margin: 0; }
     body {
       font-family: 'DM Sans', sans-serif;
-      background: var(--navy);
-      color: #e8e4dd;
+      background: var(--cream);
+      color: var(--navy);
       display: flex;
       flex-direction: column;
     }
 
-    /* ── Animated background grid ─────────────────────── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(193,39,45,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(193,39,45,0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
     /* ── Navbar ───────────────────────────────────────── */
     .bfp-navbar {
-      background: rgba(13,27,42,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--navy-border);
+      background: var(--navy);
+      border-bottom: 2px solid var(--gold);
       z-index: 10;
       position: relative;
     }
@@ -74,7 +60,6 @@
       text-transform: uppercase;
       font-weight: 500;
     }
-    .bfp-navbar img { filter: drop-shadow(0 0 6px rgba(193,39,45,0.5)); }
 
     /* ── Login wrapper ────────────────────────────────── */
     .login-wrapper {
@@ -91,78 +76,75 @@
     .login-card {
       width: 100%;
       max-width: 420px;
-      background: rgba(22, 34, 52, 0.85);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(212,168,67,0.18);
-      border-radius: 18px;
-      box-shadow:
-        0 24px 64px rgba(0,0,0,0.5),
-        0 0 0 1px rgba(255,255,255,0.03) inset;
+      background: #ffffff;
+      border: 1px solid rgba(212,168,67,0.3);
+      border-radius: 14px;
+      box-shadow: 0 16px 48px rgba(13,27,42,0.08);
       overflow: hidden;
     }
     .card-top-accent {
       height: 4px;
       background: linear-gradient(90deg, var(--fire), var(--gold), var(--fire-light));
     }
-    .card-body-inner { padding: 2rem 2rem 1.75rem; }
+    .card-body-inner { padding: 2.25rem 2rem 2rem; }
 
     /* ── Title ────────────────────────────────────────── */
     .login-icon {
       width: 52px; height: 52px;
       background: linear-gradient(135deg, var(--fire), var(--fire-light));
-      border-radius: 14px;
+      border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       font-size: 1.5rem; color: #fff;
-      box-shadow: 0 8px 24px rgba(193,39,45,0.4);
-      margin-bottom: 1.1rem;
+      box-shadow: 0 6px 16px rgba(193,39,45,0.25);
+      margin-bottom: 1rem;
     }
     .login-title {
       font-family: 'Playfair Display', serif;
-      font-size: 1.4rem;
+      font-size: 1.45rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--navy);
       margin-bottom: 0.25rem;
     }
-    .login-subtitle { font-size: 0.82rem; color: #8fa8c0; }
+    .login-subtitle { font-size: 0.85rem; color: #666; }
 
     /* ── Alert ────────────────────────────────────────── */
     #loginError {
       display: none;
-      background: rgba(193,39,45,0.15);
-      border: 1px solid rgba(193,39,45,0.4);
-      border-radius: 10px;
-      color: #ff9aa0;
-      font-size: 0.83rem;
+      background: #fdf2f2;
+      border: 1px solid #f8cbcb;
+      border-radius: 8px;
+      color: var(--fire);
+      font-size: 0.85rem;
       padding: 0.6rem 0.85rem;
       margin-bottom: 1.1rem;
     }
 
     /* ── Form labels ──────────────────────────────────── */
     .form-label {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #8fa8c0;
+      letter-spacing: 0.08em;
+      color: #555;
       font-weight: 600;
       margin-bottom: 0.4rem;
     }
 
     /* ── Inputs ───────────────────────────────────────── */
     .form-control {
-      background: rgba(13,27,42,0.6);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 10px;
-      color: #e8e4dd;
-      padding: 0.6rem 0.85rem;
-      font-size: 0.9rem;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      color: #333;
+      padding: 0.65rem 0.85rem;
+      font-size: 0.95rem;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .form-control::placeholder { color: #4a6a85; }
+    .form-control::placeholder { color: #aaa; }
     .form-control:focus {
-      background: rgba(13,27,42,0.8);
-      border-color: rgba(212,168,67,0.5);
-      box-shadow: 0 0 0 3px rgba(212,168,67,0.12);
-      color: #fff;
+      background: #fff;
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(13,27,42,0.1);
+      color: #333;
       outline: none;
     }
     .form-control.is-invalid {
@@ -184,25 +166,25 @@
       transform: translateY(-50%);
       background: none;
       border: none;
-      color: #4a6a85;
+      color: #777;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 1.1rem;
       padding: 0;
       line-height: 1;
       transition: color 0.15s;
     }
-    .toggle-pw:hover { color: var(--gold-light); }
+    .toggle-pw:hover { color: var(--navy); }
 
     /* ── Remember me ──────────────────────────────────── */
     .form-check-input {
-      background-color: rgba(13,27,42,0.6);
-      border-color: rgba(255,255,255,0.2);
+      background-color: #fff;
+      border-color: #ccc;
     }
     .form-check-input:checked {
       background-color: var(--fire);
       border-color: var(--fire);
     }
-    .form-check-label { font-size: 0.83rem; color: #8fa8c0; }
+    .form-check-label { font-size: 0.85rem; color: #555; }
 
     /* ── Submit button ────────────────────────────────── */
     .btn-fire {
@@ -210,18 +192,18 @@
       border: none;
       color: #fff;
       font-weight: 600;
-      letter-spacing: 0.04em;
-      border-radius: 50px;
-      padding: 0.65rem 1rem;
-      font-size: 0.92rem;
-      box-shadow: 0 8px 24px rgba(193,39,45,0.35);
-      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      letter-spacing: 0.02em;
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      font-size: 0.95rem;
+      box-shadow: 0 6px 16px rgba(193,39,45,0.25);
+      transition: transform 0.1s, box-shadow 0.1s, opacity 0.15s;
       position: relative;
     }
     .btn-fire:hover:not(:disabled) {
       color: #fff;
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px rgba(193,39,45,0.45);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(193,39,45,0.35);
     }
     .btn-fire:active:not(:disabled) { transform: translateY(0); }
     .btn-fire:disabled { opacity: 0.7; cursor: not-allowed; }
@@ -253,22 +235,22 @@
 
     /* ── Admin gate ───────────────────────────────────── */
     #adminSecretGate {
-      margin-top: 1rem;
+      margin-top: 1.25rem;
       padding: 1rem;
-      background: rgba(0,0,0,0.25);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 10px;
+      background: #fafaf8;
+      border: 1px solid #eee;
+      border-radius: 8px;
     }
-    #adminSecretGate .form-label { color: var(--gold-light); }
+    #adminSecretGate .form-label { color: var(--navy); }
     #adminSecretGate .form-control { font-size: 0.85rem; }
 
     /* ── Footer ───────────────────────────────────────── */
     footer {
       text-align: center;
-      padding: 0.9rem 1rem;
-      font-size: 0.72rem;
-      color: #3a5570;
-      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 1rem;
+      font-size: 0.75rem;
+      color: #777;
+      border-top: 1px solid rgba(13,27,42,0.05);
       position: relative;
       z-index: 1;
     }
@@ -290,11 +272,11 @@
       align-items: flex-start;
       gap: 0.65rem;
       padding: 0.75rem 1rem;
-      border-radius: 12px;
-      font-size: 0.84rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
       font-weight: 500;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      background: #fff;
       border-left: 4px solid transparent;
       animation: toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
       cursor: pointer;
@@ -310,22 +292,19 @@
       to { opacity: 0; transform: translateX(40px) scale(0.9); }
     }
     .fsis-toast.toast-error {
-      background: rgba(30, 10, 12, 0.92);
       border-left-color: var(--fire);
-      color: #ffc8cb;
+      color: var(--fire);
     }
     .fsis-toast.toast-success {
-      background: rgba(10, 30, 18, 0.92);
       border-left-color: #2ecc71;
-      color: #a8f5c8;
+      color: #1b8a47;
     }
     .fsis-toast.toast-info {
-      background: rgba(10, 20, 36, 0.92);
       border-left-color: #3490dc;
-      color: #a8d4f5;
+      color: #205c8d;
     }
     .fsis-toast .toast-icon { font-size: 1.1rem; line-height: 1; padding-top: 1px; }
-    .fsis-toast .toast-msg { flex: 1; line-height: 1.4; }
+    .fsis-toast .toast-msg { flex: 1; line-height: 1.4; color: #444; }
   </style>
 </head>
 <body>
@@ -393,7 +372,7 @@
         </button>
       </form>
 
-      <p class="text-muted mt-3 mb-0" style="font-size:0.78rem; color:#3a5570 !important;">
+      <p class="text-muted mt-3 mb-0" style="font-size:0.8rem;">
         <i class="bi bi-info-circle me-1"></i>
         Accounts are managed by your system administrator.
       </p>
@@ -408,8 +387,7 @@
             placeholder="Enter admin secret"
             autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
-        <button type="button" id="openAdminBtn" class="btn btn-sm w-100"
-          style="background:rgba(212,168,67,0.15);border:1px solid rgba(212,168,67,0.3);color:var(--gold-light);border-radius:8px;">
+        <button type="button" id="openAdminBtn" class="btn btn-sm btn-outline-secondary w-100">
           <i class="bi bi-speedometer2 me-1"></i> Open Admin Dashboard
         </button>
       </div>
