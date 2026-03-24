@@ -4154,3 +4154,38 @@ async function occupancyInitData() {
     renderOccupancyMarkersBatched();
   }
 }
+
+// --- CSV Export Utility ---
+function exportTableToCSV(tableId, filename) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const rows = table.querySelectorAll('tr');
+  const csv = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = [], cols = rows[i].querySelectorAll('td, th');
+    for (let j = 0; j < cols.length; j++) {
+      let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ');
+      data = data.replace(/"/g, '""');
+      row.push('"' + data + '"');
+    }
+    csv.push(row.join(','));
+  }
+  const csvString = csv.join('\n');
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  // IE11 & Edge support
+  if (navigator.msSaveBlob) {
+    navigator.msSaveBlob(blob, filename);
+  } else {
+    // Other browsers
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
+}

@@ -194,6 +194,9 @@
               <button class="btn-panel-print" onclick="conveyancePrintPanel()">
                 <i class="bi bi-printer"></i> Print
               </button>
+              <button class="btn-panel-print" onclick="exportTableToCSV('table-conveyance', 'conveyance_logbook.csv')">
+                <i class="bi bi-download"></i> CSV
+              </button>
               <button class="btn-panel-filter" onclick="toggleFilters('conveyance')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -342,6 +345,9 @@
               <button class="btn-panel-print" onclick="occupancyPrintPanel()">
                 <i class="bi bi-printer"></i> Print
               </button>
+              <button class="btn-panel-print" onclick="exportTableToCSV('table-occupancy', 'occupancy_logbook.csv')">
+                <i class="bi bi-download"></i> CSV
+              </button>
               <button class="btn-panel-filter" onclick="toggleFilters('occupancy')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -475,6 +481,9 @@
               <button class="btn-panel-print" onclick="inspectionPrintPanel()">
                 <i class="bi bi-printer"></i> Print
               </button>
+              <button class="btn-panel-print" onclick="exportTableToCSV('table-inspection', 'inspection_logbook.csv')">
+                <i class="bi bi-download"></i> CSV
+              </button>
               <button class="btn-panel-filter" onclick="toggleFilters('inspection')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -540,6 +549,9 @@
               </div>
               <button class="btn-panel-print" onclick="inspectionPrintPanel()">
                 <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-print" onclick="exportTableToCSV('table-inspection-nophoto', 'inspection_nophoto_logbook.csv')">
+                <i class="bi bi-download"></i> CSV
               </button>
               <button class="btn-panel-filter" onclick="toggleFilters('inspection')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -611,6 +623,9 @@
               </div>
               <button class="btn-panel-print" onclick="fsecPrintPanel()">
                 <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-print" onclick="exportTableToCSV('table-fsec', 'fsec_logbook.csv')">
+                <i class="bi bi-download"></i> CSV
               </button>
               <button class="btn-panel-filter" onclick="toggleFilters('fsec')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
