@@ -1400,7 +1400,35 @@ body.is-map-view [data-view="map"] {
   transform: scale(1.35);
 }
 
+.occupancy-marker.is-hover .occupancy-marker-thumb {
+  transform: scale(1.22);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
+  border-color: #93c5fd;
+}
+
+.occupancy-marker.is-hover .occupancy-marker-pin {
+  transform: scale(1.35);
+}
+
 .inspection-marker-tooltip {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  background: rgba(13, 27, 42, 0.95);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+  transform: translateY(4px);
+}
+
+.occupancy-marker-tooltip {
   font-size: 0.78rem;
   font-weight: 600;
   padding: 5px 10px;
@@ -1422,10 +1450,21 @@ body.is-map-view [data-view="map"] {
   will-change: opacity, transform;
 }
 
+.leaflet-tooltip.occupancy-marker-tooltip {
+  will-change: opacity, transform;
+}
+
 .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-right,
 .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-left,
 .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-top,
 .leaflet-tooltip.inspection-marker-tooltip.leaflet-tooltip-bottom {
+  transform: translateY(0);
+}
+
+.leaflet-tooltip.occupancy-marker-tooltip.leaflet-tooltip-right,
+.leaflet-tooltip.occupancy-marker-tooltip.leaflet-tooltip-left,
+.leaflet-tooltip.occupancy-marker-tooltip.leaflet-tooltip-top,
+.leaflet-tooltip.occupancy-marker-tooltip.leaflet-tooltip-bottom {
   transform: translateY(0);
 }
 

@@ -2726,6 +2726,27 @@ function addOccupancyMarkerFromEntry(entry) {
 
   const title = entry.owner_name || entry.io_number || "Occupancy";
   const marker = L.marker([entry.lat, entry.lng], { icon }).addTo(occupancyMarkersLayer);
+
+  const tooltipText = entry.owner_name || entry.io_number || "Occupancy";
+  marker.bindTooltip(tooltipText, {
+    permanent: false,
+    direction: "top",
+    offset: [0, -36],
+    opacity: 0.95,
+    className: "occupancy-marker-tooltip",
+  });
+
+  marker.on("mouseover", () => {
+    marker.setZIndexOffset(1000);
+    const el = marker.getElement?.();
+    if (el) el.classList.add("is-hover");
+  });
+  marker.on("mouseout", () => {
+    marker.setZIndexOffset(0);
+    const el = marker.getElement?.();
+    if (el) el.classList.remove("is-hover");
+  });
+
   marker.bindPopup(`<strong>${logbookEsc(title)}</strong><br>${logbookEsc(entry.io_number || "")}`);
   marker.on("click", () => {
     openOccupancyDetailPanel(entry);
