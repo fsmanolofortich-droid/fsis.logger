@@ -3963,7 +3963,7 @@ function occupancyRenderTable() {
           row.io_number,
           row.owner_name,
           row.owner_phone,
-          row.business_name,
+          row.type_of_occupancy,
           row.fsic_number,
           row.inspectors,
           row.remarks_signature,
@@ -3998,7 +3998,6 @@ function occupancyRenderTable() {
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Owner">${logbookEsc(row.owner_name)}</td>
       <td data-label="Owner Phone">${logbookEsc(row.owner_phone)}</td>
-      <td data-label="Residential / Property"><strong>${logbookEsc(row.business_name)}</strong></td>
       <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="Type">${logbookEsc(row.type_of_occupancy)}</td>
@@ -4062,7 +4061,6 @@ function occupancyEditEntry(idx) {
   setVal("occupancy_fsic_number", row.fsic_number);
   setVal("occupancy_owner_name", row.owner_name);
   setVal("occupancy_owner_phone", row.owner_phone);
-  setVal("occupancy_property_name", row.business_name);
   
   ensureSelectOption("occupancy_addr_barangay", row.addr_barangay || "");
   setVal("occupancy_addr_line", row.addr_line);
@@ -4163,7 +4161,7 @@ function occupancyOpenModal() {
   if (date) date.value = new Date().toISOString().slice(0, 10);
   const getEl = (id) => document.getElementById(id);
   const clearVals = ["occupancy_io_number", "occupancy_fsic_number", "occupancy_owner_name", 
-    "occupancy_owner_phone", "occupancy_property_name", "occupancy_addr_line", 
+    "occupancy_owner_phone", "occupancy_addr_line", 
     "occupancy_inspector_position", "occupancy_included_personnel_position", 
     "occupancy_duration_start", "occupancy_duration_end"];
   clearVals.forEach(id => {
@@ -4248,7 +4246,6 @@ async function occupancySaveEntry(e) {
     fsic_number: (document.getElementById("occupancy_fsic_number") || { value: "" }).value.trim(),
     owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
     owner_phone: (document.getElementById("occupancy_owner_phone") || { value: "" }).value.trim(),
-    business_name: (document.getElementById("occupancy_property_name") || { value: "" }).value.trim(),
     type_of_occupancy: (document.getElementById("occupancy_type_of_occupancy") || { value: "" }).value.trim(),
     addr_barangay: barangay,
     addr_line: line,
@@ -4351,7 +4348,7 @@ async function occupancySaveEntry(e) {
         fsic_number: entry.fsic_number || null,
         owner_name: entry.owner_name || null,
         owner_phone: entry.owner_phone || null,
-        business_name: entry.business_name || null,
+        business_name: null, // Removed field
         type_of_occupancy: entry.type_of_occupancy || null,
         address: entry.addr_line || null, // Mapping addr_line to address for consistency
         inspectors: entry.inspectors,
