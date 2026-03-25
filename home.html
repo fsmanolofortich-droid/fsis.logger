@@ -106,9 +106,22 @@
           aria-label="Search marked locations" autocomplete="off">
         <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
         <div class="map-filter" role="group" aria-label="Map markers filter">
-          <button type="button" class="map-filter-btn is-active" data-map-filter="all">All</button>
-          <button type="button" class="map-filter-btn" data-map-filter="businesses">Businesses</button>
-          <button type="button" class="map-filter-btn" data-map-filter="residential">Residential</button>
+          <select id="map-filter-select" class="form-select form-select-sm" onchange="applyMapMarkerFilter(this.value)">
+            <option value="all">All</option>
+            <option value="businesses">Businesses (Inspection)</option>
+            <option value="occupancies">All Occupancies</option>
+            <optgroup label="By Type">
+              <option value="Mercantile">Mercantile</option>
+              <option value="Storage">Storage</option>
+              <option value="Places of Assembly">Places of Assembly</option>
+              <option value="Business">Business</option>
+              <option value="Institutional">Institutional</option>
+              <option value="Residential">Residential</option>
+              <option value="Health Care">Health Care</option>
+              <option value="Industrial">Industrial</option>
+              <option value="Miscellaneous">Miscellaneous</option>
+            </optgroup>
+          </select>
         </div>
       </div>
       <div class="map-layout">
@@ -276,17 +289,25 @@
                         <input type="text" id="conveyance_owner_name" class="form-control"
                           placeholder="Full name of owner">
                       </div>
-                      <div class="col-12">
-                        <label class="form-label" for="conveyance_inspectors">Name of Inspectors (2 or more)</label>
-                        <div class="input-group mb-2">
-                          <select id="conveyance_inspector_select" class="form-select"
-                            aria-label="Select inspector to add">
-                            <option value="">Select inspector</option>
-                          </select>
-                          <button type="button" class="btn-add-inline" onclick="conveyanceAddInspector()">Add</button>
-                        </div>
-                        <textarea id="conveyance_inspectors" class="form-control" rows="2"
-                          placeholder="Enter names separated by commas or new lines"></textarea>
+                      <div class="col-6">
+                        <label class="form-label" for="conveyance_inspected_by">Inspected By</label>
+                        <select id="conveyance_inspected_by" class="form-select" aria-label="Select fire personnel">
+                          <option value="">Select inspector</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="conveyance_inspector_position">Inspector Position</label>
+                        <input type="text" id="conveyance_inspector_position" class="form-control" placeholder="e.g. Fire Officer I">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="conveyance_included_personnel_name">Included Personnel</label>
+                        <select id="conveyance_included_personnel_name" class="form-select" aria-label="Select additional personnel">
+                          <option value="">Select personnel (optional)</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label" for="conveyance_included_personnel_position">Included Position</label>
+                        <input type="text" id="conveyance_included_personnel_position" class="form-control" placeholder="Position of additional inspector">
                       </div>
                       <div class="col-12">
                         <label class="form-label" for="conveyance_remarks_signature">Remarks / Signature</label>
@@ -373,6 +394,7 @@
                     <th>Residential / Property</th>
                     <th>Address</th>
                     <th class="th-date">Date</th>
+                    <th>Type</th>
                     <th>FSIC Number</th>
                     <th>Inspected By</th>
                     <th class="col-action">Action</th>
@@ -910,9 +932,24 @@
                       <label class="form-label" for="occupancy_owner_phone">Owner Phone Number</label>
                       <input type="tel" id="occupancy_owner_phone" class="form-control" placeholder="e.g. 09XXXXXXXXX">
                     </div>
-                    <div class="col-12">
+                    <div class="col-8">
                       <label class="form-label" for="occupancy_property_name">Residential / Property Name</label>
                       <input type="text" id="occupancy_property_name" class="form-control" placeholder="Name or description of residential property">
+                    </div>
+                    <div class="col-4">
+                      <label class="form-label" for="occupancy_type_of_occupancy">Type of Occupancy</label>
+                      <select id="occupancy_type_of_occupancy" class="form-select">
+                        <option value="">Select type</option>
+                        <option value="Mercantile">Mercantile</option>
+                        <option value="Storage">Storage</option>
+                        <option value="Places of Assembly">Places of Assembly</option>
+                        <option value="Business">Business</option>
+                        <option value="Institutional">Institutional</option>
+                        <option value="Residential">Residential</option>
+                        <option value="Health Care">Health Care</option>
+                        <option value="Industrial">Industrial</option>
+                        <option value="Miscellaneous">Miscellaneous</option>
+                      </select>
                     </div>
                   </div>
                 </div>

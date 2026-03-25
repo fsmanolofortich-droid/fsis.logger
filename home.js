@@ -156,35 +156,19 @@ let inspectionDataLoaded = false;
 let inspectionActiveTab = "with-location";
 let inspectionFocusMapAfterSave = false;
 
-let mapMarkerFilter = "all"; // all | businesses | residential
+let mapMarkerFilter = "all"; // all | businesses | occupancies | Mercantile | Storage | etc
 
 function applyMapMarkerFilter(next) {
   mapMarkerFilter = next || "all";
-  const buttons = Array.from(document.querySelectorAll("[data-map-filter]"));
-  buttons.forEach((b) => b.classList.toggle("is-active", b.getAttribute("data-map-filter") === mapMarkerFilter));
-
   if (!mapInstance) return;
-  const showInspection = mapMarkerFilter === "all" || mapMarkerFilter === "businesses";
-  const showOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "residential";
+  
+  // Re-render all markers with the new filter
+  renderInspectionMarkersBatched();
+  renderOccupancyMarkersBatched();
 
-  if (inspectionMarkersLayer) {
-    if (showInspection) inspectionMarkersLayer.addTo(mapInstance);
-    else mapInstance.removeLayer(inspectionMarkersLayer);
-  }
-  if (occupancyMarkersLayer) {
-    if (showOccupancy) occupancyMarkersLayer.addTo(mapInstance);
-    else mapInstance.removeLayer(occupancyMarkersLayer);
-  }
-}
-
-function initMapMarkerFilterUi() {
-  document.addEventListener("click", (e) => {
-    const el = e.target instanceof Element ? e.target : null;
-    const btn = el?.closest?.("[data-map-filter]");
-    if (!btn) return;
-    const f = btn.getAttribute("data-map-filter") || "all";
-    applyMapMarkerFilter(f);
-  });
+  // If there's an active map search, refresh it
+  const q = document.getElementById("map-search-input")?.value;
+  if (q) searchMapLocations(q);
 }
 
 function resizeMapLayout() {
@@ -500,13 +484,15 @@ function populateModalDropdowns() {
   
   fillSelect("inspection_inspected_by", FIRE_PERSONNEL, "Select inspector");
   fillSelect("inspection_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
-  fillSelect("conveyance_inspector_select", FIRE_PERSONNEL, "Select inspector");
   fillSelect("occupancy_inspected_by", FIRE_PERSONNEL, "Select inspector");
   fillSelect("occupancy_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
+  fillSelect("conveyance_inspected_by", FIRE_PERSONNEL, "Select inspector");
+  fillSelect("conveyance_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
   
   // Auto-fill rank/position when fire personnel is selected
   bindInspectionPersonnelAutoFill();
   bindOccupancyPersonnelAutoFill();
+  bindConveyancePersonnelAutoFill();
 }
 
 function getFirePersonnelRankPositionByName(name) {
@@ -544,17 +530,22 @@ function bindOccupancyPersonnelAutoFill() {
   });
 }
 
-function conveyanceAddInspector() {
-  const sel = document.getElementById("conveyance_inspector_select");
-  const ta = document.getElementById("conveyance_inspectors");
-  if (!sel || !ta || !sel.value) return;
-  const current = (ta.value || "").trim();
-  const sep = current ? "\n" : "";
-  ta.value = current + sep + sel.value;
-  sel.selectedIndex = 0;
+function bindConveyancePersonnelAutoFill() {
+  const inspectedBy = document.getElementById("conveyance_inspected_by");
+  const inspectorPos = document.getElementById("conveyance_inspector_position");
+  const includedPersonnel = document.getElementById("conveyance_included_personnel_name");
+  const includedPos = document.getElementById("conveyance_included_personnel_position");
+
+  inspectedBy?.addEventListener("change", () => {
+    if (inspectorPos) inspectorPos.value = getFirePersonnelRankPositionByName(inspectedBy.value);
+  });
+  includedPersonnel?.addEventListener("change", () => {
+    if (includedPos) includedPos.value = getFirePersonnelRankPositionByName(includedPersonnel.value);
+  });
 }
 
 // Legacy helper kept for compatibility; no longer used by the current UI.
+function conveyanceAddInspector() { }
 function occupancyAddInspector() { }
 
 function initViewRouting() {
@@ -680,9 +671,8 @@ function init() {
   });
 
   populateModalDropdowns();
-  initViewRouting();
+  initViewRouting();  // Map markers ui filter initialization removed as it uses the select dropdown now.
   initTableFilters();
-  initMapMarkerFilterUi();
   initInspectionPhotoExif();
   initOccupancyPhotoExif();
   refreshStorageBadge();
@@ -2888,7 +2878,17 @@ function addOccupancyMarkerFromEntry(entry) {
 function renderOccupancyMarkersBatched() {
   if (!mapInstance || !occupancyMarkersLayer || !Array.isArray(occupancyData)) return;
   occupancyMarkersLayer.clearLayers();
-  const withCoords = occupancyData.filter((row) => row.lat != null && row.lng != null);
+  
+  const isTypeFilter = mapMarkerFilter !== "all" && mapMarkerFilter !== "businesses" && mapMarkerFilter !== "occupancies";
+  const showOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "occupancies" || isTypeFilter;
+
+  if (!showOccupancy) return;
+
+  const withCoords = occupancyData.filter((row) => {
+    if (row.lat == null || row.lng == null) return false;
+    if (isTypeFilter && row.type_of_occupancy !== mapMarkerFilter) return false;
+    return true;
+  });
   let i = 0;
   const batchSize = 40;
   function addBatch() {
@@ -2904,6 +2904,10 @@ const INSPECTION_MARKER_BATCH_SIZE = 40;
 function renderInspectionMarkersBatched() {
   if (!mapInstance || !inspectionMarkersLayer || !Array.isArray(inspectionData)) return;
   inspectionMarkersLayer.clearLayers();
+
+  const showInspection = mapMarkerFilter === "all" || mapMarkerFilter === "businesses";
+  if (!showInspection) return;
+
   const withCoords = inspectionData.filter((row) => row.lat != null && row.lng != null);
   let i = 0;
   function addBatch() {
@@ -2926,12 +2930,13 @@ function getMarkedOccupancyEntries() {
 
 function searchMapLocations(query) {
   const q = normalizeQuery(query);
+  const isTypeFilter = mapMarkerFilter !== "all" && mapMarkerFilter !== "businesses" && mapMarkerFilter !== "occupancies";
   const includeInspection = mapMarkerFilter === "all" || mapMarkerFilter === "businesses";
-  const includeOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "residential";
+  const includeOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "occupancies" || isTypeFilter;
 
   const candidates = [
     ...(includeInspection ? getMarkedInspectionEntries().map((r) => ({ type: "inspection", r })) : []),
-    ...(includeOccupancy ? getMarkedOccupancyEntries().map((r) => ({ type: "occupancy", r })) : []),
+    ...(includeOccupancy ? getMarkedOccupancyEntries().filter(r => !isTypeFilter || r.type_of_occupancy === mapMarkerFilter).map((r) => ({ type: "occupancy", r })) : []),
   ];
 
   const filtered = !q
@@ -3705,7 +3710,10 @@ function conveyanceEditEntry(idx) {
   setVal("conveyance_date", row.log_date);
   setVal("conveyance_io_number", row.io_number);
   setVal("conveyance_owner_name", row.owner_name);
-  setVal("conveyance_inspectors", row.inspectors);
+  ensureSelectOption("conveyance_inspected_by", row.inspectors || "");
+  setVal("conveyance_inspector_position", row.inspector_position);
+  ensureSelectOption("conveyance_included_personnel_name", row.included_personnel_name || "");
+  setVal("conveyance_included_personnel_position", row.included_personnel_position);
   setVal("conveyance_remarks_signature", row.remarks_signature);
 
   setText("conveyance-modal-title", "Edit Conveyance Record");
@@ -3730,8 +3738,16 @@ function conveyanceOpenModal() {
   if (io) io.value = "";
   const owner = document.getElementById("conveyance_owner_name");
   if (owner) owner.value = "";
-  const insp = document.getElementById("conveyance_inspectors");
-  if (insp) insp.value = "";
+  
+  const inspBy = document.getElementById("conveyance_inspected_by");
+  if (inspBy) inspBy.selectedIndex = 0;
+  const inspPos = document.getElementById("conveyance_inspector_position");
+  if (inspPos) inspPos.value = "";
+  const incBy = document.getElementById("conveyance_included_personnel_name");
+  if (incBy) incBy.selectedIndex = 0;
+  const incPos = document.getElementById("conveyance_included_personnel_position");
+  if (incPos) incPos.value = "";
+  
   const rem = document.getElementById("conveyance_remarks_signature");
   if (rem) rem.value = "";
 
@@ -3782,13 +3798,27 @@ function conveyanceSaveEntry(e) {
     log_date: (document.getElementById("conveyance_date") || { value: "" }).value,
     io_number: (document.getElementById("conveyance_io_number") || { value: "" }).value.trim(),
     owner_name: (document.getElementById("conveyance_owner_name") || { value: "" }).value.trim(),
-    inspectors: (document.getElementById("conveyance_inspectors") || { value: "" }).value.trim(),
+    inspectors: (document.getElementById("conveyance_inspected_by") || { value: "" }).value.trim(),
+    inspector_position: (document.getElementById("conveyance_inspector_position") || { value: "" }).value.trim(),
+    included_personnel_name: (document.getElementById("conveyance_included_personnel_name") || { value: "" }).value.trim(),
+    included_personnel_position: (document.getElementById("conveyance_included_personnel_position") || { value: "" }).value.trim(),
     remarks_signature: (document.getElementById("conveyance_remarks_signature") || { value: "" }).value.trim(),
     created_at: new Date().toISOString(),
   };
 
+  const isIncludedPersonnelPlaceholder =
+    !entry.included_personnel_name || /^select/i.test(String(entry.included_personnel_name).trim());
+  if (isIncludedPersonnelPlaceholder) {
+    entry.included_personnel_name = "";
+    entry.included_personnel_position = "";
+  }
+
+  const isPlaceholderInspector =
+    !entry.inspectors || /^select\s+inspector$/i.test(String(entry.inspectors).trim());
+  if (isPlaceholderInspector) entry.inspectors = "";
+
   if (!entry.log_date || !entry.io_number || !entry.inspectors) {
-    logbookShowToast("conveyance-toast", "⚠️ Please fill in Date, IO Number, and Inspectors.");
+    logbookShowToast("conveyance-toast", "⚠️ Please fill in Date, IO Number, and Inspected By.");
     return;
   }
 
@@ -3823,6 +3853,9 @@ function conveyanceSaveEntry(e) {
         io_number: entry.io_number,
         owner_name: entry.owner_name || null,
         inspectors: entry.inspectors,
+        inspector_position: entry.inspector_position || null,
+        included_personnel_name: entry.included_personnel_name || null,
+        included_personnel_position: entry.included_personnel_position || null,
         remarks_signature: entry.remarks_signature,
       };
       // On UPDATE, don't overwrite optional owner_name with null/blank.
@@ -3849,7 +3882,10 @@ async function conveyanceLoadFromSupabase() {
     log_date: r.log_date,
     io_number: r.io_number,
     owner_name: r.owner_name || "",
-    inspectors: r.inspectors,
+    inspectors: r.inspectors || "",
+    inspector_position: r.inspector_position || "",
+    included_personnel_name: r.included_personnel_name || "",
+    included_personnel_position: r.included_personnel_position || "",
     remarks_signature: r.remarks_signature,
     created_at: r.created_at,
   }));
@@ -3965,6 +4001,7 @@ function occupancyRenderTable() {
       <td data-label="Residential / Property"><strong>${logbookEsc(row.business_name)}</strong></td>
       <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
+      <td data-label="Type">${logbookEsc(row.type_of_occupancy)}</td>
       <td data-label="FSIC Number"><strong>${logbookEsc(row.fsic_number)}</strong></td>
       <td data-label="Inspected By"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
       <td class="col-action" data-label="Action">
@@ -4029,6 +4066,7 @@ function occupancyEditEntry(idx) {
   
   ensureSelectOption("occupancy_addr_barangay", row.addr_barangay || "");
   setVal("occupancy_addr_line", row.addr_line);
+  ensureSelectOption("occupancy_type_of_occupancy", row.type_of_occupancy || "");
   setVal("occupancy_inspected_by", row.inspectors);
   setVal("occupancy_inspector_position", row.inspector_position);
   ensureSelectOption("occupancy_included_personnel_name", row.included_personnel_name || "");
@@ -4132,7 +4170,7 @@ function occupancyOpenModal() {
     const el = getEl(id);
     if (el) el.value = "";
   });
-  const clearSelects = ["occupancy_addr_barangay", "occupancy_inspected_by", "occupancy_included_personnel_name"];
+  const clearSelects = ["occupancy_addr_barangay", "occupancy_inspected_by", "occupancy_included_personnel_name", "occupancy_type_of_occupancy"];
   clearSelects.forEach(id => {
     const el = getEl(id);
     if (el) el.selectedIndex = 0;
@@ -4211,6 +4249,7 @@ async function occupancySaveEntry(e) {
     owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
     owner_phone: (document.getElementById("occupancy_owner_phone") || { value: "" }).value.trim(),
     business_name: (document.getElementById("occupancy_property_name") || { value: "" }).value.trim(),
+    type_of_occupancy: (document.getElementById("occupancy_type_of_occupancy") || { value: "" }).value.trim(),
     addr_barangay: barangay,
     addr_line: line,
     inspectors: (document.getElementById("occupancy_inspected_by") || { value: "" }).value.trim(),
@@ -4313,6 +4352,7 @@ async function occupancySaveEntry(e) {
         owner_name: entry.owner_name || null,
         owner_phone: entry.owner_phone || null,
         business_name: entry.business_name || null,
+        type_of_occupancy: entry.type_of_occupancy || null,
         address: entry.addr_line || null, // Mapping addr_line to address for consistency
         inspectors: entry.inspectors,
         inspector_position: entry.inspector_position || null,
@@ -4383,6 +4423,7 @@ async function occupancyLoadFromSupabase() {
     owner_name: r.owner_name || "",
     owner_phone: r.owner_phone || "",
     business_name: r.business_name || "",
+    type_of_occupancy: r.type_of_occupancy || "",
     addr_barangay: r.business_name ? "" : "", // Note: To be fully consistent, barangay mapped from address
     addr_line: r.address || "",
     inspectors: r.inspectors || "",

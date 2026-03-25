@@ -999,80 +999,77 @@ body.is-map-view [data-view="map"] {
 /* Map search panel */
 .map-search-wrap {
   position: fixed;
-  top: 64px;
-  right: 14px;
-  left: 14px;
-  max-width: 420px;
-  margin-left: auto;
-  z-index: 200;
+  top: 14px;
+  right: 64px; /* Clears top-right controls (default Leaflet layers) */
+  left: 114px; /* Clears top-left controls (Burger + Layers icon if adjacent) */
+  z-index: 1040;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
+  transition: all 0.2s ease-in-out;
 }
 
-@media (min-width: 540px) {
+@media (max-width: 600px) {
   .map-search-wrap {
-    left: auto;
+    top: 66px;
+    left: 14px;
+    right: 14px;
+    max-width: none;
+  }
+}
+
+@media (min-width: 1200px) {
+  .map-search-wrap {
+    max-width: 700px;
   }
 }
 
 .map-search-input {
   flex: 1;
   min-width: 0;
-  padding: 11px 16px;
+  padding: 10px 16px 10px 40px; /* Space for search icon */
   border-radius: 12px;
-  border: 1px solid rgba(13, 27, 42, 0.18);
+  border: 1px solid rgba(13, 27, 42, 0.12);
   background: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-search' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 14px center;
   font-family: 'DM Sans', sans-serif;
   font-size: 0.94rem;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   outline: none;
-}
-
-.map-search-input::placeholder {
-  color: var(--text-light);
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
 
 .map-search-input:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.22);
+  box-shadow: 0 4px 14px rgba(212, 168, 67, 0.25);
 }
 
 .map-filter {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px 0 0;
+  flex-shrink: 0;
 }
 
-.map-filter-btn {
-  appearance: none;
-  border: 1px solid rgba(13, 27, 42, 0.18);
-  background: #fff;
-  color: var(--text);
-  padding: 8px 14px;
-  border-radius: 10px;
+#map-filter-select {
+  border-radius: 12px;
+  border: 1px solid rgba(13, 27, 42, 0.12);
+  background-color: #fff;
   font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-weight: 500;
+  height: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding-right: 32px;
+  max-width: 140px; /* Prevents the dropdown from squishing the search bar */
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
 }
 
-.map-filter-btn:hover {
-  background: var(--cream-dark);
-}
-
-.map-filter-btn.is-active {
-  background: var(--navy);
-  color: #fff;
-  border-color: var(--navy);
-}
-
-.map-filter-btn:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
+#map-filter-select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 4px 14px rgba(212, 168, 67, 0.25);
 }
 
 .map-search-results {
@@ -1086,7 +1083,7 @@ body.is-map-view [data-view="map"] {
   background: #fff;
   border-radius: 12px;
   border: 1px solid rgba(13, 27, 42, 0.1);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
   z-index: 201;
 }
 
