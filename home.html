@@ -367,11 +367,14 @@
                 <thead class="table-dark">
                   <tr>
                     <th>#</th>
-                    <th class="th-date">Date</th>
                     <th>IO Number</th>
                     <th>Name of Owner</th>
-                    <th>Name of Inspectors</th>
-                    <th>Remarks / Signature</th>
+                    <th>Owner Phone</th>
+                    <th>Residential / Property</th>
+                    <th>Address</th>
+                    <th class="th-date">Date</th>
+                    <th>FSIC Number</th>
+                    <th>Inspected By</th>
                     <th class="col-action">Action</th>
                   </tr>
                 </thead>
@@ -892,23 +895,99 @@
                   <div class="form-section-title">Record details</div>
                   <div class="row g-3">
                     <div class="col-6">
-                      <label class="form-label" for="occupancy_date">Date</label>
-                      <input type="date" id="occupancy_date" class="form-control">
-                    </div>
-                    <div class="col-6">
                       <label class="form-label" for="occupancy_io_number">IO Number</label>
                       <input type="text" id="occupancy_io_number" class="form-control" placeholder="e.g. IO-2026-001">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_fsic_number">FSIC Number</label>
+                      <input type="text" id="occupancy_fsic_number" class="form-control" placeholder="e.g. FSIC-2026-001">
                     </div>
                     <div class="col-12">
                       <label class="form-label" for="occupancy_owner_name">Name of Owner</label>
                       <input type="text" id="occupancy_owner_name" class="form-control" placeholder="Full name of owner">
                     </div>
                     <div class="col-12">
+                      <label class="form-label" for="occupancy_owner_phone">Owner Phone Number</label>
+                      <input type="tel" id="occupancy_owner_phone" class="form-control" placeholder="e.g. 09XXXXXXXXX">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="occupancy_property_name">Residential / Property Name</label>
+                      <input type="text" id="occupancy_property_name" class="form-control" placeholder="Name or description of residential property">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-section">
+                  <div class="form-section-title">Address</div>
+                  <div class="row g-3">
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_addr_region">Region</label>
+                      <input type="text" id="occupancy_addr_region" class="form-control" value="X" readonly>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_addr_province">Province</label>
+                      <input type="text" id="occupancy_addr_province" class="form-control" value="Bukidnon" readonly>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_addr_municipal">Municipal</label>
+                      <input type="text" id="occupancy_addr_municipal" class="form-control" value="Manolo Fortich" readonly>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_addr_barangay">Barangay</label>
+                      <select id="occupancy_addr_barangay" class="form-select" aria-label="Select barangay">
+                        <option value="">Select barangay</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="occupancy_addr_line">House no. / Street / Zone</label>
+                      <input type="text" id="occupancy_addr_line" class="form-control" placeholder="e.g. Purok 3, Zone 1, National Highway">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-section">
+                  <div class="form-section-title">Inspection</div>
+                  <div class="row g-3">
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_date">Date Inspected</label>
+                      <input type="date" id="occupancy_date" class="form-control">
+                    </div>
+                    <div class="col-6">
                       <label class="form-label" for="occupancy_inspected_by">Inspected By</label>
                       <select id="occupancy_inspected_by" class="form-select" aria-label="Select fire personnel">
                         <option value="">Select inspector</option>
                       </select>
                     </div>
+                  </div>
+                </div>
+                <div class="form-section">
+                  <div class="form-section-title">Inspection Order (IO)</div>
+                  <div class="row g-3">
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_inspector_position">Inspector Position</label>
+                      <input type="text" id="occupancy_inspector_position" class="form-control" placeholder="e.g. Fire Officer I">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_included_personnel_name">Included Personnel</label>
+                      <select id="occupancy_included_personnel_name" class="form-select" aria-label="Select additional personnel">
+                        <option value="">Select personnel (optional)</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="occupancy_included_personnel_position">Included Position</label>
+                      <input type="text" id="occupancy_included_personnel_position" class="form-control" placeholder="Position of additional inspector">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_duration_start">Duration &mdash; From</label>
+                      <input type="date" id="occupancy_duration_start" class="form-control">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occupancy_duration_end">Duration &mdash; To</label>
+                      <input type="date" id="occupancy_duration_end" class="form-control">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-section">
+                  <div class="form-section-title">Location &amp; photo</div>
+                  <div class="row g-3">
                     <div class="col-12">
                       <p class="photo-option-label mb-2">Attach photo (uses GPS from EXIF if available)</p>
                       <div class="photo-option-buttons">
@@ -992,6 +1071,67 @@
             <div class="modal-footer bfp-footer">
               <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearanceCloseModal()">Cancel</button>
               <button type="submit" class="btn btn-sm btn-dark" id="clearance-btn-proceed" form="clearance-entry-form">Proceed to Print</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
+         GLOBAL OCCUPANCY CLEARANCE MODAL
+         ================================================================ -->
+    <div class="modal-overlay" id="occupancy-clearance-modal-overlay" onclick="occupancyClearanceCloseOnOverlay(event)">
+      <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
+        <div class="modal-dialog modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header bfp-header">
+              <div>
+                <small id="occ-clearance-modal-subtitle">Clearance (Occupancy)</small>
+                <h5 class="mb-0" id="occ-clearance-modal-title">Release Clearance</h5>
+              </div>
+              <button type="button" class="btn-close btn-close-white" onclick="occupancyClearanceCloseModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="occ-clearance-entry-form" onsubmit="occupancyClearanceProceed(event)">
+                <div class="form-section">
+                  <div class="form-section-title">Missing Data</div>
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label" for="occ_clearance_fsic_number">FSIC Number</label>
+                      <input type="text" id="occ_clearance_fsic_number" class="form-control" placeholder="e.g. FSIC-2026-001">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="occ_clearance_purpose">Purpose</label>
+                      <select id="occ_clearance_purpose" class="form-select">
+                        <option value="">Select purpose</option>
+                        <option value="FOR CERTIFICATE OF OCCUPANCY">Occupancy Permit</option>
+                        <option value="FOR BUSINESS PERMIT (NEW/RENEWAL)">Business Permit</option>
+                        <option value="OTHERS">Others</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occ_clearance_valid_until">Valid Until</label>
+                      <input type="date" id="occ_clearance_valid_until" class="form-control">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="occ_clearance_fee_amount">Fee Amount (PHP)</label>
+                      <input type="number" step="0.01" id="occ_clearance_fee_amount" class="form-control" placeholder="e.g. 500.00">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occ_clearance_fee_or_number">O.R. Number</label>
+                      <input type="text" id="occ_clearance_fee_or_number" class="form-control" placeholder="O.R. Number">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="occ_clearance_fee_date">O.R. Date</label>
+                      <input type="date" id="occ_clearance_fee_date" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer bfp-footer">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="occupancyClearanceCloseModal()">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-dark" id="occ-clearance-btn-proceed" form="occ-clearance-entry-form">Proceed to Print</button>
             </div>
           </div>
         </div>

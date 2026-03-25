@@ -496,12 +496,17 @@ function populateModalDropdowns() {
   }
   fillSelect("inspection_addr_barangay", BARANGAYS, "Select barangay");
   fillSelect("fsec_addr_barangay", BARANGAYS, "Select barangay");
+  fillSelect("occupancy_addr_barangay", BARANGAYS, "Select barangay");
+  
   fillSelect("inspection_inspected_by", FIRE_PERSONNEL, "Select inspector");
   fillSelect("inspection_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
   fillSelect("conveyance_inspector_select", FIRE_PERSONNEL, "Select inspector");
   fillSelect("occupancy_inspected_by", FIRE_PERSONNEL, "Select inspector");
+  fillSelect("occupancy_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
+  
   // Auto-fill rank/position when fire personnel is selected
   bindInspectionPersonnelAutoFill();
+  bindOccupancyPersonnelAutoFill();
 }
 
 function getFirePersonnelRankPositionByName(name) {
@@ -516,6 +521,20 @@ function bindInspectionPersonnelAutoFill() {
   const inspectorPos = document.getElementById("inspection_inspector_position");
   const includedPersonnel = document.getElementById("inspection_included_personnel_name");
   const includedPos = document.getElementById("inspection_included_personnel_position");
+
+  inspectedBy?.addEventListener("change", () => {
+    if (inspectorPos) inspectorPos.value = getFirePersonnelRankPositionByName(inspectedBy.value);
+  });
+  includedPersonnel?.addEventListener("change", () => {
+    if (includedPos) includedPos.value = getFirePersonnelRankPositionByName(includedPersonnel.value);
+  });
+}
+
+function bindOccupancyPersonnelAutoFill() {
+  const inspectedBy = document.getElementById("occupancy_inspected_by");
+  const inspectorPos = document.getElementById("occupancy_inspector_position");
+  const includedPersonnel = document.getElementById("occupancy_included_personnel_name");
+  const includedPos = document.getElementById("occupancy_included_personnel_position");
 
   inspectedBy?.addEventListener("change", () => {
     if (inspectorPos) inspectorPos.value = getFirePersonnelRankPositionByName(inspectedBy.value);
@@ -1371,12 +1390,19 @@ window.addEventListener("message", (ev) => {
     return Number.isFinite(n) ? n : null;
   }
 
-  const idx = Array.isArray(inspectionData)
-    ? inspectionData.findIndex((r) => (entryId && r?.id === entryId) || (ioNumber && r?.io_number === ioNumber))
+  let sourceLogbook = "inspection";
+  let dataset = inspectionData;
+  if (d.payload?._sourceType === "occupancy") {
+    sourceLogbook = "occupancy";
+    dataset = occupancyData;
+  }
+
+  const idx = Array.isArray(dataset)
+    ? dataset.findIndex((r) => (entryId && r?.id === entryId) || (ioNumber && r?.io_number === ioNumber))
     : -1;
 
   if (idx < 0) {
-    respond(false, "Cannot find matching inspection record.");
+    respond(false, `Cannot find matching ${sourceLogbook} record.`);
     return;
   }
 
@@ -1420,31 +1446,39 @@ window.addEventListener("message", (ev) => {
     uiUpdates.insp_address = uiUpdates.address;
     delete uiUpdates.address;
   }
-  inspectionData[idx] = { ...inspectionData[idx], ...uiUpdates };
-  inspectionSaveToLocal();
-  inspectionRenderTable?.();
+
+  if (sourceLogbook === "inspection") {
+    inspectionData[idx] = { ...inspectionData[idx], ...uiUpdates };
+    inspectionSaveToLocal();
+    inspectionRenderTable?.();
+  } else {
+    occupancyData[idx] = { ...occupancyData[idx], ...uiUpdates };
+    occupancySaveToLocal();
+    occupancyRenderTable?.();
+  }
 
   if (!isSupabaseEnabled()) {
-    logbookShowToast?.("inspection-toast", "Saved on this device only (offline mode).");
+    logbookShowToast?.(`${sourceLogbook}-toast`, "Saved on this device only (offline mode).");
     respond(true, "Saved locally (offline mode).");
     return;
   }
 
-  const row = inspectionData[idx];
+  const datasetRef = sourceLogbook === "inspection" ? inspectionData : occupancyData;
+  const row = datasetRef[idx];
   if (!row?.id) {
-    logbookShowToast?.("inspection-toast", "⚠️ Save failed: missing record id.");
+    logbookShowToast?.(`${sourceLogbook}-toast`, "⚠️ Save failed: missing record id.");
     respond(false, "Missing record id.");
     return;
   }
 
   (async () => {
     try {
-      await gasRequest("update", { table: "inspection_logbook", id: row.id, row: updates });
-      logbookShowToast?.("inspection-toast", "Saved to database.");
+      await gasRequest("update", { table: `${sourceLogbook}_logbook`, id: row.id, row: updates });
+      logbookShowToast?.(`${sourceLogbook}-toast`, "Saved to database.");
       respond(true, "");
     } catch (err) {
       const msg = err?.message || String(err);
-      logbookShowToast?.("inspection-toast", "Save failed: " + msg);
+      logbookShowToast?.(`${sourceLogbook}-toast`, "Save failed: " + msg);
       respond(false, msg);
     }
   })();
@@ -3426,22 +3460,18 @@ function fsecSaveEntry(e) {
         date: entry.fsec_date,
         contact_number: entry.contact_number,
       };
-      const q = supabaseClient.from("fsec_building_plan_logbook");
-      const { error } = fsecEditingId
-        ? await q.update(payload).eq("id", fsecEditingId)
-        : await q.insert(payload);
-      if (error) throw error;
+      
+      if (fsecEditingId) {
+        await gasRequest("update", { table: "fsec_building_plan_logbook", id: fsecEditingId, row: payload });
+      } else {
+        await gasRequest("insert", { table: "fsec_building_plan_logbook", row: payload });
+      }
+      
       // Database write completes in the background; UI was already updated optimistically
       logbookShowToast("fsec-toast", "Saved to database.");
     } catch (err) {
       const msg = err?.message || String(err);
-      const hint =
-        msg.includes("policy") ||
-          msg.includes("RLS") ||
-          err?.code === "42501"
-          ? " Check Supabase: add anon RLS policy (see fsis.logger.sql)."
-          : "";
-      logbookShowToast("fsec-toast", "Save failed: " + msg + hint);
+      logbookShowToast("fsec-toast", "Save failed: " + msg);
     }
   })();
 }
@@ -3896,6 +3926,9 @@ function occupancyRenderTable() {
         [
           row.io_number,
           row.owner_name,
+          row.owner_phone,
+          row.business_name,
+          row.fsic_number,
           row.inspectors,
           row.remarks_signature,
           row.lat,
@@ -3926,16 +3959,20 @@ function occupancyRenderTable() {
     tr.id = `occupancy-row-${idx}`;
     tr.innerHTML = `
       <td data-label="#">${displayIdx + 1}</td>
-      <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Owner">${logbookEsc(row.owner_name)}</td>
-      <td data-label="Name of Inspectors"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
-      <td data-label="Remarks / Signature"><div class="cell-pre">${logbookEsc(row.remarks_signature)}</div></td>
+      <td data-label="Owner Phone">${logbookEsc(row.owner_phone)}</td>
+      <td data-label="Residential / Property"><strong>${logbookEsc(row.business_name)}</strong></td>
+      <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
+      <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
+      <td data-label="FSIC Number"><strong>${logbookEsc(row.fsic_number)}</strong></td>
+      <td data-label="Inspected By"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
       <td class="col-action" data-label="Action">
         <select class="action-select" aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
           <option value="">Actions…</option>
           <option value="edit">Edit</option>
           <option value="open_io_html">Open IO (HTML)</option>
+          <option value="open_clearance_html">Release clearance (FSIC)</option>
           <option value="delete">Delete</option>
         </select>
       </td>
@@ -3948,6 +3985,7 @@ function occupancyHandleAction(action, idx) {
   if (!action) return;
   if (action === "edit") return occupancyEditEntry(idx);
   if (action === "open_io_html") return occupancyOpenIoHtml(idx);
+  if (action === "open_clearance_html") return occupancyClearanceOpenModal(idx);
   if (action === "delete") return occupancyDeleteEntry(idx);
 }
 
@@ -3984,8 +4022,19 @@ function occupancyEditEntry(idx) {
   };
   setVal("occupancy_date", row.log_date);
   setVal("occupancy_io_number", row.io_number);
+  setVal("occupancy_fsic_number", row.fsic_number);
   setVal("occupancy_owner_name", row.owner_name);
+  setVal("occupancy_owner_phone", row.owner_phone);
+  setVal("occupancy_property_name", row.business_name);
+  
+  ensureSelectOption("occupancy_addr_barangay", row.addr_barangay || "");
+  setVal("occupancy_addr_line", row.addr_line);
   setVal("occupancy_inspected_by", row.inspectors);
+  setVal("occupancy_inspector_position", row.inspector_position);
+  ensureSelectOption("occupancy_included_personnel_name", row.included_personnel_name || "");
+  setVal("occupancy_included_personnel_position", row.included_personnel_position);
+  setVal("occupancy_duration_start", row.duration_start);
+  setVal("occupancy_duration_end", row.duration_end);
 
   setText("occupancy-modal-title", "Edit Occupancy Record");
   const btn = document.getElementById("occupancy-btn-save");
@@ -3993,6 +4042,68 @@ function occupancyEditEntry(idx) {
 
   const overlay = document.getElementById("occupancy-modal-overlay");
   overlay?.classList.add("open");
+}
+
+let occupancyClearanceIdx = null;
+
+function occupancyClearanceOpenModal(idx) {
+  const row = occupancyData[idx];
+  if (!row) return;
+
+  occupancyClearanceIdx = idx;
+
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+
+  setVal("occ_clearance_fsic_number", row.fsic_number);
+  setVal("occ_clearance_purpose", row.fsic_purpose);
+  setVal("occ_clearance_valid_until", row.fsic_valid_until);
+  setVal("occ_clearance_fee_amount", row.fsic_fee_amount);
+  setVal("occ_clearance_fee_or_number", row.fsic_fee_or_number);
+  setVal("occ_clearance_fee_date", row.fsic_fee_date);
+
+  const overlay = document.getElementById("occupancy-clearance-modal-overlay");
+  overlay?.classList.add("open");
+}
+
+function occupancyClearanceCloseModal() {
+  const overlay = document.getElementById("occupancy-clearance-modal-overlay");
+  overlay?.classList.remove("open");
+}
+
+function occupancyClearanceCloseOnOverlay(e) {
+  if (e?.target?.id === "occupancy-clearance-modal-overlay") occupancyClearanceCloseModal();
+}
+
+function occupancyClearanceProceed(e) {
+  if (e?.preventDefault) e.preventDefault();
+
+  if (occupancyClearanceIdx === null) return;
+  const row = occupancyData[occupancyClearanceIdx];
+  if (!row) return;
+
+  const val = (id) => (document.getElementById(id) || { value: "" }).value.trim();
+
+  row.fsic_number = val("occ_clearance_fsic_number");
+  row.fsic_purpose = val("occ_clearance_purpose");
+  row.fsic_valid_until = val("occ_clearance_valid_until");
+  row.fsic_fee_amount = val("occ_clearance_fee_amount");
+  row.fsic_fee_or_number = val("occ_clearance_fee_or_number");
+  row.fsic_fee_date = val("occ_clearance_fee_date");
+
+  occupancySaveToLocal();
+  occupancyRenderTable();
+  occupancyClearanceCloseModal();
+
+  try {
+    sessionStorage.setItem("fsis.clearance.current", JSON.stringify({ ...row, _sourceType: "occupancy" }));
+  } catch (err) {
+    console.warn("Could not write clearance row to sessionStorage:", err);
+  }
+
+  window.open("./fsis_clearance.html", "_blank");
 }
 
 function occupancyOpenModal() {
@@ -4012,12 +4123,20 @@ function occupancyOpenModal() {
 
   const date = document.getElementById("occupancy_date");
   if (date) date.value = new Date().toISOString().slice(0, 10);
-  const io = document.getElementById("occupancy_io_number");
-  if (io) io.value = "";
-  const owner = document.getElementById("occupancy_owner_name");
-  if (owner) owner.value = "";
-  const insp = document.getElementById("occupancy_inspected_by");
-  if (insp) insp.selectedIndex = 0;
+  const getEl = (id) => document.getElementById(id);
+  const clearVals = ["occupancy_io_number", "occupancy_fsic_number", "occupancy_owner_name", 
+    "occupancy_owner_phone", "occupancy_property_name", "occupancy_addr_line", 
+    "occupancy_inspector_position", "occupancy_included_personnel_position", 
+    "occupancy_duration_start", "occupancy_duration_end"];
+  clearVals.forEach(id => {
+    const el = getEl(id);
+    if (el) el.value = "";
+  });
+  const clearSelects = ["occupancy_addr_barangay", "occupancy_inspected_by", "occupancy_included_personnel_name"];
+  clearSelects.forEach(id => {
+    const el = getEl(id);
+    if (el) el.selectedIndex = 0;
+  });
 
   const photoInput = document.getElementById("occupancy_photo");
   if (photoInput) photoInput.value = "";
@@ -4077,11 +4196,29 @@ async function occupancySaveEntry(e) {
     await occupancyExifProcessingPromise;
   }
 
+  let barangay = (document.getElementById("occupancy_addr_barangay") || { value: "" }).value.trim();
+  const line = (document.getElementById("occupancy_addr_line") || { value: "" }).value.trim();
+
+  // Handle special 'Select barangay' residual value if someone clicks but doesn't choose
+  if (!barangay || /^select/i.test(barangay)) {
+    barangay = "";
+  }
+
   const entry = {
     log_date: (document.getElementById("occupancy_date") || { value: "" }).value,
     io_number: (document.getElementById("occupancy_io_number") || { value: "" }).value.trim(),
+    fsic_number: (document.getElementById("occupancy_fsic_number") || { value: "" }).value.trim(),
     owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
+    owner_phone: (document.getElementById("occupancy_owner_phone") || { value: "" }).value.trim(),
+    business_name: (document.getElementById("occupancy_property_name") || { value: "" }).value.trim(),
+    addr_barangay: barangay,
+    addr_line: line,
     inspectors: (document.getElementById("occupancy_inspected_by") || { value: "" }).value.trim(),
+    inspector_position: (document.getElementById("occupancy_inspector_position") || { value: "" }).value.trim(),
+    included_personnel_name: (document.getElementById("occupancy_included_personnel_name") || { value: "" }).value.trim(),
+    included_personnel_position: (document.getElementById("occupancy_included_personnel_position") || { value: "" }).value.trim(),
+    duration_start: (document.getElementById("occupancy_duration_start") || { value: "" }).value,
+    duration_end: (document.getElementById("occupancy_duration_end") || { value: "" }).value,
     remarks_signature: "",
     // Optional coordinates and photo metadata extracted from EXIF / geolocation
     lat: occupancyExifLat,
@@ -4090,6 +4227,13 @@ async function occupancySaveEntry(e) {
     photo_taken_at: occupancyExifTakenAt,
     created_at: new Date().toISOString(),
   };
+
+  const isIncludedPersonnelPlaceholder =
+    !entry.included_personnel_name || /^select/i.test(String(entry.included_personnel_name).trim());
+  if (isIncludedPersonnelPlaceholder) {
+    entry.included_personnel_name = "";
+    entry.included_personnel_position = "";
+  }
 
   // If the photo has no GPS EXIF, fall back to the user's current geolocation (same as inspection)
   if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
@@ -4165,8 +4309,17 @@ async function occupancySaveEntry(e) {
       const payload = {
         log_date: entry.log_date,
         io_number: entry.io_number,
+        fsic_number: entry.fsic_number || null,
         owner_name: entry.owner_name || null,
+        owner_phone: entry.owner_phone || null,
+        business_name: entry.business_name || null,
+        address: entry.addr_line || null, // Mapping addr_line to address for consistency
         inspectors: entry.inspectors,
+        inspector_position: entry.inspector_position || null,
+        included_personnel_name: entry.included_personnel_name || null,
+        included_personnel_position: entry.included_personnel_position || null,
+        duration_start: entry.duration_start || null,
+        duration_end: entry.duration_end || null,
         remarks_signature: null,
         latitude: entry.lat ?? null,
         longitude: entry.lng ?? null,
@@ -4226,9 +4379,19 @@ async function occupancyLoadFromSupabase() {
     id: r.id,
     log_date: r.log_date,
     io_number: r.io_number,
+    fsic_number: r.fsic_number || "",
     owner_name: r.owner_name || "",
-    inspectors: r.inspectors,
-    remarks_signature: r.remarks_signature,
+    owner_phone: r.owner_phone || "",
+    business_name: r.business_name || "",
+    addr_barangay: r.business_name ? "" : "", // Note: To be fully consistent, barangay mapped from address
+    addr_line: r.address || "",
+    inspectors: r.inspectors || "",
+    inspector_position: r.inspector_position || "",
+    included_personnel_name: r.included_personnel_name || "",
+    included_personnel_position: r.included_personnel_position || "",
+    duration_start: r.duration_start || null,
+    duration_end: r.duration_end || null,
+    remarks_signature: r.remarks_signature || "",
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
     photo_url: r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
