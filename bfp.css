@@ -2166,3 +2166,113 @@ body.is-map-view [data-view="map"] {
 .print-footer {
   display: none;
 }
+
+/* ── Stepped Modal UI ── */
+.modal-steps {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 0 0.5rem;
+  position: relative;
+}
+
+.modal-steps::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 2rem;
+  right: 2rem;
+  height: 2px;
+  background: #e2e0dc;
+  z-index: 1;
+}
+
+.step-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #e2e0dc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-light);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.step-item.active .step-circle {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(13, 27, 42, 0.1);
+  transform: scale(1.1);
+}
+
+.step-item.completed .step-circle {
+  background: #10B981;
+  border-color: #10B981;
+  color: #fff;
+}
+
+.step-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-light);
+  text-align: center;
+  max-width: 80px;
+}
+
+.step-item.active .step-label {
+  color: var(--navy);
+}
+
+.step-item.completed .step-label {
+  color: #059669;
+}
+
+/* Step content visibility */
+.step-content {
+  display: none;
+}
+
+.step-content.active {
+  display: block;
+  animation: stepFadeIn 0.35s ease-out;
+}
+
+@keyframes stepFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Footer buttons refinement */
+.modal-footer.bfp-footer {
+  background: #fcfcfb;
+  border-top: 1px solid var(--cream-dark);
+  padding: 16px 24px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}

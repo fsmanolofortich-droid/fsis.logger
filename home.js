@@ -1174,11 +1174,24 @@ function inspectionRenderTable() {
   }
 }
 
-function inspectionEditEntry(idx) {
-  const row = inspectionData[idx];
+async function inspectionEditEntry(idx) {
+  const oldRow = inspectionData[idx];
+  if (!oldRow) return;
+
+  if (isGasEnabled()) {
+    logbookShowToast("inspection-toast", "Refreshing record data...");
+    try {
+      await inspectionLoadFromSupabase();
+    } catch (err) {
+      console.warn("Refresh failed:", err);
+    }
+  }
+
+  // Re-find the row in case indices changed or data was refreshed
+  const row = (oldRow.id) ? inspectionData.find(r => r.id === oldRow.id) : inspectionData[idx];
   if (!row) return;
 
-  inspectionEditingIdx = idx;
+  inspectionEditingIdx = inspectionData.indexOf(row);
   inspectionEditingId = row.id || null;
 
   const setVal = (id, value) => {
@@ -1217,6 +1230,9 @@ function inspectionEditEntry(idx) {
   setText("inspection-modal-subtitle", "Inspection Logbook");
   const btn = document.getElementById("inspection-btn-save");
   if (btn) btn.textContent = "Update Record";
+
+  // Reset to first step
+  updateModalStepUI('inspection', 1);
 }
 
 function inspectionAddPhoto(idx) {
@@ -1673,12 +1689,103 @@ function inspectionOpenModal() {
     indicator.className = "photo-attach-indicator";
     indicator.textContent = "";
   }
+
+  // Reset to first step
+  updateModalStepUI('inspection', 1);
 }
 
 function inspectionCloseModal() {
   const overlay = document.getElementById("inspection-modal-overlay");
   if (overlay) overlay.classList.remove("open");
 }
+
+/* ── Stepped Modal Logic ────────────────────────────────────────────── */
+
+/**
+ * Universal step UI updater
+ * @param {string} prefix - 'inspection' or 'occupancy'
+ * @param {number} step - Current active step (1-based)
+ */
+function updateModalStepUI(prefix, step) {
+  const modalElem = document.getElementById(`${prefix}-modal-overlay`);
+  if (!modalElem) return;
+
+  // Track state on the element
+  modalElem.setAttribute('data-current-step', step);
+
+  // Toggle step content
+  const contents = modalElem.querySelectorAll('.step-content');
+  contents.forEach(div => {
+    const s = parseInt(div.getAttribute('data-step'), 10);
+    div.classList.toggle('active', s === step);
+  });
+
+  // Toggle step indicators
+  const indicators = modalElem.querySelectorAll('.step-item');
+  indicators.forEach(item => {
+    const s = parseInt(item.getAttribute('data-step'), 10);
+    item.classList.toggle('active', s === step);
+    item.classList.toggle('completed', s < step);
+  });
+
+  // Buttons management
+  const btnBack = document.getElementById(`${prefix}-btn-back`);
+  const btnCancel = document.getElementById(`${prefix}-btn-cancel`);
+  const btnNext = document.getElementById(`${prefix}-btn-next`);
+  const btnSave = document.getElementById(`${prefix}-btn-save`);
+
+  const maxSteps = contents.length;
+
+  if (btnBack) btnBack.style.display = (step > 1) ? 'inline-block' : 'none';
+  if (btnCancel) btnCancel.style.display = (step === 1) ? 'inline-block' : 'none';
+  if (btnNext) btnNext.style.display = (step < maxSteps) ? 'inline-block' : 'none';
+  if (btnSave) btnSave.style.display = (step === maxSteps) ? 'inline-block' : 'none';
+
+  // Smooth scroll modal to top on step change
+  const modalBody = modalElem.querySelector('.modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
+}
+
+function inspectionModalStep(delta) {
+  const overlay = document.getElementById("inspection-modal-overlay");
+  let current = parseInt(overlay.getAttribute('data-current-step') || '1', 10);
+  current += delta;
+  if (current < 1) current = 1;
+  const max = 4; // Inspection has 4 steps
+  if (current > max) current = max;
+  updateModalStepUI('inspection', current);
+}
+
+function occupancyModalStep(delta) {
+  const overlay = document.getElementById("occupancy-modal-overlay");
+  let current = parseInt(overlay.getAttribute('data-current-step') || '1', 10);
+  current += delta;
+  if (current < 1) current = 1;
+  const max = 4; // Occupancy has 4 steps
+  if (current > max) current = max;
+  updateModalStepUI('occupancy', current);
+}
+
+function fsecModalStep(delta) {
+  const overlay = document.getElementById("fsec-modal-overlay");
+  let current = parseInt(overlay.getAttribute('data-current-step') || '1', 10);
+  current += delta;
+  if (current < 1) current = 1;
+  const max = 3; // FSEC has 3 steps
+  if (current > max) current = max;
+  updateModalStepUI('fsec', current);
+}
+
+function conveyanceModalStep(delta) {
+  const overlay = document.getElementById("conveyance-modal-overlay");
+  let current = parseInt(overlay.getAttribute('data-current-step') || '1', 10);
+  current += delta;
+  if (current < 1) current = 1;
+  const max = 2; // Conveyance has 2 steps
+  if (current > max) current = max;
+  updateModalStepUI('conveyance', current);
+}
+
 
 function inspectionCloseOnOverlay(e) {
   const overlay = document.getElementById("inspection-modal-overlay");
@@ -1899,7 +2006,8 @@ async function inspectionSaveEntry(e) {
       "inspection-toast",
       "Saved on this device only (offline mode)."
     );
-    if (inspectionFocusMapAfterSave && entry.lat != null && entry.lng != null) {
+    const isEdit = inspectionEditingIdx !== null;
+    if (inspectionFocusMapAfterSave && entry.lat != null && entry.lng != null && !isEdit) {
       inspectionFocusMapAfterSave = false;
       showView("map");
       window.location.hash = "map";
@@ -1999,8 +2107,9 @@ async function inspectionSaveEntry(e) {
 
       const hasLocation = entry.lat != null && entry.lng != null;
 
-      if (hasLocation) {
-        // Always jump to the map to show the new pin
+      const isEdit = inspectionEditingId != null;
+      if (hasLocation && !isEdit) {
+        // Always jump to the map to show the new pin for NEW records
         showView("map");
         window.location.hash = "map";
         closeNavSidebar();
@@ -3259,11 +3368,23 @@ function fsecRenderTable() {
   });
 }
 
-function fsecEditEntry(idx) {
-  const row = fsecData[idx];
+async function fsecEditEntry(idx) {
+  const oldRow = fsecData[idx];
+  if (!oldRow) return;
+
+  if (isGasEnabled()) {
+    logbookShowToast("fsec-toast", "Refreshing record data...");
+    try {
+      await fsecLoadFromSupabase();
+    } catch (err) {
+      console.warn("Refresh failed:", err);
+    }
+  }
+
+  const row = (oldRow.id) ? fsecData.find(r => r.id === oldRow.id) : fsecData[idx];
   if (!row) return;
 
-  fsecEditingIdx = idx;
+  fsecEditingIdx = fsecData.indexOf(row);
   fsecEditingId = row.id || null;
 
   const setVal = (id, value) => {
@@ -3288,6 +3409,9 @@ function fsecEditEntry(idx) {
   setText("fsec-modal-subtitle", "FSEC Building Plan Logbook");
   const btn = document.getElementById("fsec-btn-save");
   if (btn) btn.textContent = "Update Record";
+
+  // Reset to first step
+  updateModalStepUI('fsec', 1);
 }
 
 function fsecHandleAction(action, idx) {
@@ -3340,6 +3464,8 @@ function fsecOpenModal() {
   const overlay = document.getElementById("fsec-modal-overlay");
   if (overlay) overlay.classList.add("open");
 
+  // Reset to first step
+  updateModalStepUI('fsec', 1);
   setText("fsec-modal-title", "Add FSEC Building Plan Record");
   setText("fsec-modal-subtitle", "FSEC Building Plan Logbook");
   const btn = document.getElementById("fsec-btn-save");
@@ -3696,11 +3822,23 @@ function conveyanceHandleAction(action, idx) {
   if (action === "delete") return conveyanceDeleteEntry(idx);
 }
 
-function conveyanceEditEntry(idx) {
-  const row = conveyanceData[idx];
+async function conveyanceEditEntry(idx) {
+  const oldRow = conveyanceData[idx];
+  if (!oldRow) return;
+
+  if (isGasEnabled()) {
+    logbookShowToast("conveyance-toast", "Refreshing record data...");
+    try {
+      await conveyanceLoadFromSupabase();
+    } catch (err) {
+      console.warn("Refresh failed:", err);
+    }
+  }
+
+  const row = (oldRow.id) ? conveyanceData.find(r => r.id === oldRow.id) : conveyanceData[idx];
   if (!row) return;
 
-  conveyanceEditingIdx = idx;
+  conveyanceEditingIdx = conveyanceData.indexOf(row);
   conveyanceEditingId = row.id || null;
 
   const setVal = (id, value) => {
@@ -3722,7 +3860,11 @@ function conveyanceEditEntry(idx) {
 
   const overlay = document.getElementById("conveyance-modal-overlay");
   overlay?.classList.add("open");
+
+  // Reset to first step
+  updateModalStepUI('conveyance', 1);
 }
+
 
 function conveyanceOpenModal() {
   conveyanceEditingIdx = null;
@@ -3753,7 +3895,11 @@ function conveyanceOpenModal() {
 
   const overlay = document.getElementById("conveyance-modal-overlay");
   overlay?.classList.add("open");
+
+  // Reset to first step
+  updateModalStepUI('conveyance', 1);
 }
+
 
 function conveyanceCloseModal() {
   const overlay = document.getElementById("conveyance-modal-overlay");
@@ -3963,7 +4109,7 @@ function occupancyRenderTable() {
           row.io_number,
           row.owner_name,
           row.owner_phone,
-          row.type_of_occupancy,
+          row.business_name,
           row.fsic_number,
           row.inspectors,
           row.remarks_signature,
@@ -3998,6 +4144,7 @@ function occupancyRenderTable() {
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Owner">${logbookEsc(row.owner_name)}</td>
       <td data-label="Owner Phone">${logbookEsc(row.owner_phone)}</td>
+      <td data-label="Residential / Property"><strong>${logbookEsc(row.business_name)}</strong></td>
       <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="Type">${logbookEsc(row.type_of_occupancy)}</td>
@@ -4037,11 +4184,23 @@ function occupancyOpenIoHtml(idx) {
   window.open("./occupancy_io_fsis.html", "_blank");
 }
 
-function occupancyEditEntry(idx) {
-  const row = occupancyData[idx];
+async function occupancyEditEntry(idx) {
+  const oldRow = occupancyData[idx];
+  if (!oldRow) return;
+
+  if (isGasEnabled()) {
+    logbookShowToast("occupancy-toast", "Refreshing record data...");
+    try {
+      await occupancyLoadFromSupabase();
+    } catch (err) {
+      console.warn("Refresh failed:", err);
+    }
+  }
+
+  const row = (oldRow.id) ? occupancyData.find(r => r.id === oldRow.id) : occupancyData[idx];
   if (!row) return;
 
-  occupancyEditingIdx = idx;
+  occupancyEditingIdx = occupancyData.indexOf(row);
   occupancyEditingId = row.id || null;
 
   // Preserve existing location/photo for edits so we don't accidentally
@@ -4061,6 +4220,7 @@ function occupancyEditEntry(idx) {
   setVal("occupancy_fsic_number", row.fsic_number);
   setVal("occupancy_owner_name", row.owner_name);
   setVal("occupancy_owner_phone", row.owner_phone);
+  setVal("occupancy_property_name", row.business_name);
   
   ensureSelectOption("occupancy_addr_barangay", row.addr_barangay || "");
   setVal("occupancy_addr_line", row.addr_line);
@@ -4078,7 +4238,11 @@ function occupancyEditEntry(idx) {
 
   const overlay = document.getElementById("occupancy-modal-overlay");
   overlay?.classList.add("open");
+
+  // Reset to first step
+  updateModalStepUI('occupancy', 1);
 }
+
 
 let occupancyClearanceIdx = null;
 
@@ -4161,7 +4325,7 @@ function occupancyOpenModal() {
   if (date) date.value = new Date().toISOString().slice(0, 10);
   const getEl = (id) => document.getElementById(id);
   const clearVals = ["occupancy_io_number", "occupancy_fsic_number", "occupancy_owner_name", 
-    "occupancy_owner_phone", "occupancy_addr_line", 
+    "occupancy_owner_phone", "occupancy_property_name", "occupancy_addr_line", 
     "occupancy_inspector_position", "occupancy_included_personnel_position", 
     "occupancy_duration_start", "occupancy_duration_end"];
   clearVals.forEach(id => {
@@ -4187,7 +4351,11 @@ function occupancyOpenModal() {
 
   const overlay = document.getElementById("occupancy-modal-overlay");
   overlay?.classList.add("open");
+
+  // Reset to first step
+  updateModalStepUI('occupancy', 1);
 }
+
 
 function occupancyCloseModal() {
   const overlay = document.getElementById("occupancy-modal-overlay");
@@ -4246,6 +4414,7 @@ async function occupancySaveEntry(e) {
     fsic_number: (document.getElementById("occupancy_fsic_number") || { value: "" }).value.trim(),
     owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
     owner_phone: (document.getElementById("occupancy_owner_phone") || { value: "" }).value.trim(),
+    business_name: (document.getElementById("occupancy_property_name") || { value: "" }).value.trim(),
     type_of_occupancy: (document.getElementById("occupancy_type_of_occupancy") || { value: "" }).value.trim(),
     addr_barangay: barangay,
     addr_line: line,
@@ -4348,7 +4517,7 @@ async function occupancySaveEntry(e) {
         fsic_number: entry.fsic_number || null,
         owner_name: entry.owner_name || null,
         owner_phone: entry.owner_phone || null,
-        business_name: null, // Removed field
+        business_name: entry.business_name || null,
         type_of_occupancy: entry.type_of_occupancy || null,
         address: entry.addr_line || null, // Mapping addr_line to address for consistency
         inspectors: entry.inspectors,
@@ -4376,8 +4545,8 @@ async function occupancySaveEntry(e) {
       renderOccupancyMarkersBatched();
       logbookShowToast("occupancy-toast", "Saved to database.");
 
-      const hasLocation = entry.lat != null && entry.lng != null;
-      if (hasLocation) {
+      const isEdit = occupancyEditingId != null;
+      if (hasLocation && !isEdit) {
         showView("map");
         window.location.hash = "map";
         closeNavSidebar();
