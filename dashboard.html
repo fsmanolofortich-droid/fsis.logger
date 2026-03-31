@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BFP Manolo Fortich — Dashboard</title>
+  <meta name="description" content="Live stats dashboard for BFP Manolo Fortich Inspection Management System">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── BFP tokens ── */
+    :root {
+      --fire:       #C1272D;
+      --fire-dark:  #8B0000;
+      --fire-light: #E8424A;
+      --gold:       #D4A843;
+      --gold-light: #F0C96A;
+      --navy:       #0D1B2A;
+      --navy-mid:   #162234;
+      --navy-light: #1E2F42;
+      --cream:      #FAF7F2;
+      --cream-dark: #F0EBE1;
+      --text:       #1A1A1A;
+      --text-mid:   #4A4A4A;
+      --text-light: #888;
+      --green:      #12B981;
+      --yellow:     #F59E0B;
+      --blue:       #3B82F6;
+      --shadow:     0 4px 24px rgba(13,27,42,0.13);
+      --shadow-lg:  0 12px 48px rgba(13,27,42,0.22);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      background: var(--cream);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .dash-header {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      border-bottom: 3px solid var(--fire);
+      padding: 1rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: var(--shadow-lg);
+    }
+    .dash-header-logo {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(193,39,45,0.2);
+      border: 2px solid rgba(193,39,45,0.5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; color: var(--fire-light);
+    }
+    .dash-header-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem; color: #fff; line-height: 1.2;
+    }
+    .dash-header-sub {
+      font-size: 0.68rem; color: var(--gold-light);
+      letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px;
+    }
+    .dash-header-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+    .dash-refresh-btn {
+      background: rgba(212,168,67,0.15);
+      border: 1px solid rgba(212,168,67,0.4);
+      color: var(--gold-light);
+      font-size: 0.78rem; padding: 0.4rem 1rem;
+      border-radius: 8px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-weight: 600;
+      transition: background 0.2s;
+    }
+    .dash-refresh-btn:hover { background: rgba(212,168,67,0.28); }
+    .dash-back-link {
+      color: rgba(255,255,255,0.6); font-size: 0.78rem;
+      text-decoration: none; transition: color 0.2s;
+    }
+    .dash-back-link:hover { color: #fff; }
+    .dash-status {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.7rem; color: rgba(255,255,255,0.55);
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-light);
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    .status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    .status-dot.loading { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .status-dot.error   { background: var(--fire);   box-shadow: 0 0 6px var(--fire); }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+    /* ── Body wrapper ── */
+    .dash-body { padding: 1.5rem; max-width: 1300px; margin: 0 auto; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-light); font-weight: 700;
+      display: flex; align-items: center; gap: 0.6rem;
+      margin: 2rem 0 0.85rem;
+    }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--cream-dark); }
+
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 1rem;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 1.2rem 1.1rem 1rem;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .stat-accent {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 3px;
+    }
+    .stat-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; margin-bottom: 0.75rem;
+    }
+    .stat-value {
+      font-size: 2.1rem; font-weight: 700; line-height: 1;
+      color: var(--navy);
+    }
+    .stat-label {
+      font-size: 0.7rem; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-light);
+      margin-top: 0.35rem; font-weight: 600;
+    }
+
+    /* ── Chart cards ── */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 680px) { .chart-grid { grid-template-columns: 1fr; } }
+    .chart-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 1.25rem 1.4rem;
+    }
+    .chart-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.88rem; font-weight: 700;
+      color: var(--navy); margin-bottom: 1.1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .bar-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.55rem; }
+    .bar-label {
+      flex: 0 0 130px; font-size: 0.74rem;
+      color: var(--text-mid); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .bar-track {
+      flex: 1; background: var(--cream-dark);
+      border-radius: 4px; height: 10px; overflow: hidden;
+    }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
+    .bar-count { flex: 0 0 28px; text-align: right; font-size: 0.76rem; font-weight: 700; color: var(--navy); }
+
+    /* ── Tables ── */
+    .recent-card {
+      background: #fff; border-radius: 14px;
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .recent-card-header {
+      background: linear-gradient(135deg, var(--navy), var(--navy-light));
+      padding: 0.9rem 1.25rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .recent-card-header-title {
+      font-family: 'Playfair Display', serif;
+      color: #fff; font-size: 0.92rem; font-weight: 700;
+    }
+    .recent-card-header-sub {
+      font-size: 0.65rem; color: var(--gold-light);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    table.recent-table {
+      width: 100%; border-collapse: collapse; font-size: 0.78rem;
+      overflow-x: auto; display: block;
+    }
+    .recent-table th {
+      padding: 0.45rem 0.75rem;
+      background: var(--cream);
+      color: var(--text-light); font-weight: 700;
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.07em;
+      border-bottom: 1px solid var(--cream-dark);
+      white-space: nowrap;
+    }
+    .recent-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--cream-dark);
+      vertical-align: middle; white-space: nowrap;
+    }
+    .recent-table tr:last-child td { border-bottom: none; }
+    .recent-table tbody tr:hover { background: rgba(13,27,42,0.02); }
+    .badge-yes {
+      display: inline-block; padding: 0.18rem 0.6rem;
+      border-radius: 20px; font-size: 0.65rem; font-weight: 700;
+      background: rgba(18,185,129,0.12); color: #0a7a45;
+      border: 1px solid rgba(18,185,129,0.3);
+    }
+    .badge-no {
+      display: inline-block; padding: 0.18rem 0.6rem;
+      border-radius: 20px; font-size: 0.65rem; font-weight: 600;
+      background: var(--cream); color: var(--text-light);
+      border: 1px solid var(--cream-dark);
+    }
+    .td-io { font-weight: 700; color: var(--fire-dark); }
+
+    /* ── Skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg,
+        var(--cream) 25%, var(--cream-dark) 50%, var(--cream) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+    /* ── Empty ── */
+    .no-data {
+      text-align: center; padding: 2rem;
+      color: var(--text-light); font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="dash-header">
+    <div class="dash-header-logo"><i class="bi bi-shield-fill"></i></div>
+    <div>
+      <div class="dash-header-title">BFP Manolo Fortich</div>
+      <div class="dash-header-sub">Inspection System Dashboard</div>
+    </div>
+    <div class="dash-header-right">
+      <div class="dash-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-ts">Loading…</span>
+      </div>
+      <button class="dash-refresh-btn" onclick="loadDashboard()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+      <a href="./home.html" class="dash-back-link"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </header>
+
+  <div class="dash-body">
+
+    <!-- Stat cards -->
+    <div class="section-label"><i class="bi bi-grid-3x3-gap-fill"></i> Overview</div>
+    <div class="stat-grid">
+
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--fire);"></div>
+        <div class="stat-icon" style="background:rgba(193,39,45,0.1);color:var(--fire);">
+          <i class="bi bi-building-check"></i>
+        </div>
+        <div class="stat-value" id="cnt-insp"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">Inspections</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--green);"></div>
+        <div class="stat-icon" style="background:rgba(18,185,129,0.1);color:var(--green);">
+          <i class="bi bi-geo-alt-fill"></i>
+        </div>
+        <div class="stat-value" id="cnt-loc"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">With Location</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--yellow);"></div>
+        <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:var(--yellow);">
+          <i class="bi bi-image"></i>
+        </div>
+        <div class="stat-value" id="cnt-noloc"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">No Location</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--gold);"></div>
+        <div class="stat-icon" style="background:rgba(212,168,67,0.12);color:var(--gold);">
+          <i class="bi bi-camera-fill"></i>
+        </div>
+        <div class="stat-value" id="cnt-photo"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">With Photo</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--blue);"></div>
+        <div class="stat-icon" style="background:rgba(59,130,246,0.1);color:var(--blue);">
+          <i class="bi bi-file-earmark-text-fill"></i>
+        </div>
+        <div class="stat-value" id="cnt-fsec"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">FSEC Plans</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-accent" style="background:#6366F1;"></div>
+        <div class="stat-icon" style="background:rgba(99,102,241,0.1);color:#6366F1;">
+          <i class="bi bi-truck-flatbed"></i>
+        </div>
+        <div class="stat-value" id="cnt-conv"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">Conveyance</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-accent" style="background:#F97316;"></div>
+        <div class="stat-icon" style="background:rgba(249,115,22,0.1);color:#F97316;">
+          <i class="bi bi-house-fill"></i>
+        </div>
+        <div class="stat-value" id="cnt-occ"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">Occupancy</div>
+      </div>
+
+    </div>
+
+    <!-- Charts -->
+    <div class="section-label"><i class="bi bi-bar-chart-fill"></i> Breakdown</div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">
+          <i class="bi bi-geo-fill" style="color:var(--fire);"></i> Inspections by Barangay
+        </div>
+        <div id="chart-brgy"><div class="skeleton" style="height:160px;"></div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">
+          <i class="bi bi-house-gear-fill" style="color:#F97316;"></i> Occupancy by Type
+        </div>
+        <div id="chart-type"><div class="skeleton" style="height:160px;"></div></div>
+      </div>
+    </div>
+
+    <!-- Recent inspections -->
+    <div class="section-label"><i class="bi bi-clock-history"></i> Recent Inspections</div>
+    <div class="recent-card">
+      <div class="recent-card-header">
+        <div>
+          <div class="recent-card-header-title">Inspection Logbook</div>
+          <div class="recent-card-header-sub">Latest 15 records</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="recent-table">
+          <thead><tr>
+            <th>#</th><th>IO Number</th><th>Business</th><th>Owner</th>
+            <th>Barangay</th><th>Date</th><th>Inspector</th><th>Photo</th>
+          </tr></thead>
+          <tbody id="tbody-insp">
+            <tr><td colspan="8"><div class="skeleton" style="height:120px;margin:.5rem;border-radius:8px;"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent occupancy -->
+    <div class="section-label"><i class="bi bi-house-heart"></i> Recent Occupancy Records</div>
+    <div class="recent-card" style="margin-bottom:2.5rem;">
+      <div class="recent-card-header">
+        <div>
+          <div class="recent-card-header-title">Occupancy Logbook</div>
+          <div class="recent-card-header-sub">Latest 15 records</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="recent-table">
+          <thead><tr>
+            <th>#</th><th>IO Number</th><th>Property</th><th>Owner</th>
+            <th>Type</th><th>Date</th><th>Inspector</th><th>Photo</th>
+          </tr></thead>
+          <tbody id="tbody-occ">
+            <tr><td colspan="8"><div class="skeleton" style="height:80px;margin:.5rem;border-radius:8px;"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /.dash-body -->
+
+<script>
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxh5BiSEO6pMsmzr-Ldu6_ZkJcqQxe4y580tok8YZf5nY0i3fWgubtJVY5-bM-wuaug/exec";
+
+  async function gasRequest(action, payload = {}) {
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action, ...payload }),
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    return json;
+  }
+
+  function esc(s) {
+    if (s == null || s === "") return "—";
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function fmtDate(d) {
+    if (!d) return "—";
+    const dt = typeof d === "string" && !d.includes("T") ? new Date(d+"T00:00:00") : new Date(d);
+    if (isNaN(dt)) return String(d);
+    return dt.toLocaleDateString("en-PH",{ year:"numeric", month:"short", day:"numeric" });
+  }
+
+  function setCount(id, n) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = n;
+  }
+
+  function groupBy(arr, fn) {
+    const m = {};
+    arr.forEach(r => { const k = fn(r) || "Unknown"; m[k] = (m[k]||0)+1; });
+    return Object.entries(m).map(([label,count]) => ({label,count})).sort((a,b) => b.count - a.count);
+  }
+
+  function buildBar(containerId, data, color) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!data.length) { el.innerHTML = '<p class="no-data">No data yet.</p>'; return; }
+    const max = Math.max(...data.map(d=>d.count),1);
+    el.innerHTML = data.slice(0,10).map(d => `
+      <div class="bar-row">
+        <span class="bar-label" title="${esc(d.label)}">${esc(d.label)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(d.count/max*100).toFixed(1)}%;background:${color};"></div></div>
+        <span class="bar-count">${d.count}</span>
+      </div>`).join("");
+  }
+
+  function brgy(r) {
+    if (r.addr_barangay) return r.addr_barangay;
+    const m = (r.address||"").match(/Barangay\s+([^,]+)/i);
+    return m ? m[1].trim() : "";
+  }
+
+  function buildInspTable(rows) {
+    const tb = document.getElementById("tbody-insp");
+    if (!tb) return;
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="no-data">No records found.</td></tr>'; return; }
+    tb.innerHTML = rows.slice(0,15).map((r,i) => `
+      <tr>
+        <td style="color:var(--text-light);">${i+1}</td>
+        <td class="td-io">${esc(r.io_number)}</td>
+        <td>${esc(r.business_name)}</td>
+        <td>${esc(r.owner_name)}</td>
+        <td>${esc(brgy(r))}</td>
+        <td style="color:var(--text-mid);">${fmtDate(r.date_inspected)}</td>
+        <td>${esc(r.inspected_by)}</td>
+        <td>${r.photo_url
+          ? `<a href="${esc(r.photo_url)}" target="_blank" class="badge-yes">✓ View</a>`
+          : '<span class="badge-no">No</span>'}</td>
+      </tr>`).join("");
+  }
+
+  function buildOccTable(rows) {
+    const tb = document.getElementById("tbody-occ");
+    if (!tb) return;
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="no-data">No records found.</td></tr>'; return; }
+    tb.innerHTML = rows.slice(0,15).map((r,i) => `
+      <tr>
+        <td style="color:var(--text-light);">${i+1}</td>
+        <td class="td-io">${esc(r.io_number)}</td>
+        <td>${esc(r.business_name)}</td>
+        <td>${esc(r.owner_name)}</td>
+        <td>${esc(r.type_of_occupancy)}</td>
+        <td style="color:var(--text-mid);">${fmtDate(r.log_date)}</td>
+        <td>${esc(r.inspectors)}</td>
+        <td>${r.photo_url
+          ? `<a href="${esc(r.photo_url)}" target="_blank" class="badge-yes">✓ View</a>`
+          : '<span class="badge-no">No</span>'}</td>
+      </tr>`).join("");
+  }
+
+  function setStatus(state, text) {
+    const dot = document.getElementById("status-dot");
+    const ts  = document.getElementById("status-ts");
+    if (dot) { dot.className = "status-dot " + state; }
+    if (ts)  ts.textContent = text;
+  }
+
+  let loading = false;
+  async function loadDashboard() {
+    if (loading) return;
+    loading = true;
+    setStatus("loading", "Loading…");
+    try {
+      const [inspRes, fsecRes, convRes, occRes] = await Promise.all([
+        gasRequest("read", { table: "inspection_logbook" }),
+        gasRequest("read", { table: "fsec_building_plan_logbook" }),
+        gasRequest("read", { table: "conveyance_logbook" }),
+        gasRequest("read", { table: "occupancy_logbook" }),
+      ]);
+
+      const insp = inspRes.data || [];
+      const fsec = fsecRes.data || [];
+      const conv = convRes.data || [];
+      const occ  = occRes.data  || [];
+
+      const withLoc   = insp.filter(r => r.latitude  != null && r.longitude != null);
+      const noLoc     = insp.filter(r => r.latitude  == null || r.longitude == null);
+      const withPhoto = insp.filter(r => r.photo_url);
+
+      setCount("cnt-insp",  insp.length);
+      setCount("cnt-loc",   withLoc.length);
+      setCount("cnt-noloc", noLoc.length);
+      setCount("cnt-photo", withPhoto.length);
+      setCount("cnt-fsec",  fsec.length);
+      setCount("cnt-conv",  conv.length);
+      setCount("cnt-occ",   occ.length);
+
+      buildBar("chart-brgy", groupBy(insp, r => brgy(r)), "var(--fire)");
+      buildBar("chart-type", groupBy(occ,  r => r.type_of_occupancy), "#F97316");
+
+      const byDate = (a, b) => new Date(b.created_at||0) - new Date(a.created_at||0);
+      buildInspTable([...insp].sort(byDate));
+      buildOccTable([...occ].sort(byDate));
+
+      const now = new Date().toLocaleTimeString("en-PH",{hour:"2-digit",minute:"2-digit"});
+      setStatus("online", `Updated ${now}`);
+    } catch (err) {
+      console.error(err);
+      setStatus("error", "Failed to load");
+      ["cnt-insp","cnt-loc","cnt-noloc","cnt-photo","cnt-fsec","cnt-conv","cnt-occ"]
+        .forEach(id => setCount(id, "—"));
+    } finally {
+      loading = false;
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

@@ -724,12 +724,27 @@ function init() {
 
 document.addEventListener("DOMContentLoaded", init);
 
+// ── Burger button 10-click easter egg → Dashboard ──────────────────────────
+let _burgerClickCount = 0;
+let _burgerClickTimer = null;
+function burgerDashTrigger() {
+  _burgerClickCount++;
+  if (_burgerClickTimer) clearTimeout(_burgerClickTimer);
+  if (_burgerClickCount >= 10) {
+    _burgerClickCount = 0;
+    window.open('./dashboard.html', '_blank');
+    return;
+  }
+  // Reset counter if no click within 2s
+  _burgerClickTimer = setTimeout(() => { _burgerClickCount = 0; }, 2000);
+}
+
 // -----------------------------
 // Shared GAS client + utilities
 // -----------------------------
 
 // Paste your deployed Google Apps Script Web App URL here
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyciiKsA8h82z8VdJHM1NFfFgdSxjWJ8kSfLHw9F6MmShYxXyJmf7qZbbLfWY3hkJyn/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxh5BiSEO6pMsmzr-Ldu6_ZkJcqQxe4y580tok8YZf5nY0i3fWgubtJVY5-bM-wuaug/exec";
 
 function isGasEnabled() {
   return Boolean(GAS_URL);
@@ -815,6 +830,28 @@ function logbookFormatDate(d) {
     month: "short",
     day: "numeric",
   });
+}
+
+/**
+ * Returns a YYYY-MM-DD string for use in <input type="date"> value.
+ */
+function logbookFormatDateForInput(d) {
+  if (!d) return "";
+  let dateObj;
+  if (typeof d === 'string' && !d.includes('T')) {
+    // Already in a simple date format?
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    dateObj = new Date(d + "T00:00:00");
+  } else {
+    dateObj = new Date(d);
+  }
+  if (isNaN(dateObj.getTime())) return "";
+  
+  // Use local components to avoid timezone shifts for simple calendar dates
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function logbookShowToast(id, msg) {
@@ -1204,7 +1241,7 @@ async function inspectionEditEntry(idx) {
   setVal("inspection_owner", row.insp_owner);
   setVal("inspection_owner_phone", row.insp_owner_phone);
   setVal("inspection_business_name", row.business_name);
-  setVal("inspection_date_inspected", row.date_inspected);
+  setVal("inspection_date_inspected", logbookFormatDateForInput(row.date_inspected));
   // Optional IO-specific fields (may not exist on older records or in the DOM)
   setVal("inspection_inspector_position", row.inspector_position);
   setVal("inspection_included_personnel_name", row.included_personnel_name);
@@ -1212,8 +1249,8 @@ async function inspectionEditEntry(idx) {
     "inspection_included_personnel_position",
     row.included_personnel_position
   );
-  setVal("inspection_duration_start", row.duration_start);
-  setVal("inspection_duration_end", row.duration_end);
+  setVal("inspection_duration_start", logbookFormatDateForInput(row.duration_start));
+  setVal("inspection_duration_end", logbookFormatDateForInput(row.duration_end));
 
   const addr = (row.insp_address || "").toString();
   const brgyMatch = addr.match(/Barangay\s+([^,]+)/i);
@@ -1235,14 +1272,128 @@ async function inspectionEditEntry(idx) {
   updateModalStepUI('inspection', 1);
 }
 
-function inspectionAddPhoto(idx) {
-  inspectionFocusMapAfterSave = true;
-  inspectionEditEntry(idx);
-  const photoInput = document.getElementById("inspection_photo");
-  if (photoInput) {
-    photoInput.scrollIntoView({ behavior: "smooth", block: "center" });
-    photoInput.focus();
+/**
+ * Dedicated "add photo late" — picks a file, uploads to Drive, patches only
+ * photo_url in the sheet. Bypasses the full edit-form flow entirely.
+ */
+async function inspectionAddPhoto(idx) {
+  const row = inspectionData[idx];
+  if (!row) return;
+  if (!row.id) {
+    logbookShowToast("inspection-toast", "⚠️ Record must be saved to database first.");
+    return;
   }
+  if (!isGasEnabled()) {
+    logbookShowToast("inspection-toast", "⚠️ Database not connected.");
+    return;
+  }
+
+  // Trigger native file picker — no modal needed
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async function () {
+    const file = input.files[0];
+    if (!file) return;
+    logbookShowToast("inspection-toast", "Uploading photo to Drive…");
+    try {
+      let uploadFile = file;
+      try { uploadFile = await sanitizeInspectionImage(file); } catch (e) {}
+
+      const base64Data = await fileToBase64(uploadFile);
+      const uploadResult = await gasRequest("upload", {
+        filename: `inspection-${Date.now()}.${(file.name || "photo.jpg").split(".").pop() || "jpg"}`,
+        mimeType: file.type || "image/jpeg",
+        base64Data,
+      });
+
+      if (!uploadResult?.data?.url) {
+        logbookShowToast("inspection-toast", "⚠️ Upload returned no URL — check Drive folder permissions.");
+        return;
+      }
+
+      const driveUrl = uploadResult.data.url;
+
+      // Patch ONLY photo_url in the sheet (dedicated action that auto-creates
+      // the column if missing, so the URL always lands in the sheet)
+      await gasRequest("patch_photo_url", {
+        table: "inspection_logbook",
+        id: row.id,
+        url: driveUrl,
+      });
+
+      // Sync local data
+      if (inspectionData[idx]) {
+        inspectionData[idx].photo_url = driveUrl;
+        inspectionSaveToLocal();
+        inspectionRenderTable();
+      }
+      logbookShowToast("inspection-toast", "✓ Photo saved to Drive and sheet.");
+    } catch (err) {
+      console.error("inspectionAddPhoto error:", err);
+      logbookShowToast("inspection-toast", "⚠️ Failed: " + (err?.message || err));
+    }
+  };
+  input.click();
+}
+
+/**
+ * Dedicated "add photo late" for Occupancy records.
+ */
+async function occupancyAddPhoto(idx) {
+  const row = occupancyData[idx];
+  if (!row) return;
+  if (!row.id) {
+    logbookShowToast("occupancy-toast", "⚠️ Record must be saved to database first.");
+    return;
+  }
+  if (!isGasEnabled()) {
+    logbookShowToast("occupancy-toast", "⚠️ Database not connected.");
+    return;
+  }
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async function () {
+    const file = input.files[0];
+    if (!file) return;
+    logbookShowToast("occupancy-toast", "Uploading photo to Drive…");
+    try {
+      let uploadFile = file;
+      try { uploadFile = await sanitizeInspectionImage(file); } catch (e) {}
+
+      const base64Data = await fileToBase64(uploadFile);
+      const uploadResult = await gasRequest("upload", {
+        filename: `occupancy-${Date.now()}.${(file.name || "photo.jpg").split(".").pop() || "jpg"}`,
+        mimeType: file.type || "image/jpeg",
+        base64Data,
+      });
+
+      if (!uploadResult?.data?.url) {
+        logbookShowToast("occupancy-toast", "⚠️ Upload returned no URL — check Drive folder permissions.");
+        return;
+      }
+
+      const driveUrl = uploadResult.data.url;
+
+      await gasRequest("patch_photo_url", {
+        table: "occupancy_logbook",
+        id: row.id,
+        url: driveUrl,
+      });
+
+      if (occupancyData[idx]) {
+        occupancyData[idx].photo_url = driveUrl;
+        occupancyRenderTable();
+      }
+      logbookShowToast("occupancy-toast", "✓ Photo saved to Drive and sheet.");
+    } catch (err) {
+      console.error("occupancyAddPhoto error:", err);
+      logbookShowToast("occupancy-toast", "⚠️ Failed: " + (err?.message || err));
+    }
+  };
+  input.click();
 }
 
 function inspectionHandleAction(action, idx) {
@@ -2024,7 +2175,8 @@ async function inspectionSaveEntry(e) {
 
   (async () => {
     try {
-      // If we have a file and GAS is enabled, upload to Google Drive via GAS
+      // ── Photo upload ──────────────────────────────────────────────────────
+      let photoUploadedUrl = null;
       if (currentExifFile && isGasEnabled()) {
         let uploadFile = currentExifFile;
         try {
@@ -2033,7 +2185,7 @@ async function inspectionSaveEntry(e) {
           console.warn("Image sanitization failed, using original file:", sanitizeErr);
           uploadFile = currentExifFile;
         }
-
+        logbookShowToast("inspection-toast", "Uploading photo to Drive…");
         try {
           const base64Data = await fileToBase64(uploadFile);
           const uploadResult = await gasRequest("upload", {
@@ -2042,10 +2194,23 @@ async function inspectionSaveEntry(e) {
             base64Data,
           });
           if (uploadResult?.data?.url) {
-            entry.photo_url = uploadResult.data.url;
+            photoUploadedUrl = uploadResult.data.url;
+            entry.photo_url = photoUploadedUrl;
+            // Sync Drive URL back into the local in-memory record immediately
+            const localIdx = inspectionEditingIdx !== null
+              ? inspectionEditingIdx
+              : inspectionData.length - 1;
+            if (inspectionData[localIdx]) {
+              inspectionData[localIdx].photo_url = photoUploadedUrl;
+              inspectionSaveToLocal();
+            }
+            logbookShowToast("inspection-toast", "Photo uploaded ✓");
+          } else {
+            logbookShowToast("inspection-toast", "⚠️ Upload returned no URL. Check Drive folder permissions.");
           }
         } catch (uploadErr) {
-          console.warn("Photo upload threw error:", uploadErr);
+          console.error("Photo upload error:", uploadErr);
+          logbookShowToast("inspection-toast", "⚠️ Photo upload failed: " + (uploadErr?.message || uploadErr));
         }
       }
 
@@ -2071,13 +2236,13 @@ async function inspectionSaveEntry(e) {
       };
 
       // On UPDATE: don't send photo_url when it's still a data URL (e.g. upload failed),
-      // so we don't overwrite the existing DB photo with a huge string or null.
+      // so we don't overwrite the existing DB photo with a huge string.
       if (inspectionEditingId && typeof payload.photo_url === "string" && payload.photo_url.startsWith("data:")) {
         delete payload.photo_url;
       }
 
-      // On UPDATE, don't send empty/null optional fields — otherwise Supabase will
-      // overwrite existing DB values to null when the user didn't intend to edit them.
+      // On UPDATE, don't send empty/null optional fields — keep existing DB values.
+      // photo_url and latitude/longitude are also protected so they're never stripped.
       if (inspectionEditingId) {
         const requiredKeys = new Set([
           "io_number",
@@ -2086,6 +2251,9 @@ async function inspectionSaveEntry(e) {
           "address",
           "date_inspected",
           "fsic_number",
+          "photo_url",     // protect — upload may have just set this
+          "latitude",
+          "longitude",
         ]);
         Object.keys(payload).forEach((k) => {
           if (requiredKeys.has(k)) return;
@@ -2094,16 +2262,38 @@ async function inspectionSaveEntry(e) {
           else if (typeof v === "string" && v.trim() === "") delete payload[k];
         });
       }
+
+      console.log("[FSIS] DB payload photo_url:", payload.photo_url ?? "(none)");
+
+      let savedId = inspectionEditingId; // will be set for edits
       if (inspectionEditingId) {
         await gasRequest("update", { table: "inspection_logbook", id: inspectionEditingId, row: payload });
       } else {
-        await gasRequest("insert", { table: "inspection_logbook", row: payload });
+        const insertResult = await gasRequest("insert", { table: "inspection_logbook", row: payload });
+        savedId = insertResult?.data?.id ?? null;
       }
+
+      // ── Guaranteed photo_url patch ─────────────────────────────────────
+      // If a photo was uploaded this session, write the Drive URL via the
+      // dedicated patch_photo_url action which auto-creates the column if
+      // missing and writes directly to the correct cell — no silent skips.
+      if (photoUploadedUrl && savedId) {
+        try {
+          await gasRequest("patch_photo_url", {
+            table: "inspection_logbook",
+            id: savedId,
+            url: photoUploadedUrl,
+          });
+        } catch (patchErr) {
+          console.warn("[FSIS] photo_url patch failed:", patchErr);
+        }
+      }
+
       await inspectionLoadFromSupabase();
       inspectionRenderTable();
       renderInspectionMarkersBatched();
       inspectionCloseModal();
-      logbookShowToast("inspection-toast", "Saved to database.");
+      logbookShowToast("inspection-toast", photoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database.");
 
       const hasLocation = entry.lat != null && entry.lng != null;
 
@@ -3394,7 +3584,7 @@ async function fsecEditEntry(idx) {
 
   setVal("fsec_owner", row.fsec_owner);
   setVal("proposed_project", row.proposed_project);
-  setVal("fsec_date", row.fsec_date);
+  setVal("fsec_date", logbookFormatDateForInput(row.fsec_date));
   setVal("contact_number", row.contact_number);
 
   const addr = (row.fsec_address || "").toString();
@@ -3845,7 +4035,7 @@ async function conveyanceEditEntry(idx) {
     const el = document.getElementById(id);
     if (el) el.value = value || "";
   };
-  setVal("conveyance_date", row.log_date);
+  setVal("conveyance_date", logbookFormatDateForInput(row.log_date));
   setVal("conveyance_io_number", row.io_number);
   setVal("conveyance_owner_name", row.owner_name);
   ensureSelectOption("conveyance_inspected_by", row.inspectors || "");
@@ -4154,6 +4344,7 @@ function occupancyRenderTable() {
         <select class="action-select" aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
           <option value="">Actions…</option>
           <option value="edit">Edit</option>
+          <option value="add_photo">Add photo</option>
           <option value="open_io_html">Open IO (HTML)</option>
           <option value="open_clearance_html">Release clearance (FSIC)</option>
           <option value="delete">Delete</option>
@@ -4167,6 +4358,7 @@ function occupancyRenderTable() {
 function occupancyHandleAction(action, idx) {
   if (!action) return;
   if (action === "edit") return occupancyEditEntry(idx);
+  if (action === "add_photo") return occupancyAddPhoto(idx);
   if (action === "open_io_html") return occupancyOpenIoHtml(idx);
   if (action === "open_clearance_html") return occupancyClearanceOpenModal(idx);
   if (action === "delete") return occupancyDeleteEntry(idx);
@@ -4215,7 +4407,7 @@ async function occupancyEditEntry(idx) {
     const el = document.getElementById(id);
     if (el) el.value = value || "";
   };
-  setVal("occupancy_date", row.log_date);
+  setVal("occupancy_date", logbookFormatDateForInput(row.log_date));
   setVal("occupancy_io_number", row.io_number);
   setVal("occupancy_fsic_number", row.fsic_number);
   setVal("occupancy_owner_name", row.owner_name);
@@ -4229,8 +4421,8 @@ async function occupancyEditEntry(idx) {
   setVal("occupancy_inspector_position", row.inspector_position);
   ensureSelectOption("occupancy_included_personnel_name", row.included_personnel_name || "");
   setVal("occupancy_included_personnel_position", row.included_personnel_position);
-  setVal("occupancy_duration_start", row.duration_start);
-  setVal("occupancy_duration_end", row.duration_end);
+  setVal("occupancy_duration_start", logbookFormatDateForInput(row.duration_start));
+  setVal("occupancy_duration_end", logbookFormatDateForInput(row.duration_end));
 
   setText("occupancy-modal-title", "Edit Occupancy Record");
   const btn = document.getElementById("occupancy-btn-save");
@@ -4490,6 +4682,7 @@ async function occupancySaveEntry(e) {
   (async () => {
     try {
       // If we have a photo file and GAS is enabled, upload to Google Drive via GAS
+      let occPhotoUploadedUrl = null;
       if (occupancyExifFile && isGasEnabled()) {
         let uploadFile = occupancyExifFile;
         try {
@@ -4498,6 +4691,7 @@ async function occupancySaveEntry(e) {
           console.warn("Occupancy image sanitization failed, using original:", sanitizeErr);
           uploadFile = occupancyExifFile;
         }
+        logbookShowToast("occupancy-toast", "Uploading photo to Drive…");
         try {
           const base64Data = await fileToBase64(uploadFile);
           const uploadResult = await gasRequest("upload", {
@@ -4505,9 +4699,15 @@ async function occupancySaveEntry(e) {
             mimeType: uploadFile.type || "image/jpeg",
             base64Data,
           });
-          if (uploadResult?.data?.url) entry.photo_url = uploadResult.data.url;
+          if (uploadResult?.data?.url) {
+            occPhotoUploadedUrl = uploadResult.data.url;
+            entry.photo_url = occPhotoUploadedUrl;
+          } else {
+            logbookShowToast("occupancy-toast", "⚠️ Upload returned no URL — check Drive folder.");
+          }
         } catch (uploadErr) {
-          console.warn("Occupancy photo upload threw:", uploadErr);
+          console.error("Occupancy photo upload error:", uploadErr);
+          logbookShowToast("occupancy-toast", "⚠️ Photo upload failed: " + (uploadErr?.message || uploadErr));
         }
       }
 
@@ -4535,15 +4735,31 @@ async function occupancySaveEntry(e) {
       if (occupancyEditingId && (!payload.owner_name || String(payload.owner_name).trim() === "")) {
         delete payload.owner_name;
       }
+      let occSavedId = occupancyEditingId;
       if (occupancyEditingId) {
         await gasRequest("update", { table: "occupancy_logbook", id: occupancyEditingId, row: payload });
       } else {
-        await gasRequest("insert", { table: "occupancy_logbook", row: payload });
+        const insertResult = await gasRequest("insert", { table: "occupancy_logbook", row: payload });
+        occSavedId = insertResult?.data?.id ?? null;
       }
+
+      // ── Guaranteed photo_url patch ──────────────────────────────────────
+      if (occPhotoUploadedUrl && occSavedId) {
+        try {
+          await gasRequest("patch_photo_url", {
+            table: "occupancy_logbook",
+            id: occSavedId,
+            url: occPhotoUploadedUrl,
+          });
+        } catch (patchErr) {
+          console.warn("[FSIS] occ photo_url patch failed:", patchErr);
+        }
+      }
+
       await occupancyLoadFromSupabase();
       occupancyRenderTable();
       renderOccupancyMarkersBatched();
-      logbookShowToast("occupancy-toast", "Saved to database.");
+      logbookShowToast("occupancy-toast", occPhotoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database.");
 
       const isEdit = occupancyEditingId != null;
       if (hasLocation && !isEdit) {
@@ -4601,8 +4817,8 @@ async function occupancyLoadFromSupabase() {
     remarks_signature: r.remarks_signature || "",
     lat: r.latitude ?? null,
     lng: r.longitude ?? null,
-    photo_url: r.latitude != null && r.longitude != null ? r.photo_url ?? null : null,
-    photo_taken_at: r.latitude != null && r.longitude != null ? r.photo_taken_at ?? null : null,
+    photo_url: r.photo_url ?? null,
+    photo_taken_at: r.photo_taken_at ?? null,
     created_at: r.created_at,
   }));
   occupancySaveToLocal();

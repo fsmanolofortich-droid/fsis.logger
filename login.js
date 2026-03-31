@@ -6,7 +6,7 @@ const SESSION_KEY = "fsis.session";
 
 // ── Google Apps Script backend ────────────────────────────────────────────────
 // Paste your deployed Web App URL below after deploying Code.gs
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyciiKsA8h82z8VdJHM1NFfFgdSxjWJ8kSfLHw9F6MmShYxXyJmf7qZbbLfWY3hkJyn/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxh5BiSEO6pMsmzr-Ldu6_ZkJcqQxe4y580tok8YZf5nY0i3fWgubtJVY5-bM-wuaug/exec";
 
 // ── Toast notification system ─────────────────────────────────────────────────
 

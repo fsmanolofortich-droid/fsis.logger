@@ -8,7 +8,7 @@
 // ── CONFIGURATION ───────────────────────────────────────────
 // 1. Replace with your Google Drive folder ID for photo storage
 //    (Open the folder in Drive and copy the ID from the URL)
-var DRIVE_FOLDER_ID = "YOUR_DRIVE_FOLDER_ID_HERE";
+var DRIVE_FOLDER_ID = "1dZPGdfM8hKxN8LzrP_XrkxD2-hs9LYZA";
 
 // 2. Replace with a strong secret used by the admin panel
 var ADMIN_SECRET = "YOUR_ADMIN_SECRET_HERE";
@@ -33,6 +33,7 @@ function doPost(e) {
     else if (action === "update")  result = handleUpdate(body);
     else if (action === "delete")  result = handleDelete(body);
     else if (action === "upload")  result = handleUpload(body);
+    else if (action === "patch_photo_url") result = handlePatchPhotoUrl(body);
     else result = { error: "Unknown action: " + action };
 
   } catch (err) {
@@ -237,6 +238,7 @@ function handleUpdate(body) {
 
   var newRow = headers.map(function(h, idx) {
     if (h === "id") return currentRow[idx]; // never overwrite id
+    if (h === "created_at") return currentRow[idx]; // never overwrite created_at
     if (updates.hasOwnProperty(h) && updates[h] !== undefined && updates[h] !== null) {
       return updates[h];
     }
@@ -265,6 +267,69 @@ function handleDelete(body) {
 }
 
 /**
+ * ─────────────────────────────────────────────────────────────────────────
+ * RUN THIS ONCE from the Apps Script editor to add photo_url columns
+ * ─────────────────────────────────────────────────────────────────────────
+ * Select "setupPhotoUrlColumns" from the dropdown → click ▶ Run
+ */
+function setupPhotoUrlColumns() {
+  var tables = ["inspection_logbook", "occupancy_logbook"];
+  var columnsToAdd = ["photo_url", "photo_taken_at", "latitude", "longitude"];
+
+  tables.forEach(function(tableName) {
+    var sheet;
+    try { sheet = getSheet(tableName); }
+    catch(e) { Logger.log("⚠️ Sheet not found: " + tableName); return; }
+
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    Logger.log("📋 " + tableName + " columns: " + headers.join(", "));
+
+    columnsToAdd.forEach(function(col) {
+      if (headers.indexOf(col) === -1) {
+        sheet.getRange(1, sheet.getLastColumn() + 1).setValue(col);
+        Logger.log("✅ Added '" + col + "' to " + tableName);
+      } else {
+        Logger.log("✔️  '" + col + "' already exists in " + tableName);
+      }
+    });
+  });
+
+  Logger.log("Done — check your Google Sheet.");
+}
+
+/**
+ * PATCH PHOTO URL — find existing row by id, then find (or create) the
+ * photo_url column and write the Drive URL directly to that cell.
+ * Body: { table, id, url }
+ * Returns: { data: { id } } or { error }
+ */
+function handlePatchPhotoUrl(body) {
+  var table = body.table || "";
+  var id = body.id || "";
+  var url = body.url || "";
+  if (!table || !id) return { error: "table and id required." };
+  if (!url) return { error: "url required." };
+
+  var sheet = getSheet(table);
+  var rowNum = findRowById(sheet, id);
+  if (rowNum < 0) return { error: "Record not found: " + id };
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var colIdx = headers.indexOf("photo_url");
+
+  // If the column doesn't exist yet, add it at the end
+  if (colIdx === -1) {
+    var newCol = sheet.getLastColumn() + 1;
+    sheet.getRange(1, newCol).setValue("photo_url");
+    colIdx = newCol - 1; // 0-indexed
+  }
+
+  // Write the URL directly to the correct cell (sheet is 1-indexed)
+  sheet.getRange(rowNum, colIdx + 1).setValue(url);
+  return { data: { id: id } };
+}
+
+/**
  * UPLOAD — decode base64 file, save to Drive, return shareable URL
  * Body: { filename, mimeType, base64Data }
  * Returns: { data: { url } }
@@ -275,20 +340,47 @@ function handleUpload(body) {
   var base64Data = body.base64Data || "";
 
   if (!base64Data) return { error: "No file data provided." };
-  if (DRIVE_FOLDER_ID === "YOUR_DRIVE_FOLDER_ID_HERE") {
-    return { error: "DRIVE_FOLDER_ID is not configured in Code.gs." };
+  if (!DRIVE_FOLDER_ID || DRIVE_FOLDER_ID === "YOUR_DRIVE_FOLDER_ID_HERE") {
+    return {
+      error: "Google Drive Folder ID not configured. Please open Code.gs in Apps Script and set DRIVE_FOLDER_ID."
+    };
   }
 
-  var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, filename);
-  var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-  var file = folder.createFile(blob);
+  try {
+    var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, filename);
+    var file = folder.createFile(blob);
 
-  // Make the file publicly viewable so the URL renders in the browser
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    // Make the file publicly viewable so the URL renders in the browser
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-  // Use the direct image URL format (works for <img> tags)
-  var fileId = file.getId();
-  var url = "https://drive.google.com/uc?export=view&id=" + fileId;
+    var fileId = file.getId();
+    var url = "https://drive.google.com/uc?export=view&id=" + fileId;
 
-  return { data: { url: url } };
+    return { data: { url: url, fileId: fileId } };
+  } catch (err) {
+    return { error: "Drive upload failed: " + err.message };
+  }
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────
+ * RUN THIS FUNCTION ONCE FROM THE APPS SCRIPT EDITOR BEFORE DEPLOYING
+ * ─────────────────────────────────────────────────────────────────────────
+ * 1. Open this file in the Apps Script editor (Extensions → Apps Script)
+ * 2. Select "testDriveAccess" from the function dropdown at the top
+ * 3. Click ▶ Run — it will ask you to authorize Google Drive access
+ * 4. Accept the permission prompt
+ * 5. Then: Deploy → New Deployment (Web App, Execute as Me, Anyone)
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+function testDriveAccess() {
+  try {
+    var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    Logger.log("✅ Drive access OK. Folder name: " + folder.getName());
+    Logger.log("Folder ID: " + DRIVE_FOLDER_ID);
+  } catch (err) {
+    Logger.log("❌ Drive access FAILED: " + err.message);
+    Logger.log("Check that DRIVE_FOLDER_ID is correct and you have Editor access to the folder.");
+  }
 }
