@@ -744,7 +744,7 @@ function burgerDashTrigger() {
 // -----------------------------
 
 // Paste your deployed Google Apps Script Web App URL here
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxh5BiSEO6pMsmzr-Ldu6_ZkJcqQxe4y580tok8YZf5nY0i3fWgubtJVY5-bM-wuaug/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwJmqg6lRB_W95VNY9XfAyAovcbJrm8VpPXXg1pP1ujFD10k85xTpbwO5v8RVyy8Bpc/exec";
 
 function isGasEnabled() {
   return Boolean(GAS_URL);
@@ -1302,8 +1302,8 @@ async function inspectionAddPhoto(idx) {
 
       const base64Data = await fileToBase64(uploadFile);
       const uploadResult = await gasRequest("upload", {
-        filename: `inspection-${Date.now()}.${(file.name || "photo.jpg").split(".").pop() || "jpg"}`,
-        mimeType: file.type || "image/jpeg",
+        filename: `inspection-${Date.now()}.${(file.name || "file.bin").split(".").pop() || "bin"}`,
+        mimeType: file.type || "application/octet-stream",
         base64Data,
       });
 
@@ -1365,8 +1365,8 @@ async function occupancyAddPhoto(idx) {
 
       const base64Data = await fileToBase64(uploadFile);
       const uploadResult = await gasRequest("upload", {
-        filename: `occupancy-${Date.now()}.${(file.name || "photo.jpg").split(".").pop() || "jpg"}`,
-        mimeType: file.type || "image/jpeg",
+        filename: `occupancy-${Date.now()}.${(file.name || "file.bin").split(".").pop() || "bin"}`,
+        mimeType: file.type || "application/octet-stream",
         base64Data,
       });
 
@@ -2189,8 +2189,8 @@ async function inspectionSaveEntry(e) {
         try {
           const base64Data = await fileToBase64(uploadFile);
           const uploadResult = await gasRequest("upload", {
-            filename: `inspection-${Date.now()}.${(uploadFile.name || "photo.jpg").split(".").pop() || "jpg"}`,
-            mimeType: uploadFile.type || "image/jpeg",
+            filename: `inspection-${Date.now()}.${(uploadFile.name || "file.bin").split(".").pop() || "bin"}`,
+            mimeType: uploadFile.type || "application/octet-stream",
             base64Data,
           });
           if (uploadResult?.data?.url) {
@@ -2829,6 +2829,16 @@ async function sanitizeInspectionImage(file) {
             }
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
+            let outMime = "image/jpeg";
+            let outExt = "jpg";
+            if (file.type === "image/png") {
+              outMime = "image/png";
+              outExt = "png";
+            } else if (file.type === "image/webp") {
+              outMime = "image/webp";
+              outExt = "webp";
+            }
+
             canvas.toBlob(
               (blob) => {
                 if (!blob) {
@@ -2837,12 +2847,12 @@ async function sanitizeInspectionImage(file) {
                 }
                 const baseName =
                   (file.name && file.name.replace(/\.[^.]+$/, "")) || "photo";
-                const sanitized = new File([blob], baseName + ".jpg", {
-                  type: "image/jpeg",
+                const sanitized = new File([blob], baseName + "." + outExt, {
+                  type: outMime,
                 });
                 resolve(sanitized);
               },
-              "image/jpeg",
+              outMime,
               0.8
             );
           } catch (err) {
@@ -4695,8 +4705,8 @@ async function occupancySaveEntry(e) {
         try {
           const base64Data = await fileToBase64(uploadFile);
           const uploadResult = await gasRequest("upload", {
-            filename: `occupancy-${Date.now()}.${(uploadFile.name || "photo.jpg").split(".").pop() || "jpg"}`,
-            mimeType: uploadFile.type || "image/jpeg",
+            filename: `occupancy-${Date.now()}.${(uploadFile.name || "file.bin").split(".").pop() || "bin"}`,
+            mimeType: uploadFile.type || "application/octet-stream",
             base64Data,
           });
           if (uploadResult?.data?.url) {

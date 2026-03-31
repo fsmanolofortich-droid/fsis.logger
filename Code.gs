@@ -351,8 +351,14 @@ function handleUpload(body) {
     var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, filename);
     var file = folder.createFile(blob);
 
-    // Make the file publicly viewable so the URL renders in the browser
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    // Try to make the file publicly viewable so the URL renders in the browser
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (sharingErr) {
+      // Ignore "Tinanggihang bigyan ng access: DriveApp" errors caused by 
+      // strict Google Workspace organization policies. The file is already uploaded.
+      // (The user can manually share the 'FSIS Storage' folder instead).
+    }
 
     var fileId = file.getId();
     var url = "https://drive.google.com/uc?export=view&id=" + fileId;
