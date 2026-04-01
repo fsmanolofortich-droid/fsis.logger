@@ -236,7 +236,10 @@ function initLeafletMap() {
         "Road map": osmLayer,
         Satellite: satelliteLayer,
       },
-      {},
+      {
+        "Inspection Flags": inspectionMarkersLayer,
+        "Occupancy Flags": occupancyMarkersLayer,
+      },
       { position: "topright" }
     )
     .addTo(mapInstance);

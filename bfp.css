@@ -10,8 +10,8 @@
   inset: 0;
   background: rgba(13, 27, 42, 0.52);
   backdrop-filter: blur(5px);
-  z-index: 1055;
-  /* Above Bootstrap navbar/offcanvas (1045) */
+  z-index: 1400;
+  /* Above the map panel (1300) and burger button (1305) */
   display: none;
   align-items: center;
   justify-content: center;
@@ -222,7 +222,7 @@ h2,
   background: var(--navy);
   color: #fff;
   box-shadow: var(--shadow-lg);
-  z-index: 1045;
+  z-index: 1305;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1140,7 +1140,7 @@ body.is-map-view [data-view="map"] {
   background: rgba(13, 27, 42, 0.96);
   color: #fff;
   box-shadow: -6px 0 28px rgba(0, 0, 0, 0.4);
-  z-index: 400;
+  z-index: 1300;
   transform: translateX(100%);
   opacity: 0;
   transition: transform 0.25s ease-out, opacity 0.25s ease-out;
@@ -1305,6 +1305,10 @@ body.is-map-view [data-view="map"] {
     left: auto;
     width: 100%;
     max-width: 100%;
+  }
+
+  .map-detail-header {
+    padding-left: 72px;
   }
 }
 
