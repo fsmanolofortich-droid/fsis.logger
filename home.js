@@ -1309,44 +1309,64 @@ async function inspectionAddPhoto(idx) {
   input.onchange = async function () {
     const file = input.files[0];
     if (!file) return;
-    logbookShowToast("inspection-toast", "Uploading photo to Drive…");
-    try {
-      let uploadFile = file;
-      try { uploadFile = await sanitizeInspectionImage(file); } catch (e) {}
 
-      const base64Data = await fileToBase64(uploadFile);
-      const uploadResult = await gasRequest("upload", {
-        filename: `inspection-${Date.now()}.${(file.name || "file.bin").split(".").pop() || "bin"}`,
-        mimeType: file.type || "application/octet-stream",
-        base64Data,
-      });
+    void beginPhotoAttachFromPicker("inspection_direct", file, null, {
+      onConfirm: async ({ file, dataUrl, meta }) => {
+        logbookShowToast("inspection-toast", "Uploading photo to Drive…");
+        try {
+          let uploadFile = file;
+          try { uploadFile = await sanitizeInspectionImage(file); } catch (e) {}
 
-      if (!uploadResult?.data?.url) {
-        logbookShowToast("inspection-toast", "⚠️ Upload returned no URL — check Drive folder permissions.");
-        return;
+          const base64Data = await fileToBase64(uploadFile);
+          const uploadResult = await gasRequest("upload", {
+            filename: `inspection-${Date.now()}.${(file.name || "file.bin").split(".").pop() || "bin"}`,
+            mimeType: file.type || "application/octet-stream",
+            base64Data,
+          });
+
+          if (!uploadResult?.data?.url) {
+            logbookShowToast("inspection-toast", "⚠️ Upload returned no URL — check Drive folder permissions.");
+            return;
+          }
+
+          const driveUrl = uploadResult.data.url;
+          const exLat = normalizeGeoNumber(meta?.gps?.lat);
+          const exLng = normalizeGeoNumber(meta?.gps?.lng);
+
+          await gasRequest("patch_photo_url", {
+            table: "inspection_logbook",
+            id: row.id,
+            url: driveUrl,
+          });
+
+          if (exLat != null && exLng != null) {
+            try {
+              await gasRequest("patch_lat_lng", {
+                table: "inspection_logbook",
+                id: row.id,
+                latitude: exLat,
+                longitude: exLng,
+              });
+            } catch (err) { }
+          }
+
+          if (inspectionData[idx]) {
+            inspectionData[idx].photo_url = driveUrl;
+            if (exLat != null && exLng != null) {
+              inspectionData[idx].lat = exLat;
+              inspectionData[idx].lng = exLng;
+            }
+            inspectionSaveToLocal();
+            inspectionRenderTable();
+            renderInspectionMarkersBatched();
+          }
+          logbookShowToast("inspection-toast", "✓ Photo & EXIF saved to Drive and sheet.");
+        } catch (err) {
+          console.error("inspectionAddPhoto error:", err);
+          logbookShowToast("inspection-toast", "⚠️ Failed: " + (err?.message || err));
+        }
       }
-
-      const driveUrl = uploadResult.data.url;
-
-      // Patch ONLY photo_url in the sheet (dedicated action that auto-creates
-      // the column if missing, so the URL always lands in the sheet)
-      await gasRequest("patch_photo_url", {
-        table: "inspection_logbook",
-        id: row.id,
-        url: driveUrl,
-      });
-
-      // Sync local data
-      if (inspectionData[idx]) {
-        inspectionData[idx].photo_url = driveUrl;
-        inspectionSaveToLocal();
-        inspectionRenderTable();
-      }
-      logbookShowToast("inspection-toast", "✓ Photo saved to Drive and sheet.");
-    } catch (err) {
-      console.error("inspectionAddPhoto error:", err);
-      logbookShowToast("inspection-toast", "⚠️ Failed: " + (err?.message || err));
-    }
+    });
   };
   input.click();
 }
@@ -1372,40 +1392,63 @@ async function occupancyAddPhoto(idx) {
   input.onchange = async function () {
     const file = input.files[0];
     if (!file) return;
-    logbookShowToast("occupancy-toast", "Uploading photo to Drive…");
-    try {
-      let uploadFile = file;
-      try { uploadFile = await sanitizeInspectionImage(file); } catch (e) {}
 
-      const base64Data = await fileToBase64(uploadFile);
-      const uploadResult = await gasRequest("upload", {
-        filename: `occupancy-${Date.now()}.${(file.name || "file.bin").split(".").pop() || "bin"}`,
-        mimeType: file.type || "application/octet-stream",
-        base64Data,
-      });
+    void beginPhotoAttachFromPicker("occupancy_direct", file, null, {
+      onConfirm: async ({ file, dataUrl, meta }) => {
+        logbookShowToast("occupancy-toast", "Uploading photo to Drive…");
+        try {
+          let uploadFile = file;
+          try { uploadFile = await sanitizeInspectionImage(file); } catch (e) {}
 
-      if (!uploadResult?.data?.url) {
-        logbookShowToast("occupancy-toast", "⚠️ Upload returned no URL — check Drive folder permissions.");
-        return;
+          const base64Data = await fileToBase64(uploadFile);
+          const uploadResult = await gasRequest("upload", {
+            filename: `occupancy-${Date.now()}.${(file.name || "file.bin").split(".").pop() || "bin"}`,
+            mimeType: file.type || "application/octet-stream",
+            base64Data,
+          });
+
+          if (!uploadResult?.data?.url) {
+            logbookShowToast("occupancy-toast", "⚠️ Upload returned no URL — check Drive folder permissions.");
+            return;
+          }
+
+          const driveUrl = uploadResult.data.url;
+          const exLat = normalizeGeoNumber(meta?.gps?.lat);
+          const exLng = normalizeGeoNumber(meta?.gps?.lng);
+
+          await gasRequest("patch_photo_url", {
+            table: "occupancy_logbook",
+            id: row.id,
+            url: driveUrl,
+          });
+
+          if (exLat != null && exLng != null) {
+            try {
+              await gasRequest("patch_lat_lng", {
+                table: "occupancy_logbook",
+                id: row.id,
+                latitude: exLat,
+                longitude: exLng,
+              });
+            } catch (err) { }
+          }
+
+          if (occupancyData[idx]) {
+            occupancyData[idx].photo_url = driveUrl;
+            if (exLat != null && exLng != null) {
+              occupancyData[idx].lat = exLat;
+              occupancyData[idx].lng = exLng;
+            }
+            occupancyRenderTable();
+            renderOccupancyMarkersBatched();
+          }
+          logbookShowToast("occupancy-toast", "✓ Photo & EXIF saved to Drive and sheet.");
+        } catch (err) {
+          console.error("occupancyAddPhoto error:", err);
+          logbookShowToast("occupancy-toast", "⚠️ Failed: " + (err?.message || err));
+        }
       }
-
-      const driveUrl = uploadResult.data.url;
-
-      await gasRequest("patch_photo_url", {
-        table: "occupancy_logbook",
-        id: row.id,
-        url: driveUrl,
-      });
-
-      if (occupancyData[idx]) {
-        occupancyData[idx].photo_url = driveUrl;
-        occupancyRenderTable();
-      }
-      logbookShowToast("occupancy-toast", "✓ Photo saved to Drive and sheet.");
-    } catch (err) {
-      console.error("occupancyAddPhoto error:", err);
-      logbookShowToast("occupancy-toast", "⚠️ Failed: " + (err?.message || err));
-    }
+    });
   };
   input.click();
 }
@@ -3175,7 +3218,7 @@ function photoPreviewRenderExif(meta) {
   panel.innerHTML = `<dl>${rows.join("")}</dl>`;
 }
 
-async function beginPhotoAttachFromPicker(context, file, sourceInput) {
+async function beginPhotoAttachFromPicker(context, file, sourceInput, options = {}) {
   const isInspection = context === "inspection";
   const inputCamera = document.getElementById(
     isInspection ? "inspection_photo" : "occupancy_photo"
@@ -3199,6 +3242,7 @@ async function beginPhotoAttachFromPicker(context, file, sourceInput) {
     inputCamera,
     inputLibrary,
     indicator,
+    options,
   };
 
   const img = document.getElementById("photo-preview-modal-img");
@@ -3253,10 +3297,15 @@ async function photoPreviewConfirm() {
     dataUrl,
     meta,
     indicator,
+    options,
   } = ctx;
 
   photoPreviewSetOpen(false);
   photoPreviewContext = null;
+
+  if (options && typeof options.onConfirm === "function") {
+    return options.onConfirm({ file, dataUrl, meta });
+  }
 
   const applyExif = async () => {
     const isInspection = context === "inspection";
