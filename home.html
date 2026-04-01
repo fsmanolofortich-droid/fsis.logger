@@ -945,7 +945,7 @@
                     <div class="form-section-title">Location &amp; photo</div>
                     <div class="row g-3">
                       <div class="col-12">
-                        <p class="photo-option-label">Attach photo (uses GPS from EXIF if available)</p>
+                        <p class="photo-option-label">Attach photo — a preview opens to confirm; EXIF shows GPS and time taken when present.</p>
                         <div class="photo-option-buttons">
                           <label class="photo-option-btn">
                             <input type="file" id="inspection_photo" accept="image/*" capture="environment" aria-label="Take photo with camera">
@@ -1135,7 +1135,7 @@
                     <div class="form-section-title">Location &amp; photo</div>
                     <div class="row g-3">
                       <div class="col-12">
-                        <p class="photo-option-label mb-2">Attach photo (uses GPS from EXIF if available)</p>
+                        <p class="photo-option-label mb-2">Attach photo — a preview opens to confirm; EXIF shows GPS and time taken when present.</p>
                         <div class="photo-option-buttons">
                           <label class="photo-option-btn">
                             <input type="file" id="occupancy_photo" accept="image/*" capture="environment" aria-label="Take photo with camera">
@@ -1165,6 +1165,35 @@
       </div>
     </div>
     <div class="toast" id="occupancy-toast"></div>
+
+    <!-- Photo preview + EXIF confirmation (inspection & occupancy) -->
+    <div class="modal-overlay" id="photo-preview-modal-overlay" onclick="photoPreviewCloseOnOverlay(event)"
+      aria-hidden="true">
+      <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;"
+        onclick="event.stopPropagation()">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header bfp-header">
+              <h5 class="modal-title text-white mb-0">Photo preview</h5>
+              <button type="button" class="btn-close btn-close-white" id="photo-preview-btn-close"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="photo-preview-img-wrap">
+                <img id="photo-preview-modal-img" src="" alt="Selected photo preview" />
+              </div>
+              <p class="photo-preview-status mb-0" id="photo-preview-modal-status">Reading photo…</p>
+              <div class="photo-preview-exif-panel" id="photo-preview-modal-exif" hidden></div>
+            </div>
+            <div class="modal-footer bfp-footer">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="photo-preview-btn-cancel">Cancel</button>
+              <button type="button" class="btn btn-sm btn-dark" id="photo-preview-btn-confirm" disabled>Use this
+                photo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ================================================================
          GLOBAL CLEARANCE MODAL

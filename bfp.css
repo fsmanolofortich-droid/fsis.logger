@@ -22,6 +22,61 @@
   display: flex;
 }
 
+/* Photo attach preview (stacked above logbook modals) */
+#photo-preview-modal-overlay {
+  z-index: 1600;
+}
+
+.photo-preview-img-wrap {
+  max-height: min(48vh, 380px);
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview-img-wrap img {
+  max-width: 100%;
+  max-height: min(48vh, 380px);
+  object-fit: contain;
+}
+
+.photo-preview-exif-panel {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--cream-dark);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.photo-preview-exif-panel dl {
+  margin: 0;
+}
+
+.photo-preview-exif-panel dt {
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-top: 0.5rem;
+}
+
+.photo-preview-exif-panel dt:first-child {
+  margin-top: 0;
+}
+
+.photo-preview-exif-panel dd {
+  margin: 0.15rem 0 0;
+  color: var(--text);
+}
+
+.photo-preview-status {
+  font-size: 0.875rem;
+  color: var(--text-mid);
+  margin-top: 0.5rem;
+}
+
 /* Override Bootstrap's .modal full-screen positioning inside our custom overlay.
    Bootstrap sets position:fixed; inset:0; overflow-y:auto which makes the modal
    invisible (it covers the whole screen behind the backdrop).

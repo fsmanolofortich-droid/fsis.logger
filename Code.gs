@@ -34,6 +34,7 @@ function doPost(e) {
     else if (action === "delete")  result = handleDelete(body);
     else if (action === "upload")  result = handleUpload(body);
     else if (action === "patch_photo_url") result = handlePatchPhotoUrl(body);
+    else if (action === "patch_lat_lng") result = handlePatchLatLng(body);
     else result = { error: "Unknown action: " + action };
 
   } catch (err) {
@@ -326,6 +327,50 @@ function handlePatchPhotoUrl(body) {
 
   // Write the URL directly to the correct cell (sheet is 1-indexed)
   sheet.getRange(rowNum, colIdx + 1).setValue(url);
+  return { data: { id: id } };
+}
+
+/**
+ * PATCH LAT/LNG — write latitude & longitude cells by row id (creates columns if missing).
+ * Body: { table, id, latitude, longitude }
+ */
+function handlePatchLatLng(body) {
+  var table = body.table || "";
+  var id = body.id || "";
+  var lat = body.latitude;
+  var lng = body.longitude;
+  if (!table || !id) return { error: "table and id required." };
+  if (lat === undefined || lat === null || lng === undefined || lng === null) {
+    return { error: "latitude and longitude required." };
+  }
+
+  var sheet = getSheet(table);
+  var rowNum = findRowById(sheet, id);
+  if (rowNum < 0) return { error: "Record not found: " + id };
+
+  var columnsToAdd = ["latitude", "longitude"];
+  columnsToAdd.forEach(function (col) {
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (headers.indexOf(col) === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(col);
+    }
+  });
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var latCol = headers.indexOf("latitude");
+  var lngCol = headers.indexOf("longitude");
+  if (latCol === -1 || lngCol === -1) {
+    return { error: "Could not resolve latitude/longitude columns." };
+  }
+
+  var latNum = Number(lat);
+  var lngNum = Number(lng);
+  if (isNaN(latNum) || isNaN(lngNum)) {
+    return { error: "Invalid latitude or longitude." };
+  }
+
+  sheet.getRange(rowNum, latCol + 1).setValue(latNum);
+  sheet.getRange(rowNum, lngCol + 1).setValue(lngNum);
   return { data: { id: id } };
 }
 
