@@ -2473,7 +2473,7 @@ function openInspectionDetailPanel(entry) {
 
   if (photoWrap && photoImg) {
     if (entry.photo_url) {
-      photoImg.src = entry.photo_url;
+      photoImg.src = getGoogleDriveThumbnailUrl(entry.photo_url);
       photoImg.alt = entry.business_name || "Inspection photo";
       photoWrap.style.display = "";
     } else {
@@ -2586,7 +2586,7 @@ function openOccupancyDetailPanel(entry) {
 
   if (photoWrap && photoImg) {
     if (entry.photo_url) {
-      photoImg.src = entry.photo_url;
+      photoImg.src = getGoogleDriveThumbnailUrl(entry.photo_url);
       photoImg.alt = entry.owner_name || "Occupancy photo";
       photoWrap.style.display = "";
     } else {
@@ -3081,15 +3081,29 @@ function initOccupancyPhotoExif() {
   inputLibrary?.addEventListener("change", () => void onPhotoChange(inputLibrary));
 }
 
+function getGoogleDriveThumbnailUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500-h500`;
+  }
+  match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500-h500`;
+  }
+  return url;
+}
+
 function addInspectionMarkerFromEntry(entry) {
   if (!mapInstance || !inspectionMarkersLayer) return;
   if (!Number.isFinite(entry.lat) || !Number.isFinite(entry.lng)) return;
 
   let icon;
   if (entry.photo_url) {
+    const thumbUrl = getGoogleDriveThumbnailUrl(entry.photo_url);
     icon = L.divIcon({
       className: "inspection-marker inspection-marker--photo",
-      html: `<div class="inspection-marker-thumb" style="background-image:url('${entry.photo_url}')"></div>`,
+      html: `<div class="inspection-marker-thumb" style="background-image:url('${thumbUrl}')"></div>`,
       iconSize: [40, 40],
       iconAnchor: [20, 40],
       popupAnchor: [0, -36],
@@ -3138,9 +3152,10 @@ function addOccupancyMarkerFromEntry(entry) {
 
   let icon;
   if (entry.photo_url) {
+    const thumbUrl = getGoogleDriveThumbnailUrl(entry.photo_url);
     icon = L.divIcon({
       className: "occupancy-marker occupancy-marker--photo",
-      html: `<div class="occupancy-marker-thumb" style="background-image:url('${entry.photo_url}')"></div>`,
+      html: `<div class="occupancy-marker-thumb" style="background-image:url('${thumbUrl}')"></div>`,
       iconSize: [40, 40],
       iconAnchor: [20, 40],
       popupAnchor: [0, -36],
