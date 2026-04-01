@@ -2875,19 +2875,72 @@ async function sanitizeInspectionImage(file) {
   });
 }
 
-function dmsToDecimal(dms, ref) {
+/** Single EXIF rational component (number, Number object, or [num, den]). */
+function exifRationalToNumber(v) {
+  if (v == null || v === "") return NaN;
+  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+  if (typeof v === "string") {
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? n : NaN;
+  }
+  if (typeof v === "object" && "numerator" in v && "denominator" in v) {
+    const d = Number(v.denominator);
+    if (!d) return NaN;
+    return Number(v.numerator) / d;
+  }
+  if (Array.isArray(v) && v.length >= 2) {
+    const den = Number(v[1]);
+    if (!den) return NaN;
+    return Number(v[0]) / den;
+  }
+  return NaN;
+}
+
+function normalizeGpsRef(ref, axis) {
+  if (ref == null || ref === "") return axis === "lat" ? "N" : "E";
+  if (typeof ref === "number" && ref >= 32 && ref <= 127) return String.fromCharCode(ref);
+  const s = String(ref).trim().toUpperCase().slice(0, 1);
+  if (s === "N" || s === "S" || s === "E" || s === "W") return s;
+  return axis === "lat" ? "N" : "E";
+}
+
+function dmsToDecimal(dms, ref, axis) {
   if (!dms || dms.length !== 3) return null;
-  const deg = dms[0];
-  const min = dms[1];
-  const sec = dms[2];
-  const sign = ref === "S" || ref === "W" ? -1 : 1;
+  const deg = exifRationalToNumber(dms[0]);
+  const min = exifRationalToNumber(dms[1]);
+  const sec = exifRationalToNumber(dms[2]);
+  if (![deg, min, sec].every((x) => Number.isFinite(x))) return null;
+  const r = normalizeGpsRef(ref, axis || "lat");
+  const sign = r === "S" || r === "W" ? -1 : 1;
   const value = sign * (deg + min / 60 + sec / 3600);
-  return isFinite(value) ? value : null;
+  return Number.isFinite(value) ? value : null;
+}
+
+function coordsFromExifJsTags(tags) {
+  if (!tags || typeof tags !== "object") return null;
+  const lat = tags.GPSLatitude;
+  const lng = tags.GPSLongitude;
+  const latRef = tags.GPSLatitudeRef;
+  const lngRef = tags.GPSLongitudeRef;
+  if (!lat || !lng) return null;
+  const plat = dmsToDecimal(lat, latRef, "lat");
+  const plng = dmsToDecimal(lng, lngRef, "lng");
+  if (plat != null && plng != null) return { lat: plat, lng: plng };
+  return null;
+}
+
+function getExifrNamespace() {
+  const root = window.exifr;
+  if (!root) return null;
+  if (typeof root.parse === "function" || typeof root.gps === "function") return root;
+  const d = root.default;
+  if (d && (typeof d.parse === "function" || typeof d.gps === "function")) return d;
+  return null;
 }
 
 // Shared GPS extraction (used by both inspection and occupancy) to ensure consistent behavior.
 async function readGpsFromFile(file) {
-  const exifrApi = window.exifr?.default || window.exifr;
+  const exifrApi = getExifrNamespace();
 
   const toFinite = (v) => {
     if (v == null) return null;
@@ -2899,25 +2952,45 @@ async function readGpsFromFile(file) {
     return null;
   };
 
+  const pickFromParsed = (parsed) => {
+    if (!parsed || typeof parsed !== "object") return null;
+    let plat = toFinite(parsed.latitude ?? parsed.lat);
+    let plng = toFinite(parsed.longitude ?? parsed.lng);
+    if (plat == null || plng == null) {
+      const g = parsed.gps;
+      if (g && typeof g === "object") {
+        plat = toFinite(plat ?? g.latitude ?? g.lat);
+        plng = toFinite(plng ?? g.longitude ?? g.lng);
+      }
+    }
+    if (plat == null || plng == null) {
+      const rawLat = parsed.GPSLatitude;
+      const rawLng = parsed.GPSLongitude;
+      if (rawLat && rawLng) {
+        plat = dmsToDecimal(rawLat, parsed.GPSLatitudeRef, "lat");
+        plng = dmsToDecimal(rawLng, parsed.GPSLongitudeRef, "lng");
+      }
+    }
+    if (plat != null && plng != null) return { lat: plat, lng: plng };
+    return null;
+  };
+
   const tryExifr = async (input) => {
     if (!exifrApi) return null;
     try {
-      // Aggressive parse: check all common blocks where Android might stuff GPS data during gallery intent
-      if (typeof exifrApi.parse === "function") {
-        const parsed = await exifrApi.parse(input, { tiff: true, exif: true, gps: true });
-        if (parsed) {
-          const plat = toFinite(parsed.latitude ?? parsed.lat ?? parsed.GPSLatitude);
-          const plng = toFinite(parsed.longitude ?? parsed.lng ?? parsed.GPSLongitude);
-          if (plat != null && plng != null) return { lat: plat, lng: plng };
-        }
-      }
-
-      // Fallback to the dedicated gps() method if parse() didn't find it or wasn't available
       if (typeof exifrApi.gps === "function") {
         const gps = await exifrApi.gps(input);
-        const lat = toFinite(gps?.latitude ?? gps?.lat ?? gps?.GPSLatitude);
-        const lng = toFinite(gps?.longitude ?? gps?.lng ?? gps?.GPSLongitude);
+        const lat = toFinite(gps?.latitude ?? gps?.lat);
+        const lng = toFinite(gps?.longitude ?? gps?.lng ?? gps?.lon);
         if (lat != null && lng != null) return { lat, lng };
+      }
+      if (typeof exifrApi.parse === "function") {
+        let parsed = await exifrApi.parse(input);
+        let found = pickFromParsed(parsed);
+        if (found) return found;
+        parsed = await exifrApi.parse(input, { tiff: true, ifd0: true, exif: true, gps: true, mergeOutput: true });
+        found = pickFromParsed(parsed);
+        if (found) return found;
       }
     } catch (e) {
       console.warn("exifr read attempt failed:", e);
@@ -2926,7 +2999,6 @@ async function readGpsFromFile(file) {
   };
 
   if (exifrApi) {
-    // 1st attempt: ArrayBuffer (most reliable for raw binary)
     try {
       if (typeof file?.arrayBuffer === "function") {
         const buf = await file.arrayBuffer();
@@ -2937,7 +3009,6 @@ async function readGpsFromFile(file) {
       console.warn("exifr arrayBuffer read failed:", e);
     }
 
-    // 2nd attempt: Raw File object (sometimes needed depending on parser internals)
     try {
       const result = await tryExifr(file);
       if (result) return result;
@@ -2946,8 +3017,18 @@ async function readGpsFromFile(file) {
     }
   }
 
-  // 3rd attempt: Fallback to exif-js if available
   if (window.EXIF) {
+    try {
+      if (typeof window.EXIF.readFromBinaryFile === "function" && typeof file?.arrayBuffer === "function") {
+        const buf = await file.arrayBuffer();
+        const tags = window.EXIF.readFromBinaryFile(buf);
+        const fromBinary = coordsFromExifJsTags(tags);
+        if (fromBinary) return fromBinary;
+      }
+    } catch (e) {
+      console.warn("exif-js readFromBinaryFile failed:", e);
+    }
+
     let objectUrl = null;
     try {
       objectUrl = URL.createObjectURL(file);
@@ -2968,15 +3049,7 @@ async function readGpsFromFile(file) {
         const timer = setTimeout(() => done(null), 5000);
         try {
           window.EXIF.getData(img, function () {
-            const lat = window.EXIF.getTag(this, "GPSLatitude");
-            const latRef = window.EXIF.getTag(this, "GPSLatitudeRef");
-            const lng = window.EXIF.getTag(this, "GPSLongitude");
-            const lngRef = window.EXIF.getTag(this, "GPSLongitudeRef");
-            if (lat && lng && latRef && lngRef) {
-              done({ lat: dmsToDecimal(lat, latRef), lng: dmsToDecimal(lng, lngRef) });
-            } else {
-              done(null);
-            }
+            done(coordsFromExifJsTags(this.exifdata || {}));
           });
         } catch (e) {
           console.warn("exif-js sync block failed:", e);
