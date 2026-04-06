@@ -1126,11 +1126,20 @@ function inspectionRenderTable() {
     empty.style.display = "none";
     if (tableWrap) tableWrap.style.display = "";
 
-    filtered.forEach(({ row, idx }, displayIdx) => {
+    filtered.forEach(({ row, idx }) => {
       const hasLocation = row.lat != null && row.lng != null;
+      // "#" is 1,2,3… within each tab (with location vs no location), not across both.
+      let rowNum;
+      if (hasLocation) {
+        withLocationCount++;
+        rowNum = withLocationCount;
+      } else {
+        noLocationCount++;
+        rowNum = noLocationCount;
+      }
 
       const baseRowHtml = `
-        <td data-label="#">${displayIdx + 1}</td>
+        <td data-label="#">${rowNum}</td>
         <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
         <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
         <td data-label="Owner phone">${logbookEsc(row.insp_owner_phone)}</td>
@@ -1142,7 +1151,6 @@ function inspectionRenderTable() {
       `;
 
       if (hasLocation) {
-        withLocationCount++;
         const tr = document.createElement("tr");
         tr.id = `inspection-row-${idx}`;
         tr.innerHTML = `
@@ -1164,7 +1172,6 @@ function inspectionRenderTable() {
         `;
         tbody.appendChild(tr);
       } else {
-        noLocationCount++;
         if (tbodyNoPhoto) {
           const tr2 = document.createElement("tr");
           tr2.id = `inspection-row-${idx}`;
