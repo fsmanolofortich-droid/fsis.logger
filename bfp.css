@@ -660,6 +660,60 @@ table#table-fsec {
   margin-bottom: 3px;
 }
 
+/* BFP modal header: no fill behind × (global .btn-close adds a tinted box) */
+.modal-header.bfp-header .btn-close {
+  background: none;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.modal-header.bfp-header .btn-close:hover {
+  background: none;
+  background-color: transparent;
+  opacity: 0.85;
+}
+
+.modal-header.bfp-header .btn-close.btn-close-white {
+  filter: none;
+}
+
+.modal-header.bfp-header .btn-close::before {
+  content: "\00d7";
+  display: block;
+  font-size: 1.45rem;
+  line-height: 1;
+  color: #fff;
+  font-weight: 300;
+}
+
+/* Nav offcanvas close: same flat × as BFP modals */
+.offcanvas-header .btn-close {
+  background: none;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+.offcanvas-header .btn-close:hover {
+  background: none;
+  background-color: transparent;
+  opacity: 0.85;
+}
+
+.offcanvas-header .btn-close.btn-close-white {
+  filter: none;
+}
+
+.offcanvas-header .btn-close::before {
+  content: "\00d7";
+  display: block;
+  font-size: 1.45rem;
+  line-height: 1;
+  color: #fff;
+  font-weight: 300;
+}
 
 .btn-close {
   background: rgba(255, 255, 255, 0.12);
@@ -2334,4 +2388,4 @@ body.is-map-view [data-view="map"] {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-}
+}
