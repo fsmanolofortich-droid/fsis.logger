@@ -474,40 +474,50 @@
     if ((!addrLine || !addrBarangay || !addrMunicipal || !addrProvince || !addrRegion) && fullAddr) {
       const parts = fullAddr.split(/,\s*/).map((p) => String(p || "").trim()).filter(Boolean);
 
-      // Try to locate "Barangay ___" anywhere in the merged address.
-      if (!addrBarangay) {
-        const brgyPart = parts.find((p) => /^barangay\s+/i.test(p));
-        if (brgyPart) addrBarangay = brgyPart.replace(/^Barangay\s+/i, "").trim();
+      // If it looks like it's starting with Region, it might be in General-to-Specific order.
+      // We usually want Specific-to-General (Line, Brgy, City, Province, Region).
+      if (parts.length > 1 && parts[0].toLowerCase().indexOf("region") !== -1) {
+        parts.reverse();
       }
 
-      // If we have the legacy 5-part format, map positions directly.
-      // "Region X, Province, Municipal, Barangay Name, Street/Line"
-      if (parts.length >= 5) {
-        addrRegion = addrRegion || parts[0];
-        addrProvince = addrProvince || parts[1];
-        addrMunicipal = addrMunicipal || parts[2];
-        if (!addrBarangay) addrBarangay = (parts[3] || "").replace(/^Barangay\s+/i, "").trim();
-        addrLine = addrLine || (parts[4] || "").trim();
-      } else if (parts.length >= 4) {
-        // Common case when "line/street" is blank:
-        // "Region X, Province, Municipal, Barangay Name"
-        addrRegion = addrRegion || parts[0];
-        addrProvince = addrProvince || parts[1];
-        addrMunicipal = addrMunicipal || parts[2];
-        if (!addrBarangay) addrBarangay = (parts[3] || "").replace(/^Barangay\s+/i, "").trim();
+      // Try to identify parts based on content if they are missing
+      if (!addrBarangay) {
+        const brgy = parts.find(p => /^(barangay|brgy)/i.test(p));
+        if (brgy) addrBarangay = brgy.replace(/^(barangay|brgy)\.?\s+/i, "");
+      }
+      
+      // Map based on reversed (Specific-to-General) order if we have enough parts
+      if (parts.length >= 3) {
+        addrLine = addrLine || parts[0];
+        // If parts[1] is the barangay, we'll pick it up below
+        addrMunicipal = addrMunicipal || parts[parts.length - 3];
+        addrProvince = addrProvince || parts[parts.length - 2];
+        addrRegion = addrRegion || parts[parts.length - 1];
       }
     }
-    const addressParts = [
-      addrLine,
-      addrBarangay ? "Barangay " + addrBarangay : "",
-      addrMunicipal || "Manolo Fortich",
-      addrProvince || "Bukidnon",
-      addrRegion || "Region X",
-    ].filter(Boolean);
-    const address =
-      addressParts.length > 0
-        ? addressParts.join(", ")
-        : fullAddr || "";
+
+    const finalParts = [];
+    if (addrLine) finalParts.push(addrLine);
+    if (addrBarangay) {
+      const cleanBrgy = addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "");
+      finalParts.push("Barangay " + cleanBrgy);
+    }
+    if (addrMunicipal) finalParts.push(addrMunicipal);
+    if (addrProvince) finalParts.push(addrProvince);
+    if (addrRegion) finalParts.push(addrRegion);
+
+    // De-duplicate parts (e.g. if Barangay is also the Province)
+    const seen = new Set();
+    const uniqueParts = [];
+    finalParts.forEach(p => {
+      const lower = p.toLowerCase().trim();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        uniqueParts.push(p);
+      }
+    });
+
+    const address = uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr;
     const remarks = entry.remarks || "";
 
     const setText = (id, value) => {

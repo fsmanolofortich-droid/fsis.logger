@@ -1479,26 +1479,57 @@
 			function buildDisplayAddress(entry) {
 				var addrLine = entry.addr_line || "";
 				var addrBarangay = entry.addr_barangay || "";
+				var addrMunicipal = entry.addr_municipal || entry.fsec_addr_municipal || "";
+				var addrProvince = entry.addr_province || entry.fsec_addr_province || "";
+				var addrRegion = entry.addr_region || entry.fsec_addr_region || "";
 				var fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
 
-				if (addrLine || addrBarangay) {
-					var rawBarangay = addrBarangay.replace(/^(Brgy\.|Barangay\.|Brgy|Barangay)\s+/i, "").trim();
-					var bgy = rawBarangay ? "Barangay " + rawBarangay : "";
-					var addressParts = [
-						addrLine,
-						bgy,
-						entry.addr_municipal || entry.fsec_addr_municipal || "Manolo Fortich",
-						entry.addr_province || entry.fsec_addr_province || "Bukidnon",
-						entry.addr_region || entry.fsec_addr_region || "Region X"
-					].filter(Boolean);
-					return addressParts.join(", ");
+				if (!addrLine && !addrBarangay && !addrMunicipal && fullAddr) {
+					var parts = fullAddr.split(/,\s*/).map(function(p) { return String(p || "").trim(); }).filter(Boolean);
+					if (parts.length > 1 && parts[0].toLowerCase().indexOf("region") !== -1) {
+						parts.reverse();
+					}
+					if (parts.length >= 3) {
+						addrLine = addrLine || parts[0];
+						addrMunicipal = addrMunicipal || parts[parts.length - 3];
+						addrProvince = addrProvince || parts[parts.length - 2];
+						addrRegion = addrRegion || parts[parts.length - 1];
+					}
+					if (!addrBarangay) {
+						var brgy = parts.find(function(p) { return /^(barangay|brgy)/i.test(p); });
+						if (brgy) addrBarangay = brgy;
+					}
 				}
 
-				if (fullAddr && fullAddr.indexOf("Region") === 0) {
-					return fullAddr.split(/,\s*/).reverse().join(", ");
+				var finalParts = [];
+				if (addrLine) finalParts.push(addrLine);
+				if (addrBarangay) {
+					var cleanBrgy = addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "").trim();
+					if (cleanBrgy) finalParts.push("Barangay " + cleanBrgy);
+				}
+				if (addrMunicipal) finalParts.push(addrMunicipal);
+				if (addrProvince) finalParts.push(addrProvince);
+				if (addrRegion) finalParts.push(addrRegion);
+
+				// Fallback defaults
+				if (finalParts.length > 0) {
+					if (!addrMunicipal) finalParts.push("Manolo Fortich");
+					if (!addrProvince) finalParts.push("Bukidnon");
+					if (!addrRegion) finalParts.push("Region X");
 				}
 
-				return fullAddr;
+				var seen = {};
+				var uniqueParts = [];
+				for (var i = 0; i < finalParts.length; i++) {
+					var p = finalParts[i];
+					var lower = p.toLowerCase().trim();
+					if (!seen[lower]) {
+						seen[lower] = true;
+						uniqueParts.push(p);
+					}
+				}
+
+				return uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr;
 			}
 
 			var businessName = (entry.business_name || "").toString().trim();
