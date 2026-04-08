@@ -1007,57 +1007,70 @@ function inspectionSave() {
   if (!isSupabaseEnabled()) inspectionSaveToLocal();
 }
 
-function inspectionFormatAddressDisplay(row) {
-  const addrLine = row.addr_line;
-  const addrBarangay = row.addr_barangay;
-  if (
-    addrLine != null &&
-    addrBarangay != null &&
-    (addrLine !== "" || addrBarangay !== "")
-  ) {
-    return [
-      addrLine,
-      addrBarangay,
-      "Manolo Fortich",
-      "Bukidnon",
-      "Region X",
-    ]
-      .filter(Boolean)
-      .join(", ");
+function extractAddressParts(row) {
+  let addrLine = row.addr_line || "";
+  let addrBarangay = row.addr_barangay || "";
+  let addrMunicipal = row.addr_municipal || "";
+  let addrProvince = row.addr_province || "";
+  let addrRegion = row.addr_region || "";
+  const fullAddr = (row.insp_address || row.fsec_address || row.address || "").toString().trim();
+  
+  if ((!addrLine || !addrBarangay || !addrMunicipal || !addrProvince || !addrRegion) && fullAddr) {
+    const parts = fullAddr.split(/,\s*/).map((p) => String(p || "").trim()).filter(Boolean);
+    if (parts.length > 1 && parts[0].toLowerCase().indexOf("region") !== -1) {
+      parts.reverse();
+    }
+    if (!addrBarangay) {
+      const brgy = parts.find(p => /^(barangay|brgy)/i.test(p));
+      if (brgy) addrBarangay = brgy.replace(/^(barangay|brgy)\.?\s+/i, "");
+    }
+    if (parts.length >= 3) {
+      addrLine = addrLine || parts[0];
+      addrMunicipal = addrMunicipal || parts[parts.length - 3];
+      addrProvince = addrProvince || parts[parts.length - 2];
+      addrRegion = addrRegion || parts[parts.length - 1];
+    }
   }
 
-  const full = (row.insp_address || row.fsec_address || "").toString().trim();
-  if (!full) return "—";
-  const parts = full.split(/,\s*/);
-  if (parts.length >= 5) {
-    const line = parts[4];
-    const barangay = (parts[3] || "")
-      .replace(/^Barangay\s+/i, "")
-      .trim();
-    const municipal = parts[2] || "";
-    const province = parts[1] || "";
-    const region = parts[0] || "";
-    return [line, barangay, municipal, province, region]
-      .filter(Boolean)
-      .join(", ");
+  const finalParts = [];
+  if (addrLine) finalParts.push(addrLine);
+  if (addrBarangay) {
+    const cleanBrgy = addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "");
+    finalParts.push("Barangay " + cleanBrgy);
   }
-  return full;
+  if (addrMunicipal) finalParts.push(addrMunicipal);
+  if (addrProvince) finalParts.push(addrProvince);
+  if (addrRegion) finalParts.push(addrRegion);
+
+  const seen = new Set();
+  const uniqueParts = [];
+  finalParts.forEach(p => {
+    const lower = p.toLowerCase().trim();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      uniqueParts.push(p);
+    }
+  });
+
+  return { uniqueParts, fullAddr, addrLine, cleanBrgy: addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "") };
+}
+
+function inspectionFormatAddressDisplay(row) {
+  const { uniqueParts, fullAddr } = extractAddressParts(row);
+  return uniqueParts.length > 0 ? uniqueParts.join(", ") : (fullAddr || "—");
 }
 
 // Short address for table display — strips the repeated municipality/province/region
 // to keep the address column compact. Full version still used for print and detail panels.
 function inspectionFormatAddressShort(row) {
-  const addrLine = (row.addr_line || "").trim();
-  const addrBarangay = (row.addr_barangay || "").trim();
-  if (addrLine || addrBarangay) {
+  const { addrLine, cleanBrgy, fullAddr } = extractAddressParts(row);
+  if (addrLine || cleanBrgy) {
     const parts = [];
     if (addrLine) parts.push(addrLine);
-    if (addrBarangay) parts.push("Brgy. " + addrBarangay);
+    if (cleanBrgy) parts.push("Brgy. " + cleanBrgy);
     return parts.join(", ") || "—";
   }
-  // Legacy free-text fallback: just use the raw string (it's already compact)
-  const full = (row.insp_address || "").toString().trim();
-  return full || "—";
+  return fullAddr || "—";
 }
 
 function inspectionRenderTable() {
