@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FSIS Logger</string>
+    <!-- Replace with your deployed site URL (must include home.html if that is the entry file). Example: https://yourdomain.com/fsis/home.html -->
+    <string name="app_web_url">REPLACE_WITH_YOUR_HTTPS_URL/home.html</string>
+    <string name="choose_image">Choose image</string>
+    <string name="load_error">Could not load page. Check your internet connection and app_web_url in strings.xml.</string>
+    <string name="set_app_url">Set app_web_url in res/values/strings.xml to your hosted FSIS home page, then rebuild.</string>
+</resources>
