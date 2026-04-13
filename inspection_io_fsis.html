@@ -1,12 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inspection Order - BFP Manolo Fortich Fire Station</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { background: #fff; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      background: #fff;
+    }
+
     body {
       font-family: 'Times New Roman', Times, serif;
       font-size: 12pt;
@@ -15,11 +24,13 @@
       justify-content: center;
       padding: 20px;
     }
+
     body.render-pdf {
       background: #fff;
       padding: 0;
       display: block;
     }
+
     .page {
       position: relative;
       background: #fff;
@@ -28,12 +39,14 @@
       min-height: 297mm;
       /* Allowance so content doesn't touch the frame */
       padding: 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       overflow: hidden;
     }
+
     body.render-pdf .page {
       box-shadow: none;
     }
+
     /* Place the border as an actual image so it prints reliably */
     .page-frame {
       position: absolute;
@@ -45,12 +58,14 @@
       pointer-events: none;
       z-index: 0;
     }
+
     .page-content {
       position: relative;
       z-index: 1;
       /* Allowance so content doesn't touch the frame */
       padding: 18mm 20mm;
     }
+
     /* In render-pdf mode, lock exact page size and avoid overflow */
     html.render-pdf,
     body.render-pdf {
@@ -59,6 +74,7 @@
       overflow: hidden;
       margin: 0;
     }
+
     body.render-pdf .page {
       width: 210mm;
       height: 297mm;
@@ -74,29 +90,36 @@
       gap: 20px;
       margin-bottom: 10px;
     }
+
     .header img {
       width: 90px;
       height: 90px;
       object-fit: contain;
     }
+
     .header-text {
       text-align: center;
       line-height: 1.5;
     }
+
     .header-text .agency {
       font-size: 10pt;
     }
+
     .header-text .dept {
       font-size: 12pt;
       font-weight: bold;
     }
+
     .header-text .bureau {
       font-size: 12pt;
       font-weight: bold;
     }
+
     .header-text .sub {
       font-size: 10pt;
     }
+
     .header-text .contact {
       font-size: 8pt;
     }
@@ -109,11 +132,13 @@
       margin-top: 24px;
       margin-bottom: 4px;
     }
+
     .title-row h1 {
       font-size: 22pt;
       font-weight: bold;
       text-transform: uppercase;
     }
+
     .date-block {
       font-size: 12pt;
       display: flex;
@@ -123,6 +148,7 @@
       padding-top: 0;
       min-width: 160px;
     }
+
     .date-block .date-value {
       display: inline-block;
       min-width: 140px;
@@ -130,15 +156,18 @@
       border-bottom: 2px solid #000;
       color: #000;
     }
+
     .date-block .date-label {
       margin-top: 2px;
       font-size: 10pt;
       color: #000;
     }
+
     .number-block {
       font-size: 10pt;
       margin-bottom: 16px;
     }
+
     #io_number {
       display: inline-block;
       min-width: 140px;
@@ -147,6 +176,7 @@
       color: #000;
       font-style: normal;
     }
+
     .number-block .pre-numbered {
       font-style: italic;
     }
@@ -157,33 +187,41 @@
       border-collapse: collapse;
       margin-bottom: 24px;
     }
+
     .info-table td {
       border: 1px solid #333;
       padding: 8px 10px;
       vertical-align: top;
     }
+
     .info-table .label {
       font-weight: bold;
       white-space: nowrap;
       width: 100px;
     }
+
     .info-table .colon {
       width: 10px;
       text-align: center;
     }
+
     .info-table .value {
       min-height: 40px;
       color: #000;
     }
+
     .info-table .value em {
       color: #000;
     }
+
     #io_address {
       white-space: pre-line;
     }
+
     .included {
       margin-top: 8px;
     }
+
     .included strong {
       display: block;
       margin-bottom: 4px;
@@ -195,19 +233,23 @@
       justify-content: space-between;
       margin-bottom: 30px;
     }
+
     .signatory-block {
       width: 45%;
     }
+
     .signatory-block .role-label {
       font-weight: bold;
       font-size: 10pt;
       margin-bottom: 20px;
     }
+
     .signatory-block .name {
       text-decoration: underline;
       font-size: 10pt;
       margin-bottom: 2px;
     }
+
     .signatory-block .position {
       font-weight: bold;
       font-size: 10pt;
@@ -227,12 +269,14 @@
       font-size: 12pt;
       margin-bottom: 12px;
     }
+
     .ack-text {
       font-size: 10pt;
       line-height: 1.6;
       text-align: justify;
       margin-bottom: 40px;
     }
+
     .ack-footer {
       display: flex;
       justify-content: space-between;
@@ -240,6 +284,7 @@
       gap: 20px;
       margin-top: 20px;
     }
+
     .ack-field {
       display: flex;
       flex-direction: column;
@@ -247,13 +292,21 @@
       text-align: center;
       gap: 6px;
     }
-    .ack-field.sig { width: 55%; }
-    .ack-field.date { width: 30%; }
+
+    .ack-field.sig {
+      width: 55%;
+    }
+
+    .ack-field.date {
+      width: 30%;
+    }
+
     .ack-line {
       width: 100%;
       border-top: 2px solid #000;
       height: 0;
     }
+
     .ack-label {
       font-size: 10pt;
       color: #000;
@@ -273,412 +326,426 @@
     }
 
     /* Print/PDF helpers */
-    @page { size: A4; margin: 0; }
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
     @media print {
-      html, body {
+
+      html,
+      body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
+
       body {
         background: #fff;
         padding: 0;
         display: block;
       }
+
       .page {
         box-shadow: none;
       }
     }
   </style>
 </head>
+
 <body>
-<div class="page">
-  <img class="page-frame" src="./border.png" alt="" aria-hidden="true">
-  <div class="page-content">
+  <div class="page">
+    <img class="page-frame" src="./border.png" alt="" aria-hidden="true">
+    <div class="page-content">
 
-  <!-- Header -->
-  <div class="header">
-    <img src="./dilg_logo.png" alt="DILG Logo">
-    <div class="header-text">
-      <div class="agency">Republic of the Philippines</div>
-      <div class="dept">Department of the Interior and Local Government</div>
-      <div class="bureau">Bureau of Fire Protection</div>
-      <div class="sub">Region 10</div>
-      <div class="sub">Bukidnon Provincial Office</div>
-      <div class="sub">Manolo Fortich Fire Station</div>
-      <div class="sub">Tankulan, Manolo Fortich, Bukidnon</div>
-      <div class="contact">Cellphone #: 09352307289 / Email Address: manolofortichfs_bfp10@yahoo.com</div>
-    </div>
-    <img src="./Bureau_of_Fire_Protection.png" alt="BFP Logo">
-  </div>
-
-  <!-- Title -->
-  <div class="title-row">
-    <h1>Inspection Order</h1>
-    <div class="date-block">
-      <span id="io_date" class="date-value" contenteditable="true"></span>
-      <div class="date-label">Date</div>
-    </div>
-  </div>
-  <div class="number-block">
-    NUMBER:
-    <span id="io_number" contenteditable="true"></span><br>
-    <span class="pre-numbered">(Pre-numbered)</span>
-  </div>
-
-  <!-- Info Table -->
-  <table class="info-table">
-    <tr>
-      <td class="label">TO</td>
-      <td class="colon">:</td>
-      <td class="value">
-        <span id="io_to_name" contenteditable="true"></span><br>
-        <span id="io_to_position" contenteditable="true"></span><br>
-        <div class="included">
-          <strong>Included:</strong>
-          <span id="io_included_name" contenteditable="true"></span><br>
-          <span id="io_included_position" contenteditable="true"></span><br>
+      <!-- Header -->
+      <div class="header">
+        <img src="./dilg_logo.png" alt="DILG Logo">
+        <div class="header-text">
+          <div class="agency">Republic of the Philippines</div>
+          <div class="dept">Department of the Interior and Local Government</div>
+          <div class="bureau">Bureau of Fire Protection</div>
+          <div class="sub">Region 10</div>
+          <div class="sub">Bukidnon Provincial Office</div>
+          <div class="sub">Manolo Fortich Fire Station</div>
+          <div class="sub">Tankulan, Manolo Fortich, Bukidnon</div>
+          <div class="contact">Cellphone #: 09352307289 / Email Address: manolofortichfs_bfp10@yahoo.com</div>
         </div>
-      </td>
-    </tr>
-    <tr>
-      <td class="label">PROCEED</td>
-      <td class="colon">:</td>
-      <td class="value">
-        <div id="io_address" contenteditable="true"></div>
-      </td>
-    </tr>
-    <tr>
-      <td class="label">PURPOSE</td>
-      <td class="colon">:</td>
-      <td class="value">Inspection</td>
-    </tr>
-    <tr>
-      <td class="label">DURATION</td>
-      <td class="colon">:</td>
-      <td class="value">
-        From:
-        <span id="io_duration_start" contenteditable="true"></span>
-        &nbsp; to :
-        <span id="io_duration_end" contenteditable="true"></span>
-      </td>
-    </tr>
-    <tr>
-      <td class="label">REMARKS</td>
-      <td class="colon">:</td>
-      <td class="value">
-        <div>To conduct Fire Safety Inspection(BUSINESS AND ROUTINE / ANNUAL INSPECTION) In accordance with the pertinent provision of Rule 9, Division 1 of the RIRR of the Fire Code of the Philippines(R.A. 9514)</div>
-      </td>
-    </tr>
-  </table>
+        <img src="./Bureau_of_Fire_Protection.png" alt="BFP Logo">
+      </div>
 
-  <!-- Signatories -->
-  <div class="signatories">
-    <div class="signatory-block">
-      <div class="role-label">RECOMMENDING APPROVER:</div>
-      <div class="name">SFO1 Cedric B Gamolo, BFP</div>
-      <div class="position">Chief, Fire Safety Enforcement Section</div>
+      <!-- Title -->
+      <div class="title-row">
+        <h1>Inspection Order</h1>
+        <div class="date-block">
+          <span id="io_date" class="date-value" contenteditable="true"></span>
+          <div class="date-label">Date</div>
+        </div>
+      </div>
+      <div class="number-block">
+        NUMBER:
+        <span id="io_number" contenteditable="true"></span><br>
+        <span class="pre-numbered">(Pre-numbered)</span>
+      </div>
+
+      <!-- Info Table -->
+      <table class="info-table">
+        <tr>
+          <td class="label">TO</td>
+          <td class="colon">:</td>
+          <td class="value">
+            <span id="io_to_name" contenteditable="true"></span><br>
+            <span id="io_to_position" contenteditable="true"></span><br>
+            <div class="included">
+              <strong>Included:</strong>
+              <span id="io_included_name" contenteditable="true"></span><br>
+              <span id="io_included_position" contenteditable="true"></span><br>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="label">PROCEED</td>
+          <td class="colon">:</td>
+          <td class="value">
+            <div id="io_address" contenteditable="true"></div>
+          </td>
+        </tr>
+        <tr>
+          <td class="label">PURPOSE</td>
+          <td class="colon">:</td>
+          <td class="value">Inspection</td>
+        </tr>
+        <tr>
+          <td class="label">DURATION</td>
+          <td class="colon">:</td>
+          <td class="value">
+            From:
+            <span id="io_duration_start" contenteditable="true"></span>
+            &nbsp; to :
+            <span id="io_duration_end" contenteditable="true"></span>
+          </td>
+        </tr>
+        <tr>
+          <td class="label">REMARKS</td>
+          <td class="colon">:</td>
+          <td class="value">
+            <div>To conduct Fire Safety Inspection(BUSINESS AND ROUTINE / ANNUAL INSPECTION) In accordance with the
+              pertinent provision of Rule 9, Division 1 of the RIRR of the Fire Code of the Philippines(R.A. 9514)</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Signatories -->
+      <div class="signatories">
+        <div class="signatory-block">
+          <div class="role-label">RECOMMENDING APPROVER:</div>
+          <div class="name">SFO1 Cedric B Gamolo, BFP</div>
+          <div class="position">Chief, Fire Safety Enforcement Section</div>
+        </div>
+        <div class="signatory-block">
+          <div class="role-label">APPROVED:</div>
+          <div class="name">SFO3 Rafael I Corona Jr., BFP</div>
+          <div class="position">Acting, Municipal Fire Marshal</div>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <hr class="divider">
+
+      <!-- Acknowledgement -->
+      <div class="ack-title">ACKNOWLEDGEMENT</div>
+      <div class="ack-text">
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This is to acknowledge that permission was granted to the above-named Fire
+        Safety Inspector/s
+        accompanied by authorized representative to conduct Fire Safety Inspection within the premises in
+        accordance with law.
+      </div>
+
+      <div class="ack-footer">
+        <div class="ack-field sig">
+          <div class="ack-line"></div>
+          <div class="ack-label">Signature over Printed Name / Authorized Representative</div>
+        </div>
+        <div class="ack-field date">
+          <div class="ack-line"></div>
+          <div class="ack-label">Date / Time</div>
+        </div>
+      </div>
+
     </div>
-    <div class="signatory-block">
-      <div class="role-label">APPROVED:</div>
-      <div class="name">SFO3 Rafael I Corona Jr., BFP</div>
-      <div class="position">Acting, Municipal Fire Marshal</div>
-    </div>
+    <!-- Form Footer -->
+    <div class="form-footer">BFP-QSF-FSED-009</div>
   </div>
 
-  <!-- Divider -->
-  <hr class="divider">
-
-  <!-- Acknowledgement -->
-  <div class="ack-title">ACKNOWLEDGEMENT</div>
-  <div class="ack-text">
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This is to acknowledge that permission was granted to the above-named Fire Safety Inspector/s
-    accompanied by authorized representative to conduct Fire Safety Inspection within the premises in
-    accordance with law.
-  </div>
-
-  <div class="ack-footer">
-    <div class="ack-field sig">
-      <div class="ack-line"></div>
-      <div class="ack-label">Signature over Printed Name / Authorized Representative</div>
-    </div>
-    <div class="ack-field date">
-      <div class="ack-line"></div>
-      <div class="ack-label">Date / Time</div>
-    </div>
-  </div>
-
-  </div>
-  <!-- Form Footer -->
-  <div class="form-footer">BFP-QSF-FSED-009</div>
-</div>
-
-<script>
-  (function () {
-    function formatDateISOToLong(dateStr) {
-      if (!dateStr) return "";
-      try {
-        const d = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00" : ""));
-        if (!isFinite(d.getTime())) return "";
-        return d.toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
-      } catch {
-        return dateStr;
-      }
-    }
-
-    // Accept injected server-side data first, then fall back to sessionStorage.
-    let entry = null;
-    if (window.__FSIS_IO_ENTRY__ && typeof window.__FSIS_IO_ENTRY__ === "object") {
-      entry = window.__FSIS_IO_ENTRY__;
-    } else {
-      const raw = sessionStorage.getItem("fsis.io.current");
-      try {
-        entry = raw ? JSON.parse(raw) : null;
-      } catch {
-        entry = null;
-      }
-    }
-
-    if (!entry) {
-      // No data passed in; leave placeholders as-is so the user can type manually.
-      return;
-    }
-
-    const todayIso = new Date().toISOString().slice(0, 10);
-    // Use the inspection's own date for the printed date,
-    // falling back to today only if it's missing.
-    const headerSourceDate = entry.date_inspected || todayIso;
-    const headerDate = formatDateISOToLong(headerSourceDate);
-
-    const durationStart =
-      entry.duration_start || entry.date_inspected || todayIso;
-    const durationEnd =
-      entry.duration_end || entry.date_inspected || todayIso;
-
-    const toName = entry.inspected_by || "";
-    const toPosition = entry.inspector_position || "";
-    const includedName = entry.included_personnel_name || "";
-    const includedPosition = entry.included_personnel_position || "";
-    // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
-    // Merged format (legacy): "Region X, Province, Municipal, Barangay Name, Street/Line"
-    let business_name = entry.business_name || "";
-    let addrLine = entry.addr_line || "";
-    let addrBarangay = entry.addr_barangay || "";
-    let addrMunicipal = entry.addr_municipal || "";
-    let addrProvince = entry.addr_province || "";
-    let addrRegion = entry.addr_region || "";
-    const fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
-    if ((!addrLine || !addrBarangay || !addrMunicipal || !addrProvince || !addrRegion) && fullAddr) {
-      const parts = fullAddr.split(/,\s*/).map((p) => String(p || "").trim()).filter(Boolean);
-
-      // If it looks like it's starting with Region, it might be in General-to-Specific order.
-      // We usually want Specific-to-General (Line, Brgy, City, Province, Region).
-      if (parts.length > 1 && parts[0].toLowerCase().indexOf("region") !== -1) {
-        parts.reverse();
+  <script>
+    (function () {
+      function formatDateISOToLong(dateStr) {
+        if (!dateStr) return "";
+        try {
+          const d = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00" : ""));
+          if (!isFinite(d.getTime())) return "";
+          return d.toLocaleDateString("en-PH", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        } catch {
+          return dateStr;
+        }
       }
 
-      // Try to identify parts based on content if they are missing
-      if (!addrBarangay) {
-        const brgy = parts.find(p => /^(barangay|brgy)/i.test(p));
-        if (brgy) addrBarangay = brgy.replace(/^(barangay|brgy)\.?\s+/i, "");
+      // Accept injected server-side data first, then fall back to sessionStorage.
+      let entry = null;
+      if (window.__FSIS_IO_ENTRY__ && typeof window.__FSIS_IO_ENTRY__ === "object") {
+        entry = window.__FSIS_IO_ENTRY__;
+      } else {
+        const raw = sessionStorage.getItem("fsis.io.current");
+        try {
+          entry = raw ? JSON.parse(raw) : null;
+        } catch {
+          entry = null;
+        }
       }
-      
-      // Map based on reversed (Specific-to-General) order if we have enough parts
-      if (parts.length >= 3) {
-        addrLine = addrLine || parts[0];
-        // If parts[1] is the barangay, we'll pick it up below
-        addrMunicipal = addrMunicipal || parts[parts.length - 3];
-        addrProvince = addrProvince || parts[parts.length - 2];
-        addrRegion = addrRegion || parts[parts.length - 1];
+
+      if (!entry) {
+        // No data passed in; leave placeholders as-is so the user can type manually.
+        return;
       }
-    }
 
-    const finalParts = [];
-    if (addrLine) finalParts.push(addrLine);
-    if (addrBarangay) {
-      const cleanBrgy = addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "");
-      finalParts.push("Barangay " + cleanBrgy);
-    }
-    if (addrMunicipal) finalParts.push(addrMunicipal);
-    if (addrProvince) finalParts.push(addrProvince);
-    if (addrRegion) finalParts.push(addrRegion);
+      const todayIso = new Date().toISOString().slice(0, 10);
+      // Use the inspection's own date for the printed date,
+      // falling back to today only if it's missing.
+      const headerSourceDate = entry.date_inspected || todayIso;
+      const headerDate = formatDateISOToLong(headerSourceDate);
 
-    // De-duplicate parts (e.g. if Barangay is also the Province)
-    const seen = new Set();
-    const uniqueParts = [];
-    finalParts.forEach(p => {
-      const lower = p.toLowerCase().trim();
-      if (!seen.has(lower)) {
-        seen.add(lower);
-        uniqueParts.push(p);
+      const durationStart =
+        entry.duration_start || entry.date_inspected || todayIso;
+      const durationEnd =
+        entry.duration_end || entry.date_inspected || todayIso;
+
+      const toName = entry.inspected_by || "";
+      const toPosition = entry.inspector_position || "";
+      const includedName = entry.included_personnel_name || "";
+      const includedPosition = entry.included_personnel_position || "";
+      // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
+      // Merged format (legacy): "Region X, Province, Municipal, Barangay Name, Street/Line"
+      let business_name = entry.business_name || "";
+      let owner_name = entry.owner_name || "";
+      let addrLine = entry.addr_line || "";
+      let addrBarangay = entry.addr_barangay || "";
+      let addrMunicipal = entry.addr_municipal || "";
+      let addrProvince = entry.addr_province || "";
+      let addrRegion = entry.addr_region || "";
+      const fullAddr = (entry.insp_address || entry.fsec_address || "").toString().trim();
+      if ((!addrLine || !addrBarangay || !addrMunicipal || !addrProvince || !addrRegion) && fullAddr) {
+        const parts = fullAddr.split(/,\s*/).map((p) => String(p || "").trim()).filter(Boolean);
+
+        // If it looks like it's starting with Region, it might be in General-to-Specific order.
+        // We usually want Specific-to-General (Line, Brgy, City, Province, Region).
+        if (parts.length > 1 && parts[0].toLowerCase().indexOf("region") !== -1) {
+          parts.reverse();
+        }
+
+        // Try to identify parts based on content if they are missing
+        if (!addrBarangay) {
+          const brgy = parts.find(p => /^(barangay|brgy)/i.test(p));
+          if (brgy) addrBarangay = brgy.replace(/^(barangay|brgy)\.?\s+/i, "");
+        }
+
+        // Map based on reversed (Specific-to-General) order if we have enough parts
+        if (parts.length >= 3) {
+          addrLine = addrLine || parts[0];
+          // If parts[1] is the barangay, we'll pick it up below
+          addrMunicipal = addrMunicipal || parts[parts.length - 3];
+          addrProvince = addrProvince || parts[parts.length - 2];
+          addrRegion = addrRegion || parts[parts.length - 1];
+        }
       }
-    });
 
-    const address = uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr;
-    const remarks = entry.remarks || "";
+      const finalParts = [];
+      if (addrLine) finalParts.push(addrLine);
+      if (addrBarangay) {
+        const cleanBrgy = addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "");
+        finalParts.push("Barangay " + cleanBrgy);
+      }
+      if (addrMunicipal) finalParts.push(addrMunicipal);
+      if (addrProvince) finalParts.push(addrProvince);
+      if (addrRegion) finalParts.push(addrRegion);
 
-    const setText = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = value || "";
-    };
+      // De-duplicate parts (e.g. if Barangay is also the Province)
+      const seen = new Set();
+      const uniqueParts = [];
+      finalParts.forEach(p => {
+        const lower = p.toLowerCase().trim();
+        if (!seen.has(lower)) {
+          seen.add(lower);
+          uniqueParts.push(p);
+        }
+      });
 
-    // Map entry fields into the <> areas.
-    setText("io_date", headerDate);
-    setText("io_number", entry.io_number || "");
-    setText("io_to_name", toName);
-    setText("io_to_position", toPosition ? "" + toPosition : "");
-    setText("io_included_name", includedName);
-    setText("io_included_position", includedPosition);
-    const proceedText = [business_name.trim(), address].filter(Boolean).join("\n");
-    setText("io_address", proceedText);
-    setText("io_duration_start", formatDateISOToLong(durationStart));
-    setText("io_duration_end", formatDateISOToLong(durationEnd));
-    setText("io_remarks", remarks);
+      const address = uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr;
+      const remarks = entry.remarks || "";
 
-    // Save Logic
-    function getById(id) {
-      const el = document.getElementById(id);
-      return el ? el.textContent.trim() : "";
-    }
-
-    function sendSave() {
-      if (!entry) return;
-      const payload = {
-        io_number: getById("io_number"),
-        date_inspected: getById("io_date"), // Re-map formatted date if desired or just let DB keep original
-        inspectors: getById("io_to_name"),
-        inspector_position: getById("io_to_position"),
-        included_personnel_name: getById("io_included_name"),
-        included_personnel_position: getById("io_included_position"),
-        duration_start: getById("io_duration_start"),
-        duration_end: getById("io_duration_end"),
-        io_remarks: getById("io_remarks")
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = value || "";
       };
 
-      try {
-        window.opener?.postMessage({
-          type: "fsis_io_save",
-          table: "inspection_logbook",
-          entryId: entry.id || null,
-          io_number: entry.io_number || null,
-          payload: payload
-        }, "*");
-        showInlineNotice("Saving…");
-      } catch (err) {
-        showInlineNotice("Save failed: " + (err?.message || err));
+      // Map entry fields into the <> areas.
+      setText("io_date", headerDate);
+      setText("io_number", entry.io_number || "");
+      setText("io_to_name", toName);
+      setText("io_to_position", toPosition ? "" + toPosition : "");
+      setText("io_included_name", includedName);
+      setText("io_included_position", includedPosition);
+      const bizOwner = [business_name.trim(), owner_name.trim()].filter(Boolean).join(" / ");
+      const proceedText = [bizOwner, address].filter(Boolean).join("\n");
+      setText("io_address", proceedText);
+      setText("io_duration_start", formatDateISOToLong(durationStart));
+      setText("io_duration_end", formatDateISOToLong(durationEnd));
+      setText("io_remarks", remarks);
+
+      // Save Logic
+      function getById(id) {
+        const el = document.getElementById(id);
+        return el ? el.textContent.trim() : "";
       }
+
+      function sendSave() {
+        if (!entry) return;
+        const payload = {
+          io_number: getById("io_number"),
+          date_inspected: getById("io_date"), // Re-map formatted date if desired or just let DB keep original
+          inspectors: getById("io_to_name"),
+          inspector_position: getById("io_to_position"),
+          included_personnel_name: getById("io_included_name"),
+          included_personnel_position: getById("io_included_position"),
+          duration_start: getById("io_duration_start"),
+          duration_end: getById("io_duration_end"),
+          io_remarks: getById("io_remarks")
+        };
+
+        try {
+          window.opener?.postMessage({
+            type: "fsis_io_save",
+            table: "inspection_logbook",
+            entryId: entry.id || null,
+            io_number: entry.io_number || null,
+            payload: payload
+          }, "*");
+          showInlineNotice("Saving…");
+        } catch (err) {
+          showInlineNotice("Save failed: " + (err?.message || err));
+        }
+      }
+
+      function showInlineNotice(msg) {
+        const st = document.getElementById("fsisSaveStatus");
+        if (!st) return;
+        if (!msg) {
+          st.style.display = "none";
+        } else {
+          st.textContent = msg;
+          st.style.display = "block";
+        }
+      }
+
+      // Add a fixed save button
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "fsisSaveBtn";
+      btn.textContent = "Save to Database";
+      btn.style.position = "fixed";
+      btn.style.right = "16px";
+      btn.style.bottom = "16px";
+      btn.style.zIndex = "9999";
+      btn.style.padding = "10px 14px";
+      btn.style.borderRadius = "10px";
+      btn.style.border = "1px solid rgba(0,0,0,0.25)";
+      btn.style.background = "#0D1B2A";
+      btn.style.color = "#fff";
+      btn.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      btn.style.fontSize = "14px";
+      btn.style.cursor = "pointer";
+      btn.onclick = sendSave;
+
+      const status = document.createElement("div");
+      status.id = "fsisSaveStatus";
+      status.style.position = "fixed";
+      status.style.right = "16px";
+      status.style.bottom = "58px";
+      status.style.zIndex = "9999";
+      status.style.maxWidth = "280px";
+      status.style.padding = "8px 10px";
+      status.style.borderRadius = "10px";
+      status.style.border = "1px solid rgba(0,0,0,0.12)";
+      status.style.background = "rgba(255,255,255,0.95)";
+      status.style.color = "#111827";
+      status.style.fontFamily = btn.style.fontFamily;
+      status.style.fontSize = "12px";
+      status.style.display = "none";
+
+      document.body.appendChild(btn);
+      document.body.appendChild(status);
+
+      window.addEventListener("message", function (ev) {
+        const d = ev?.data;
+        if (!d || d.type !== "fsis_io_save_result") return;
+        if (d.ok) showInlineNotice("Saved.");
+        else showInlineNotice("Save failed: " + (d.message || ""));
+        setTimeout(() => showInlineNotice(""), 2000);
+      });
+
+      // Hide controls in print
+      const style = document.createElement("style");
+      style.textContent = "@media print { #fsisSaveBtn, #fsisSaveStatus { display: none !important; } }";
+      document.head.appendChild(style);
+
+    })();
+
+    // When opened with ?download=pdf, generate PDF from this page and download.
+    if (window.location.search.indexOf("download=pdf") !== -1) {
+      const filename =
+        sessionStorage.getItem("fsis.io.downloadFilename") || "inspection-order.pdf";
+      const script = document.createElement("script");
+      script.src =
+        "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      script.onload = function () {
+        const element = document.querySelector(".page");
+        if (element && window.html2pdf) {
+          // scale: 1 so content fits one letter page; scale 2 was enlarging and causing 2 pages
+          window.html2pdf()
+            .set({
+              margin: 0,
+              filename: filename,
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: { scale: 1, useCORS: true, backgroundColor: "#ffffff" },
+              jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+            })
+            .from(element)
+            .save()
+            .then(function () {
+              try {
+                window.close();
+              } catch (_) { }
+            })
+            .catch(function (err) {
+              console.error("PDF generation failed", err);
+            });
+        }
+      };
+      document.head.appendChild(script);
     }
+  </script>
 
-    function showInlineNotice(msg) {
-      const st = document.getElementById("fsisSaveStatus");
-      if (!st) return;
-      if (!msg) {
-        st.style.display = "none";
-      } else {
-        st.textContent = msg;
-        st.style.display = "block";
-      }
+  <script>
+    // Ensure backend render has a white canvas (no gray/black).
+    if (window.location.search.indexOf("render=pdf") !== -1) {
+      document.body.classList.add("render-pdf");
+      document.documentElement.classList.add("render-pdf");
     }
-
-    // Add a fixed save button
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.id = "fsisSaveBtn";
-    btn.textContent = "Save to Database";
-    btn.style.position = "fixed";
-    btn.style.right = "16px";
-    btn.style.bottom = "16px";
-    btn.style.zIndex = "9999";
-    btn.style.padding = "10px 14px";
-    btn.style.borderRadius = "10px";
-    btn.style.border = "1px solid rgba(0,0,0,0.25)";
-    btn.style.background = "#0D1B2A";
-    btn.style.color = "#fff";
-    btn.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-    btn.style.fontSize = "14px";
-    btn.style.cursor = "pointer";
-    btn.onclick = sendSave;
-
-    const status = document.createElement("div");
-    status.id = "fsisSaveStatus";
-    status.style.position = "fixed";
-    status.style.right = "16px";
-    status.style.bottom = "58px";
-    status.style.zIndex = "9999";
-    status.style.maxWidth = "280px";
-    status.style.padding = "8px 10px";
-    status.style.borderRadius = "10px";
-    status.style.border = "1px solid rgba(0,0,0,0.12)";
-    status.style.background = "rgba(255,255,255,0.95)";
-    status.style.color = "#111827";
-    status.style.fontFamily = btn.style.fontFamily;
-    status.style.fontSize = "12px";
-    status.style.display = "none";
-
-    document.body.appendChild(btn);
-    document.body.appendChild(status);
-
-    window.addEventListener("message", function (ev) {
-      const d = ev?.data;
-      if (!d || d.type !== "fsis_io_save_result") return;
-      if (d.ok) showInlineNotice("Saved.");
-      else showInlineNotice("Save failed: " + (d.message || ""));
-      setTimeout(() => showInlineNotice(""), 2000);
-    });
-
-    // Hide controls in print
-    const style = document.createElement("style");
-    style.textContent = "@media print { #fsisSaveBtn, #fsisSaveStatus { display: none !important; } }";
-    document.head.appendChild(style);
-
-  })();
-
-  // When opened with ?download=pdf, generate PDF from this page and download.
-  if (window.location.search.indexOf("download=pdf") !== -1) {
-    const filename =
-      sessionStorage.getItem("fsis.io.downloadFilename") || "inspection-order.pdf";
-    const script = document.createElement("script");
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-    script.onload = function () {
-      const element = document.querySelector(".page");
-      if (element && window.html2pdf) {
-        // scale: 1 so content fits one letter page; scale 2 was enlarging and causing 2 pages
-        window.html2pdf()
-          .set({
-            margin: 0,
-            filename: filename,
-            image: { type: "jpeg", quality: 0.98 },
-            html2canvas: { scale: 1, useCORS: true, backgroundColor: "#ffffff" },
-            jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-          })
-          .from(element)
-          .save()
-          .then(function () {
-            try {
-              window.close();
-            } catch (_) {}
-          })
-          .catch(function (err) {
-            console.error("PDF generation failed", err);
-          });
-      }
-    };
-    document.head.appendChild(script);
-  }
-</script>
-
-<script>
-  // Ensure backend render has a white canvas (no gray/black).
-  if (window.location.search.indexOf("render=pdf") !== -1) {
-    document.body.classList.add("render-pdf");
-    document.documentElement.classList.add("render-pdf");
-  }
-</script>
+  </script>
 
 </body>
+
 </html>

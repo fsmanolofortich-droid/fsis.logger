@@ -2168,17 +2168,8 @@ async function inspectionSaveEntry(e) {
     }
   }
 
-  // If the photo has no GPS EXIF, fall back to the user's current geolocation
-  if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
-    entry.lat = normalizeGeoNumber(lastUserLatitude);
-    entry.lng = normalizeGeoNumber(lastUserLongitude);
-  }
-
-  entry.lat = normalizeGeoNumber(entry.lat);
-  entry.lng = normalizeGeoNumber(entry.lng);
-
-  // Keep the attached photo even if coordinates are missing.
-  // (Coordinates may come from the device location or be added later.)
+  // Removed fallback to user's current location if photo has no GPS EXIF
+  // as per user request: "do not put lat long if photo do not have lat long"
 
   const isPlaceholderBarangay = !barangay || /^select\s+barangay$/i.test(String(barangay).trim());
   if (!entry.business_name || isPlaceholderBarangay || !entry.date_inspected) {
@@ -2232,17 +2223,12 @@ async function inspectionSaveEntry(e) {
       "Saved on this device only (offline mode)."
     );
     const isEdit = inspectionEditingIdx !== null;
-    if (inspectionFocusMapAfterSave && entry.lat != null && entry.lng != null && !isEdit) {
-      inspectionFocusMapAfterSave = false;
-      showView("map");
-      window.location.hash = "map";
-      closeNavSidebar();
-      setTimeout(() => {
-        if (mapInstance) {
-          mapInstance.setView([entry.lat, entry.lng], 16);
-          openInspectionDetailPanel(entry);
-        }
-      }, 100);
+    if (entry.lat != null && entry.lng != null && !isEdit) {
+      // Stay in logbook instead of jumping to map as per user request
+      showView("inspection");
+      window.location.hash = "inspection";
+      setInspectionTab("with-location");
+      inspectionRenderTable();
     }
     return;
   }
@@ -2393,16 +2379,24 @@ async function inspectionSaveEntry(e) {
 
       const isEdit = inspectionEditingId != null;
       if (hasLocation && !isEdit) {
-        // Always jump to the map to show the new pin for NEW records
-        showView("map");
-        window.location.hash = "map";
-        closeNavSidebar();
+        // No longer jumping to map as per user request.
+        // Stay in the logbook and highlight the new row.
+        showView("inspection");
+        window.location.hash = "inspection";
+        setInspectionTab("with-location");
+        inspectionRenderTable();
+
         setTimeout(() => {
-          if (mapInstance) {
-            mapInstance.setView([entry.lat, entry.lng], 16);
-            openInspectionDetailPanel(entry);
+          const idx = inspectionData.findIndex((r) => r.io_number === entry.io_number);
+          if (idx >= 0) {
+            const rowEl = document.getElementById(`inspection-row-${idx}`);
+            if (rowEl) {
+              rowEl.classList.add("row-highlight");
+              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
+            }
           }
-        }, 100);
+        }, 200);
       } else {
         // No location found: Force them to the logbook "No location" tab so they know it saved!
         // We highlight it without fully filtering so they see it in context.
@@ -3355,37 +3349,8 @@ async function photoPreviewConfirm() {
       indicator.textContent = t;
     }
 
-    const needGeo =
-      (isInspection
-        ? currentExifLat == null || currentExifLng == null
-        : occupancyExifLat == null || occupancyExifLng == null) &&
-      navigator.geolocation;
-
-    if (needGeo) {
-      try {
-        await new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const { latitude, longitude } = pos.coords || {};
-              if (latitude != null && longitude != null) {
-                if (isInspection) {
-                  currentExifLat = normalizeGeoNumber(latitude);
-                  currentExifLng = normalizeGeoNumber(longitude);
-                } else {
-                  occupancyExifLat = normalizeGeoNumber(latitude);
-                  occupancyExifLng = normalizeGeoNumber(longitude);
-                }
-              }
-              resolve();
-            },
-            () => resolve(),
-            { enableHighAccuracy: true, timeout: 6000, maximumAge: 30_000 }
-          );
-        });
-      } catch {
-        /* ignore */
-      }
-    }
+    // Removed automatic device geolocation fallback for photos without GPS
+    // as per user request: "do not put lat long if photo do not have lat long"
   };
 
   if (context === "inspection") {
@@ -5039,11 +5004,8 @@ async function occupancySaveEntry(e) {
     }
   }
 
-  // If the photo has no GPS EXIF, fall back to the user's current geolocation (same as inspection)
-  if (entry.lat == null && entry.lng == null && lastUserLatitude != null && lastUserLongitude != null) {
-    entry.lat = normalizeGeoNumber(lastUserLatitude);
-    entry.lng = normalizeGeoNumber(lastUserLongitude);
-  }
+  // Removed fallback to user's current location if photo has no GPS EXIF
+  // as per user request: "do not put lat long if photo do not have lat long"
 
   entry.lat = normalizeGeoNumber(entry.lat);
   entry.lng = normalizeGeoNumber(entry.lng);
@@ -5187,15 +5149,23 @@ async function occupancySaveEntry(e) {
         Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
       const isEdit = occupancyEditingId != null;
       if (hasLocation && !isEdit) {
-        showView("map");
-        window.location.hash = "map";
-        closeNavSidebar();
+        // No longer jumping to map as per user request.
+        // Stay in the logbook and highlight the new row.
+        showView("occupancy");
+        window.location.hash = "occupancy";
+        occupancyRenderTable();
+
         setTimeout(() => {
-          if (mapInstance) {
-            mapInstance.setView([entry.lat, entry.lng], 16);
-            openOccupancyDetailPanel(entry);
+          const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
+          if (idx >= 0) {
+            const rowEl = document.getElementById(`occupancy-row-${idx}`);
+            if (rowEl) {
+              rowEl.classList.add("row-highlight");
+              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
+            }
           }
-        }, 100);
+        }, 200);
       } else {
         showView("occupancy");
         window.location.hash = "occupancy";
