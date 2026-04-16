@@ -820,7 +820,6 @@ function isSupabaseEnabled() {
 async function gasRequest(action, payload) {
   const res = await fetch(GAS_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...(payload || {}) }),
   });
   const raw = await res.text();
