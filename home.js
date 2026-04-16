@@ -772,8 +772,37 @@ function burgerDashTrigger() {
 // Shared GAS client + utilities
 // -----------------------------
 
-// Paste your deployed Google Apps Script Web App URL here
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwJmqg6lRB_W95VNY9XfAyAovcbJrm8VpPXXg1pP1ujFD10k85xTpbwO5v8RVyy8Bpc/exec";
+// Default GAS endpoint; runtime can override this in deployed environments.
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwJmqg6lRB_W95VNY9XfAyAovcbJrm8VpPXXg1pP1ujFD10k85xTpbwO5v8RVyy8Bpc/exec";
+const GAS_URL_STORAGE_KEY = "fsis.gas_url";
+
+function resolveGasUrl() {
+  const fromQuery = new URLSearchParams(window.location.search).get("gas_url");
+  if (fromQuery) {
+    const clean = fromQuery.trim();
+    if (clean) {
+      localStorage.setItem(GAS_URL_STORAGE_KEY, clean);
+      return clean;
+    }
+  }
+
+  const fromStorage = (localStorage.getItem(GAS_URL_STORAGE_KEY) || "").trim();
+  if (fromStorage) return fromStorage;
+
+  // If this page itself is served by Apps Script Web App, use same URL as API.
+  const host = window.location.hostname || "";
+  const href = window.location.href || "";
+  if (
+    host.includes("script.google.com") ||
+    host.includes("script.googleusercontent.com")
+  ) {
+    return href.split("?")[0];
+  }
+
+  return DEFAULT_GAS_URL;
+}
+
+const GAS_URL = resolveGasUrl();
 
 function isGasEnabled() {
   return Boolean(GAS_URL);
@@ -791,9 +820,16 @@ function isSupabaseEnabled() {
 async function gasRequest(action, payload) {
   const res = await fetch(GAS_URL, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...(payload || {}) }),
   });
-  const json = await res.json();
+  const raw = await res.text();
+  let json;
+  try {
+    json = JSON.parse(raw);
+  } catch (e) {
+    throw new Error("Invalid API response. Check deployed GAS URL in home.js/localStorage.");
+  }
   if (json.error) throw new Error(json.error);
   return json;
 }
