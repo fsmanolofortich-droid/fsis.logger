@@ -5010,6 +5010,16 @@ function fireDrillCloseOnOverlay(e) {
   if (e?.target?.id === "fire_drill-modal-overlay") fireDrillCloseModal();
 }
 
+// Keep modal callbacks available for inline HTML handlers after deployment.
+if (typeof window !== "undefined") {
+  window.fireDrillOpenModal = fireDrillOpenModal;
+  window.fireDrillCloseModal = fireDrillCloseModal;
+  window.fireDrillCloseOnOverlay = fireDrillCloseOnOverlay;
+  window.fireDrillSaveEntry = fireDrillSaveEntry;
+  window.fireDrillModalStep = fireDrillModalStep;
+  window.fireDrillHandleAction = fireDrillHandleAction;
+}
+
 function fireDrillDeleteEntry(idx) {
   if (!confirm("Delete this record?")) return;
 
