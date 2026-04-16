@@ -66,7 +66,7 @@ function getCurrentView() {
     hash === "inspection" ||
     hash === "fsec" ||
     hash === "conveyance" ||
-    hash === "occupancy" ||
+    hash === "fire_drill" ||
     hash === "occupancy"
   ) {
     return hash;
@@ -354,6 +354,8 @@ function showView(name) {
     fsecInitData();
   } else if (name === "conveyance" && !conveyanceDataLoaded) {
     conveyanceInitData();
+  } else if (name === "fire_drill" && !fireDrillDataLoaded) {
+    fireDrillInitData();
   } else if (name === "occupancy" && !occupancyDataLoaded) {
     occupancyInitData();
   }
@@ -494,7 +496,8 @@ function populateModalDropdowns() {
   fillSelect("inspection_addr_barangay", BARANGAYS, "Select barangay");
   fillSelect("fsec_addr_barangay", BARANGAYS, "Select barangay");
   fillSelect("occupancy_addr_barangay", BARANGAYS, "Select barangay");
-  
+  fillSelect("fire_drill_addr_barangay", BARANGAYS, "Select barangay");
+
   fillSelect("inspection_inspected_by", FIRE_PERSONNEL, "Select inspector");
   fillSelect("inspection_included_personnel_name", FIRE_PERSONNEL, "Select personnel (optional)");
   fillSelect("occupancy_inspected_by", FIRE_PERSONNEL, "Select inspector");
@@ -684,6 +687,16 @@ function init() {
   });
 
   populateModalDropdowns();
+  const fdIssued = document.getElementById("fire_drill_date_issued");
+  if (fdIssued) {
+    fdIssued.addEventListener("change", fireDrillSyncIssuanceFieldsFromDate);
+    fdIssued.addEventListener("input", fireDrillSyncIssuanceFieldsFromDate);
+  }
+  const fdValidityType = document.getElementById("fire_drill_validity_type");
+  if (fdValidityType) {
+    fdValidityType.addEventListener("change", fireDrillSyncValidityDate);
+    fdValidityType.addEventListener("input", fireDrillSyncValidityDate);
+  }
   initViewRouting();  // Map markers ui filter initialization removed as it uses the select dropdown now.
   initTableFilters();
   initPhotoPreviewModal();
@@ -731,6 +744,8 @@ function init() {
     fsecInitData();
   } else if (initialView === "conveyance" && !conveyanceDataLoaded) {
     conveyanceInitData();
+  } else if (initialView === "fire_drill" && !fireDrillDataLoaded) {
+    fireDrillInitData();
   } else if (initialView === "occupancy" && !occupancyDataLoaded) {
     occupancyInitData();
   }
@@ -930,6 +945,10 @@ function initTableFilters() {
   bind(
     ["conveyance-filter-q", "conveyance-filter-from", "conveyance-filter-to"],
     () => conveyanceRenderTable()
+  );
+  bind(
+    ["fire_drill-filter-q", "fire_drill-filter-from", "fire_drill-filter-to"],
+    () => fireDrillRenderTable()
   );
   bind(
     ["occupancy-filter-q", "occupancy-filter-from", "occupancy-filter-to"],
@@ -2015,6 +2034,24 @@ function conveyanceModalStep(delta) {
   updateModalStepUI('conveyance', current);
 }
 
+function fireDrillModalStep(delta) {
+  const overlay = document.getElementById("fire_drill-modal-overlay");
+  if (!overlay) return;
+  let current = parseInt(overlay.getAttribute("data-current-step") || "1", 10);
+  current += delta;
+  if (current < 1) current = 1;
+  const max = 2;
+  if (current > max) current = max;
+  updateModalStepUI("fire_drill", current);
+  if (current === 2 && delta > 0) {
+    const iss = document.getElementById("fire_drill_date_issued");
+    const cert = document.getElementById("fire_drill_certificate_date");
+    if (iss && cert && !iss.value && cert.value) {
+      iss.value = cert.value;
+      fireDrillSyncIssuanceFieldsFromDate();
+    }
+  }
+}
 
 function inspectionCloseOnOverlay(e) {
   const overlay = document.getElementById("inspection-modal-overlay");
@@ -4591,6 +4628,553 @@ async function conveyanceInitData() {
     console.warn("Conveyance load from GAS failed:", err);
     logbookShowToast("conveyance-toast", "Could not load data from server.");
     conveyanceRenderTable();
+  }
+}
+
+// -----------------------------
+// Fire Drill logbook module (fields align with fire_drill_certificate.html placeholders)
+// -----------------------------
+
+/** Build full address string and parts (same pattern as inspection / occupancy). */
+function fireDrillMergeAddressFields() {
+  const region = (document.getElementById("fire_drill_addr_region")?.value || "X").trim();
+  const province = (document.getElementById("fire_drill_addr_province")?.value || "Bukidnon").trim();
+  const municipal = (document.getElementById("fire_drill_addr_municipal")?.value || "Manolo Fortich").trim();
+  let barangay = (document.getElementById("fire_drill_addr_barangay") || { value: "" }).value.trim();
+  const line = (document.getElementById("fire_drill_addr_line") || { value: "" }).value.trim();
+  if (!barangay || /^select/i.test(barangay)) barangay = "";
+  const merged = [line, barangay ? `Barangay ${barangay}` : null, municipal, province, `Region ${region}`]
+    .filter((p) => String(p || "").trim())
+    .join(", ");
+  return { merged, addr_barangay: barangay, addr_line: line };
+}
+
+/** Split stored `address` from the sheet into line + barangay when possible. */
+function fireDrillParseStoredAddress(full) {
+  const s = (full || "").toString().trim();
+  if (!s) return { addr_line: "", addr_barangay: "" };
+  const brgyMatch = s.match(/Barangay\s+([^,]+)/i);
+  const addr_barangay = brgyMatch ? brgyMatch[1].trim() : "";
+  let addr_line = "";
+  if (brgyMatch) {
+    addr_line = s.slice(0, brgyMatch.index).replace(/,\s*$/, "").trim();
+  } else {
+    addr_line = s.split(",")[0]?.trim() || s;
+  }
+  return { addr_line, addr_barangay };
+}
+
+/** Ordinal day for certificates (1st, 2nd, … 14th). */
+function fireDrillOrdinalDay(dayNum) {
+  const d = Math.floor(Number(dayNum));
+  if (!Number.isFinite(d) || d < 1 || d > 31) return String(dayNum);
+  const j = d % 10;
+  const k = d % 100;
+  if (k >= 11 && k <= 13) return `${d}th`;
+  if (j === 1) return `${d}st`;
+  if (j === 2) return `${d}nd`;
+  if (j === 3) return `${d}rd`;
+  return `${d}th`;
+}
+
+function fireDrillFormatMonthYearIssued(d) {
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function fireDrillAddMonthsClamped(dateObj, monthsToAdd) {
+  const y = dateObj.getFullYear();
+  const m = dateObj.getMonth();
+  const day = dateObj.getDate();
+  const targetMonthIndex = m + monthsToAdd;
+  const lastDay = new Date(y, targetMonthIndex + 1, 0).getDate();
+  const safeDay = Math.min(day, lastDay);
+  return new Date(y, targetMonthIndex, safeDay, 12, 0, 0);
+}
+
+/** Infer validity type from issuance date + valid-until date when possible. */
+function fireDrillInferValidityType(issuedIso, validIso) {
+  if (!issuedIso || !validIso) return "";
+  const issued = new Date(issuedIso + "T12:00:00");
+  const valid = new Date(validIso + "T12:00:00");
+  if (Number.isNaN(issued.getTime()) || Number.isNaN(valid.getTime())) return "";
+
+  const sameDate = (a, b) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (sameDate(fireDrillAddMonthsClamped(issued, 3), valid)) return "quarterly";
+  if (sameDate(fireDrillAddMonthsClamped(issued, 6), valid)) return "midyear";
+  if (sameDate(fireDrillAddMonthsClamped(issued, 12), valid)) return "annual";
+  return "";
+}
+
+/** Auto-compute "valid until" from issuance date + selected validity period. */
+function fireDrillSyncValidityDate() {
+  const issuedEl = document.getElementById("fire_drill_date_issued");
+  const typeEl = document.getElementById("fire_drill_validity_type");
+  const validEl = document.getElementById("fire_drill_date_valid");
+  if (!issuedEl || !typeEl || !validEl) return;
+  const issuedVal = issuedEl.value;
+  const type = (typeEl.value || "").trim();
+  if (!issuedVal || !type) return;
+
+  const issued = new Date(issuedVal + "T12:00:00");
+  if (Number.isNaN(issued.getTime())) return;
+
+  let months = 0;
+  if (type === "quarterly") months = 3;
+  else if (type === "midyear") months = 6;
+  else if (type === "annual") months = 12;
+  else return;
+
+  const out = fireDrillAddMonthsClamped(issued, months);
+  const y = out.getFullYear();
+  const m = String(out.getMonth() + 1).padStart(2, "0");
+  const d = String(out.getDate()).padStart(2, "0");
+  validEl.value = `${y}-${m}-${d}`;
+}
+
+/** Fill day + month/year from the issuance date picker (local noon to avoid TZ shift). */
+function fireDrillSyncIssuanceFieldsFromDate() {
+  const el = document.getElementById("fire_drill_date_issued");
+  const dayEl = document.getElementById("fire_drill_day_issued");
+  const myEl = document.getElementById("fire_drill_month_year_issued");
+  if (!el || !dayEl || !myEl) return;
+  const v = el.value;
+  if (!v) {
+    dayEl.value = "";
+    myEl.value = "";
+    return;
+  }
+  const d = new Date(v + "T12:00:00");
+  if (Number.isNaN(d.getTime())) return;
+  dayEl.value = fireDrillOrdinalDay(d.getDate());
+  myEl.value = fireDrillFormatMonthYearIssued(d);
+  fireDrillSyncValidityDate();
+}
+
+/**
+ * Rebuild yyyy-mm-dd for the issuance date input from stored day/month-year strings.
+ */
+function fireDrillIssuancePartsToDateString(dayStr, monthYearStr) {
+  const dayNum = parseInt(String(dayStr || "").replace(/[^\d]/g, ""), 10);
+  const my = String(monthYearStr || "").trim();
+  const parts = my.match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (!parts || !dayNum) return "";
+  const monthName = parts[1];
+  const year = parseInt(parts[2], 10);
+  const months = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+  ];
+  const mi = months.indexOf(monthName.toLowerCase());
+  if (mi < 0) return "";
+  const d = new Date(year, mi, dayNum);
+  if (d.getFullYear() !== year || d.getMonth() !== mi || d.getDate() !== dayNum) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+const FIRE_DRILL_STORAGE_KEY = "bfp_fire_drill";
+let fireDrillData = [];
+let fireDrillEditingIdx = null;
+let fireDrillEditingId = null;
+let fireDrillDataLoaded = false;
+
+function fireDrillLoadFromLocal() {
+  fireDrillData = JSON.parse(localStorage.getItem(FIRE_DRILL_STORAGE_KEY) || "[]");
+}
+
+function fireDrillSaveToLocal() {
+  localStorage.setItem(FIRE_DRILL_STORAGE_KEY, JSON.stringify(fireDrillData));
+}
+
+function fireDrillSetPrintDate() {
+  const el = document.getElementById("fire_drill-print-date");
+  if (!el) return;
+  const now = new Date();
+  el.textContent = now.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function fireDrillPrintPanel() {
+  fireDrillSetPrintDate();
+  const oldTitle = document.title;
+  document.title = "";
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.title = oldTitle;
+    }, 500);
+  }, 0);
+}
+
+function fireDrillClearFilters() {
+  const q = document.getElementById("fire_drill-filter-q");
+  const from = document.getElementById("fire_drill-filter-from");
+  const to = document.getElementById("fire_drill-filter-to");
+  if (q) q.value = "";
+  if (from) from.value = "";
+  if (to) to.value = "";
+  fireDrillRenderTable();
+}
+
+function fireDrillRenderTable() {
+  const tbody = document.getElementById("tbody-fire_drill");
+  const empty = document.getElementById("empty-fire_drill");
+  const tableWrap = document.getElementById("table-fire_drill")?.closest(".table-wrap");
+  const countBadge = document.getElementById("fire_drill-record-count");
+  if (!tbody || !empty) return;
+  if (countBadge) countBadge.textContent = String(fireDrillData.length || 0);
+
+  const q = normalizeQuery(document.getElementById("fire_drill-filter-q")?.value);
+  const from = (document.getElementById("fire_drill-filter-from")?.value || "").trim();
+  const to = (document.getElementById("fire_drill-filter-to")?.value || "").trim();
+
+  const filtered = fireDrillData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.certificate_date, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery(
+        [
+          row.control_number,
+          row.building_name,
+          row.address,
+          row.or_number,
+          row.amount_paid,
+        ]
+          .filter(Boolean)
+          .join(" | ")
+      );
+      return hay.includes(q);
+    });
+
+  tbody.innerHTML = "";
+  if (fireDrillData.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+    return;
+  }
+
+  if (filtered.length === 0) {
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+    return;
+  }
+
+  empty.style.display = "none";
+  if (tableWrap) tableWrap.style.display = "";
+
+  filtered.forEach(({ row, idx }, displayIdx) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td data-label="#">${displayIdx + 1}</td>
+      <td class="td-date" data-label="Cert. date">${logbookFormatDate(row.certificate_date)}</td>
+      <td data-label="Control No.">${logbookEsc(row.control_number)}</td>
+      <td data-label="Building">${logbookEsc(row.building_name)}</td>
+      <td data-label="Address"><div class="cell-pre">${logbookEsc(row.address)}</div></td>
+      <td data-label="Valid until">${logbookFormatDate(row.date_valid)}</td>
+      <td class="col-action" data-label="Action">
+        <select class="action-select" aria-label="Row actions" onchange="fireDrillHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
+          <option value="">Actions…</option>
+          <option value="open_certificate">Open Certificate</option>
+          <option value="edit">Edit</option>
+          <option value="delete">Delete</option>
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function fireDrillHandleAction(action, idx) {
+  if (!action) return;
+  if (action === "open_certificate") return fireDrillOpenCertificate(idx);
+  if (action === "edit") return fireDrillEditEntry(idx);
+  if (action === "delete") return fireDrillDeleteEntry(idx);
+}
+
+function fireDrillOpenCertificate(idx) {
+  const row = fireDrillData[idx];
+  if (!row) return;
+  try {
+    sessionStorage.setItem("fsis.fire_drill.certificate", JSON.stringify(row));
+  } catch (err) {
+    console.warn("Could not write fire drill certificate row to sessionStorage:", err);
+  }
+  window.open("./fire_drill_certificate.html", "_blank");
+}
+
+async function fireDrillEditEntry(idx) {
+  const oldRow = fireDrillData[idx];
+  if (!oldRow) return;
+
+  if (isGasEnabled()) {
+    logbookShowToast("fire_drill-toast", "Retrieving the latest record from the server.");
+    try {
+      await fireDrillLoadFromSupabase();
+    } catch (err) {
+      console.warn("Refresh failed:", err);
+    }
+  }
+
+  const row = oldRow.id ? fireDrillData.find((r) => r.id === oldRow.id) : fireDrillData[idx];
+  if (!row) return;
+
+  fireDrillEditingIdx = fireDrillData.indexOf(row);
+  fireDrillEditingId = row.id || null;
+
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+  setVal("fire_drill_control_number", row.control_number);
+  setVal("fire_drill_certificate_date", logbookFormatDateForInput(row.certificate_date));
+  setVal("fire_drill_building_name", row.building_name);
+  setVal("fire_drill_owner_name", row.owner_name);
+  let brgy = row.addr_barangay || "";
+  let line = row.addr_line || "";
+  if (!brgy && !line && row.address) {
+    const p = fireDrillParseStoredAddress(row.address);
+    brgy = p.addr_barangay;
+    line = p.addr_line;
+  }
+  ensureSelectOption("fire_drill_addr_barangay", brgy);
+  setVal("fire_drill_addr_line", line);
+  let issuedIso = fireDrillIssuancePartsToDateString(row.day_issued, row.month_year_issued);
+  if (!issuedIso && row.certificate_date) {
+    issuedIso = logbookFormatDateForInput(row.certificate_date);
+  }
+  setVal("fire_drill_date_issued", issuedIso);
+  fireDrillSyncIssuanceFieldsFromDate();
+  setVal("fire_drill_date_valid", logbookFormatDateForInput(row.date_valid));
+  setVal("fire_drill_validity_type", fireDrillInferValidityType(issuedIso, logbookFormatDateForInput(row.date_valid)));
+  setVal("fire_drill_amount_paid", row.amount_paid);
+  setVal("fire_drill_or_number", row.or_number);
+  setVal("fire_drill_date_paid", logbookFormatDateForInput(row.date_paid));
+
+  setText("fire_drill-modal-title", "Amend Fire Drill Certificate Entry");
+  const btn = document.getElementById("fire_drill-btn-save");
+  if (btn) btn.textContent = "Update Entry";
+
+  document.getElementById("fire_drill-modal-overlay")?.classList.add("open");
+  updateModalStepUI("fire_drill", 1);
+}
+
+function fireDrillOpenModal() {
+  fireDrillEditingIdx = null;
+  fireDrillEditingId = null;
+
+  setText("fire_drill-modal-title", "New Fire Drill Certificate Entry");
+  const btn = document.getElementById("fire_drill-btn-save");
+  if (btn) btn.textContent = "Submit";
+
+  const d = new Date().toISOString().slice(0, 10);
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+  setVal("fire_drill_control_number", "");
+  setVal("fire_drill_certificate_date", d);
+  setVal("fire_drill_building_name", "");
+  setVal("fire_drill_owner_name", "");
+  setVal("fire_drill_addr_line", "");
+  const fdBr = document.getElementById("fire_drill_addr_barangay");
+  if (fdBr) fdBr.selectedIndex = 0;
+  setVal("fire_drill_date_issued", d);
+  fireDrillSyncIssuanceFieldsFromDate();
+  setVal("fire_drill_validity_type", "");
+  setVal("fire_drill_date_valid", "");
+  setVal("fire_drill_amount_paid", "");
+  setVal("fire_drill_or_number", "");
+  setVal("fire_drill_date_paid", "");
+
+  document.getElementById("fire_drill-modal-overlay")?.classList.add("open");
+  updateModalStepUI("fire_drill", 1);
+}
+
+function fireDrillCloseModal() {
+  document.getElementById("fire_drill-modal-overlay")?.classList.remove("open");
+}
+
+function fireDrillCloseOnOverlay(e) {
+  if (e?.target?.id === "fire_drill-modal-overlay") fireDrillCloseModal();
+}
+
+function fireDrillDeleteEntry(idx) {
+  if (!confirm("Delete this record?")) return;
+
+  const row = fireDrillData[idx];
+  if (!row) return;
+
+  fireDrillData.splice(idx, 1);
+  fireDrillSaveToLocal();
+  fireDrillRenderTable();
+  logbookShowToast("fire_drill-toast", "The entry was deleted.");
+
+  if (!isSupabaseEnabled()) return;
+  if (!row.id) {
+    logbookShowToast("fire_drill-toast", "This entry cannot be deleted: no record identifier.");
+    return;
+  }
+
+  (async () => {
+    try {
+      await gasRequest("delete", { table: "fire_drill_logbook", id: row.id });
+    } catch (err) {
+      logbookShowToast("fire_drill-toast", "Deletion failed: " + (err?.message || err));
+    }
+  })();
+}
+
+function fireDrillSaveEntry(e) {
+  if (e?.preventDefault) e.preventDefault();
+
+  const addrParts = fireDrillMergeAddressFields();
+
+  const issuedVal = (document.getElementById("fire_drill_date_issued") || { value: "" }).value;
+  let day_issued = "";
+  let month_year_issued = "";
+  if (issuedVal) {
+    const issuedD = new Date(issuedVal + "T12:00:00");
+    if (!Number.isNaN(issuedD.getTime())) {
+      day_issued = fireDrillOrdinalDay(issuedD.getDate());
+      month_year_issued = fireDrillFormatMonthYearIssued(issuedD);
+    }
+  }
+
+  const entry = {
+    control_number: (document.getElementById("fire_drill_control_number") || { value: "" }).value.trim(),
+    certificate_date: (document.getElementById("fire_drill_certificate_date") || { value: "" }).value,
+    building_name: (document.getElementById("fire_drill_building_name") || { value: "" }).value.trim(),
+    owner_name: (document.getElementById("fire_drill_owner_name") || { value: "" }).value.trim(),
+    address: addrParts.merged,
+    addr_barangay: addrParts.addr_barangay,
+    addr_line: addrParts.addr_line,
+    day_issued,
+    month_year_issued,
+    date_valid: (document.getElementById("fire_drill_date_valid") || { value: "" }).value,
+    amount_paid: (document.getElementById("fire_drill_amount_paid") || { value: "" }).value.trim(),
+    or_number: (document.getElementById("fire_drill_or_number") || { value: "" }).value.trim(),
+    date_paid: (document.getElementById("fire_drill_date_paid") || { value: "" }).value,
+    created_at: new Date().toISOString(),
+  };
+
+  if (!entry.certificate_date || !entry.control_number || !entry.building_name) {
+    logbookShowToast(
+      "fire_drill-toast",
+      "Certificate date, control number, and the name of the building or structure are required."
+    );
+    return;
+  }
+
+  const isOnline = isSupabaseEnabled();
+
+  if (fireDrillEditingIdx !== null) {
+    const prev = fireDrillData[fireDrillEditingIdx] || {};
+    fireDrillData[fireDrillEditingIdx] = {
+      ...prev,
+      ...entry,
+      id: prev.id || null,
+      created_at: prev.created_at || entry.created_at,
+    };
+  } else {
+    fireDrillData.push({ ...entry, id: null });
+  }
+
+  fireDrillSaveToLocal();
+  fireDrillRenderTable();
+  fireDrillCloseModal();
+  showSaveIndicator("Fire drill certificate entry saved.");
+
+  if (!isOnline) {
+    logbookShowToast(
+      "fire_drill-toast",
+      "The entry was saved on this device only; the server was not available."
+    );
+    return;
+  }
+
+  const serverEditingId = fireDrillEditingId;
+  (async () => {
+    try {
+      const payload = {
+        control_number: entry.control_number,
+        certificate_date: entry.certificate_date,
+        building_name: entry.building_name,
+        owner_name: entry.owner_name || null,
+        address: entry.address || null,
+        day_issued: entry.day_issued || null,
+        month_year_issued: entry.month_year_issued || null,
+        date_valid: entry.date_valid || null,
+        amount_paid: entry.amount_paid || null,
+        or_number: entry.or_number || null,
+        date_paid: entry.date_paid || null,
+      };
+      if (serverEditingId) {
+        await gasRequest("update", { table: "fire_drill_logbook", id: serverEditingId, row: payload });
+      } else {
+        await gasRequest("insert", { table: "fire_drill_logbook", row: payload });
+      }
+      logbookShowToast("fire_drill-toast", "The entry was saved to the central record.");
+      await fireDrillLoadFromSupabase();
+      fireDrillRenderTable();
+    } catch (err) {
+      const msg = err?.message || String(err);
+      logbookShowToast("fire_drill-toast", "The entry could not be saved: " + msg);
+    }
+  })();
+}
+
+async function fireDrillLoadFromSupabase() {
+  const result = await gasRequest("read", { table: "fire_drill_logbook" });
+  fireDrillData = (result.data || []).map((r) => {
+    const parsed = fireDrillParseStoredAddress(r.address || "");
+    return {
+      id: r.id,
+      control_number: r.control_number || "",
+      certificate_date: r.certificate_date || "",
+      building_name: r.building_name || "",
+      owner_name: r.owner_name || "",
+      address: r.address || "",
+      addr_barangay: parsed.addr_barangay,
+      addr_line: parsed.addr_line,
+      day_issued: r.day_issued || "",
+      month_year_issued: r.month_year_issued || "",
+      date_valid: r.date_valid || "",
+      amount_paid: r.amount_paid != null ? String(r.amount_paid) : "",
+      or_number: r.or_number || "",
+      date_paid: r.date_paid || "",
+      created_at: r.created_at,
+    };
+  });
+  fireDrillSaveToLocal();
+}
+
+async function fireDrillInitData() {
+  if (fireDrillDataLoaded) return;
+  fireDrillDataLoaded = true;
+  localStorage.removeItem(FIRE_DRILL_STORAGE_KEY);
+  fireDrillSetPrintDate();
+  fireDrillRenderTable();
+  if (!isGasEnabled()) return;
+  try {
+    await fireDrillLoadFromSupabase();
+    fireDrillSetPrintDate();
+    fireDrillRenderTable();
+  } catch (err) {
+    console.warn("Fire Drill load from GAS failed:", err);
+    logbookShowToast("fire_drill-toast", "Unable to load data from the server.");
+    fireDrillRenderTable();
   }
 }
 

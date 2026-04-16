@@ -35,12 +35,11 @@
 				transform: scale(0.1);
 				-moz-transform: scale(0.1);
 				-webkit-transform: scale(0.1);
+				transform-origin: top left;
 				-moz-transform-origin: top left;
 				-webkit-transform-origin: top left;
 			}
 		}
-
-		.pdf24_layer {}
 
 		.pdf24_ie {
 			font-size: 1pt;
@@ -51,9 +50,27 @@
 		}
 
 		@media print {
+			@page {
+				size: 8.5in 13in;
+				margin: 0;
+			}
+
+			html,
+			body {
+				width: 8.5in;
+				height: 13in;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+
 			.pdf24_view {
 				font-size: 1em;
 				transform: scale(1);
+			}
+
+			body>div {
+				box-shadow: none !important;
+				margin: 0 !important;
 			}
 		}
 
@@ -536,6 +553,26 @@
 			color: #000000;
 		}
 
+		/* Underline all dynamic values injected from logbook data */
+		.fd-data {
+			text-decoration: underline;
+			text-underline-offset: 0.08em;
+			/* Override PDF bold font classes for consistent dynamic text */
+			font-family: "LJEJDJ+Arial", "Arial", sans-serif !important;
+			font-weight: 400 !important;
+			font-style: normal !important;
+		}
+
+		.fd-data[contenteditable="true"] {
+			outline: none;
+			cursor: text;
+		}
+
+		.sig-name {
+			text-decoration: underline;
+			text-underline-offset: 0.1em;
+		}
+
 		body>div {
 			box-shadow: 0 0 5px rgba(0, 0, 0, 0.3) !important;
 			margin: 20px auto !important;
@@ -571,10 +608,10 @@
 						href="mailto:manolofortichfs_bfp10@yahoo.com" target="_blank"><span
 							class="pdf24_19 pdf24_08 pdf24_20">manolofortichfs_bfp10@yahoo.com &nbsp;</span></a></div>
 				<div class="pdf24_01" style="left:6em;top:18.9871em;"><span class="pdf24_21 pdf24_08 pdf24_22"
-						style="word-spacing:-0.0012em;">Control No. MFFS-&lt;control_number&gt; &nbsp;</span></div>
-				<div class="pdf24_01" style="left:37.8558em;top:20.7393em;"><span
-						class="pdf24_11 pdf24_08 pdf24_23">&lt;DATE&gt; &nbsp;</span></div>
-				<div class="pdf24_01" style="left:38.4392em;top:21.9556em;"><span
+						style="word-spacing:-0.0012em;">Control No. <span class="fd-data" style="text-decoration:none;">&lt;control_number&gt;</span> &nbsp;</span></div>
+				<div class="pdf24_01" style="left:33.9em;top:20.7393em;width:12em;text-align:center;"><span
+						class="pdf24_11 pdf24_08 pdf24_23"><span class="fd-data">&lt;DATE&gt;</span> &nbsp;</span></div>
+				<div class="pdf24_01" style="left:33.9em;top:21.9556em;width:12em;text-align:center;"><span
 						class="pdf24_24 pdf24_08 pdf24_25">Date &nbsp;</span></div>
 				<div class="pdf24_01" style="left:14.5608em;top:23.7858em;"><span class="pdf24_26 pdf24_27 pdf24_17"
 						style="word-spacing:-0.0001em;">C E R T I F I C A T I O N &nbsp;</span></div>
@@ -585,28 +622,24 @@
 						class="pdf24_11 pdf24_08 pdf24_29" style="word-spacing:0.0007em;">FIRE SAFETY SEMINAR AND DRILL
 					</span><span class="pdf24_07 pdf24_08 pdf24_20" style="word-spacing:0.0007em;">has been conducted at
 						&nbsp;</span></div>
-				<div class="pdf24_01" style="left:22.1208em;top:32.9827em;"><span class="pdf24_07 pdf24_08 pdf24_30"
-						style="word-spacing:0.0026em;">&lt;Building Name&gt; &nbsp;</span></div>
-				<div class="pdf24_01" style="left:19.1267em;top:34.0252em;"><span class="pdf24_31 pdf24_08 pdf24_29"
+				<div class="pdf24_01" style="left:6em;top:32.9827em;width:39em;text-align:center;"><span class="pdf24_07 pdf24_08 pdf24_30"
+						style="word-spacing:0.0026em;"><span class="fd-data">&lt;Building Name&gt;</span> &nbsp;</span></div>
+				<div class="pdf24_01" style="left:6em;top:34.0252em;width:39em;text-align:center;"><span class="pdf24_31 pdf24_08 pdf24_29"
 						style="word-spacing:0.0008em;">(Name of Building / Structure /Facility) &nbsp;</span></div>
-				<div class="pdf24_01" style="left:6em;top:35.9493em;"><span class="pdf24_07 pdf24_08 pdf24_14"
-						style="word-spacing:-0.0155em;">On April 14, 2026 located at &nbsp;</span></div>
+				<div class="pdf24_01" style="left:6em;top:35.9493em;max-width:48em;white-space:normal;"><span class="pdf24_07 pdf24_08 pdf24_14"
+						style="word-spacing:-0.0155em;">On </span><span
+						class="pdf24_07 pdf24_08 pdf24_14"><span class="fd-data">&lt;DATE&gt;</span></span><span class="pdf24_07 pdf24_08 pdf24_14">
+						located at </span><span class="pdf24_32 pdf24_08 pdf24_33"><span class="fd-data">&lt;ADDRESS&gt;</span></span><span
+						class="pdf24_32 pdf24_08 pdf24_17">.</span></div>
 				<div class="pdf24_01" style="left:9.1267em;top:37.0002em;"><span
 						class="pdf24_31 pdf24_08 pdf24_12">(Date) &nbsp;</span></div>
-				<div class="pdf24_01" style="left:27.3708em;top:36.0248em;"><span
-						class="pdf24_32 pdf24_08 pdf24_33">&lt;ADDRESS&gt; &nbsp;</span></div>
-				<div class="pdf24_01" style="left:44.7983em;top:36.0248em;"><span
-						class="pdf24_32 pdf24_08 pdf24_17">.</span></div>
 				<div class="pdf24_01" style="left:28.2125em;top:37.0002em;"><span
 						class="pdf24_31 pdf24_08 pdf24_20">(Address) &nbsp;</span></div>
 				<div class="pdf24_01" style="left:6em;top:38.9243em;"><span class="pdf24_07 pdf24_08 pdf24_34"
 						style="word-spacing:0.0011em;">owned by &nbsp;</span></div>
-				<div class="pdf24_01" style="left:16.5525em;top:38.9243em;"><span class="pdf24_07 pdf24_08 pdf24_20"
-						style="word-spacing:0.0029em;">FIRST COMMUNITY COOPERATIVE </span><span
-						class="pdf24_16 pdf24_08 pdf24_17" style="word-spacing:0.0302em;">– </span><span
-						class="pdf24_07 pdf24_08 pdf24_33" style="word-spacing:0.0082em;">MANOLO FORTICH &nbsp;</span>
-				</div>
-				<div class="pdf24_01" style="left:24.1208em;top:39.9669em;"><span class="pdf24_31 pdf24_08 pdf24_13"
+				<div class="pdf24_01" style="left:6em;top:38.9243em;width:39em;text-align:center;"><span class="pdf24_07 pdf24_08 pdf24_20"
+						style="word-spacing:0.0029em;"><span class="fd-data">&lt;Owner/Company&gt;</span> &nbsp;</span></div>
+				<div class="pdf24_01" style="left:6em;top:39.9669em;width:39em;text-align:center;"><span class="pdf24_31 pdf24_08 pdf24_13"
 						style="word-spacing:-0.0006em;">(Name of Owner/Company) &nbsp;</span></div>
 				<div class="pdf24_01" style="left:6em;top:41.3243em;"><span class="pdf24_07 pdf24_08 pdf24_14"
 						style="word-spacing:0.0147em;">pursuant to Rule 10, Chapter 2, Division 21 of the Revised
@@ -614,21 +647,16 @@
 				<div class="pdf24_01" style="left:6em;top:42.9077em;"><span class="pdf24_07 pdf24_08 pdf24_35"
 						style="word-spacing:0.0057em;">(RIRR) of RA 9514 otherwise known as the </span><span
 						class="pdf24_16 pdf24_08 pdf24_36">“</span><span class="pdf24_07 pdf24_08 pdf24_18"
-						style="word-spacing:0.0026em;">Fire Code of the Philippine of 2008</span><span
+						style="word-spacing:0.0026em;">Fire Code of the Philippines of 2008</span><span
 						class="pdf24_16 pdf24_08 pdf24_37">”</span><span class="pdf24_07 pdf24_08 pdf24_37">.
 						&nbsp;</span></div>
 				<div class="pdf24_01" style="left:9.0017em;top:44.9577em;"><span class="pdf24_07 pdf24_08 pdf24_29"
-						style="word-spacing:0.0028em;">Issued this 14</span><sup style="top: -0.3333em;"><span
-							class="pdf24_38 pdf24_39 pdf24_40" style="word-spacing:0.1788em;">th </span></sup><span
-						class="pdf24_07 pdf24_08 pdf24_34" style="word-spacing:0.006em;">&lt;Day Issued&gt; day of
-						April</span><span class="pdf24_07 pdf24_08 pdf24_17"
-						style="word-spacing:0.2824em;">&nbsp;</span><span class="pdf24_07 pdf24_08 pdf24_15"
-						style="word-spacing:0.0029em;">2026 &lt;Month and Year Issued&gt; &nbsp;</span></div>
+						style="word-spacing:0.0028em;">Issued this </span><span
+						class="pdf24_07 pdf24_08 pdf24_34" style="word-spacing:0.006em;"><span class="fd-data">&lt;Day Issued&gt;</span> day of
+						<span class="fd-data">&lt;Month and Year Issued&gt;</span> &nbsp;</span></div>
 				<div class="pdf24_01" style="left:9.0017em;top:47.0685em;"><span class="pdf24_07 pdf24_08 pdf24_14"
-						style="word-spacing:0.0046em;">This certification is valid until 14</span><sup
-						style="top: -0.3333em;"><span class="pdf24_38 pdf24_39 pdf24_40"
-							style="word-spacing:0.1788em;">th </span></sup><span class="pdf24_07 pdf24_08 pdf24_41"
-						style="word-spacing:0.0028em;">April 2027 &lt;Date Valid&gt;. &nbsp;</span></div>
+						style="word-spacing:0.0046em;">This certification is valid until </span><span class="pdf24_07 pdf24_08 pdf24_41"
+						style="word-spacing:0.0028em;"><span class="fd-data">&lt;Date Valid&gt;</span>. &nbsp;</span></div>
 				<div class="pdf24_01" style="left:13.3442em;top:48.1194em;"><span class="pdf24_31 pdf24_08 pdf24_17"
 						style="word-spacing:-0.0005em;">(Date depending on the Type of Occupancy which requires
 						quarterly, semi-annual or annually) &nbsp;</span></div>
@@ -637,19 +665,19 @@
 				<div class="pdf24_01" style="left:27.0042em;top:51.0935em;"><span class="pdf24_11 pdf24_08 pdf24_20"
 						style="word-spacing:-0.0003em;">RECOMMEND APPROVAL: &nbsp;</span></div>
 				<div class="pdf24_01" style="left:5.6167em;top:52.2852em;"><span class="pdf24_07 pdf24_08 pdf24_41"
-						style="word-spacing:0.0062em;">Amount Paid: Php 3,000.00 &lt;amount_paid&gt; &nbsp;</span></div>
+						style="word-spacing:0.0062em;">Amount Paid: Php <span class="fd-data">&lt;amount_paid&gt;</span> &nbsp;</span></div>
 				<div class="pdf24_01" style="left:5.6167em;top:53.4927em;"><span class="pdf24_07 pdf24_08 pdf24_34"
-						style="word-spacing:0.0078em;">O.R. Number: 240818962 &lt;OR Number&gt; &nbsp;</span></div>
+						style="word-spacing:0.0078em;">O.R. Number: <span class="fd-data">&lt;OR Number&gt;</span> &nbsp;</span></div>
 				<div class="pdf24_01" style="left:5.6167em;top:54.7102em;"><span class="pdf24_07 pdf24_08 pdf24_42"
-						style="word-spacing:0.0057em;">Date: 13 April 2026 &lt;Date Paid&gt; &nbsp;</span></div>
-				<div class="pdf24_01" style="left:27.0042em;top:55.3102em;"><span class="pdf24_11 pdf24_08 pdf24_22"
+						style="word-spacing:0.0057em;">Date: <span class="fd-data">&lt;Date Paid&gt;</span> &nbsp;</span></div>
+				<div class="pdf24_01" style="left:27.0042em;top:55.3102em;"><span class="pdf24_11 pdf24_08 pdf24_22 sig-name"
 						style="word-spacing:0.0024em;">SFO1 Cedric B Gamolo, BFP &nbsp;</span></div>
 				<div class="pdf24_01" style="left:29.8125em;top:56.3685em;"><span class="pdf24_07 pdf24_08 pdf24_43"
 						style="word-spacing:0.0093em;">CHIEF, FSES &nbsp;</span></div>
 				<div class="pdf24_01" style="left:27.0042em;top:58.4768em;"><span
 						class="pdf24_11 pdf24_08 pdf24_44">APPROVED: &nbsp;</span></div>
-				<div class="pdf24_01" style="left:27.3208em;top:60.5852em;"><span class="pdf24_11 pdf24_08 pdf24_34"
-						style="word-spacing:0.0051em;">SFO3 Rafael I Corona Jr, BFP __ &nbsp;</span></div>
+				<div class="pdf24_01" style="left:27.3208em;top:60.5852em;"><span class="pdf24_11 pdf24_08 pdf24_34 sig-name"
+						style="word-spacing:0.0051em;">SFO3 Rafael I Corona Jr, BFP &nbsp;</span></div>
 				<div class="pdf24_01" style="left:25.5375em;top:61.6352em;"><span class="pdf24_07 pdf24_08 pdf24_29"
 						style="word-spacing:0.0032em;">ACTING, MUNICIPAL FIRE MARSHAL &nbsp;</span></div>
 				<div class="pdf24_01" style="left:8.0271em;top:63.9039em;"><span class="pdf24_45 pdf24_08 pdf24_29"
@@ -683,6 +711,157 @@
 			</div>
 		</div>
 	</div>
+	<script>
+		(function () {
+			function parseIsoDate(iso) {
+				if (!iso) return null;
+				var s = String(iso).trim();
+				if (!s) return null;
+				var d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T12:00:00") : new Date(s);
+				return isNaN(d.getTime()) ? null : d;
+			}
+
+			function ordinal(day) {
+				var d = Number(day);
+				if (!isFinite(d)) return "";
+				var j = d % 10, k = d % 100;
+				if (k >= 11 && k <= 13) return d + "th";
+				if (j === 1) return d + "st";
+				if (j === 2) return d + "nd";
+				if (j === 3) return d + "rd";
+				return d + "th";
+			}
+
+			function fmtDateLong(iso) {
+				var d = parseIsoDate(iso);
+				if (!d) return "";
+				var month = d.toLocaleDateString("en-US", { month: "long" });
+				var day = d.getDate();
+				var year = d.getFullYear();
+				return month + " " + day + ", " + year;
+			}
+
+			function fmtDateOrdinalLong(iso) {
+				var d = parseIsoDate(iso);
+				if (!d) return "";
+				var day = ordinal(d.getDate());
+				var month = d.toLocaleDateString("en-US", { month: "long" });
+				var year = d.getFullYear();
+				return day + " " + month + " " + year;
+			}
+
+			function fmtMonthYear(iso) {
+				var d = parseIsoDate(iso);
+				if (!d) return "";
+				return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+			}
+
+			function getCertificateData() {
+				try {
+					var raw = sessionStorage.getItem("fsis.fire_drill.certificate");
+					if (!raw) return null;
+					return JSON.parse(raw);
+				} catch (e) {
+					return null;
+				}
+			}
+
+			function firstNonEmptyField(obj, keys) {
+				if (!obj || !keys || !keys.length) return "";
+				var normalized = {};
+				Object.keys(obj).forEach(function (k) {
+					normalized[String(k).trim().toLowerCase()] = obj[k];
+				});
+				for (var i = 0; i < keys.length; i++) {
+					var key = String(keys[i] || "").trim().toLowerCase();
+					if (!key) continue;
+					var val = normalized[key];
+					if (val == null) continue;
+					var s = String(val).trim();
+					if (s) return s;
+				}
+				return "";
+			}
+
+			function replacePlaceholders(map) {
+				var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+				var nodes = [];
+				while (walker.nextNode()) nodes.push(walker.currentNode);
+				nodes.forEach(function (node) {
+					var txt = node.nodeValue;
+					if (!txt || txt.indexOf("<") === -1) return;
+					Object.keys(map).forEach(function (token) {
+						if (txt.indexOf(token) !== -1) {
+							txt = txt.split(token).join(map[token]);
+						}
+					});
+					node.nodeValue = txt;
+				});
+			}
+
+			function enableEditableDataFields() {
+				var fields = document.querySelectorAll(".fd-data");
+				fields.forEach(function (el) {
+					el.setAttribute("contenteditable", "true");
+					el.setAttribute("spellcheck", "false");
+				});
+			}
+
+			var row = getCertificateData();
+			if (!row) return;
+
+			var certDate = row.certificate_date || "";
+			var dayIssued = row.day_issued || "";
+			if (!dayIssued) {
+				var cd = parseIsoDate(certDate);
+				dayIssued = cd ? ordinal(cd.getDate()) : "";
+			}
+
+			var monthYearIssued = "";
+			if (row.month_year_issued) {
+				var monthYearRaw = String(row.month_year_issued).trim();
+				var parsedMonthYear = parseIsoDate(monthYearRaw);
+				monthYearIssued = parsedMonthYear
+					? parsedMonthYear.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+					: monthYearRaw;
+			}
+			if (!monthYearIssued) {
+				monthYearIssued = fmtMonthYear(certDate);
+			}
+			var ownerCompany = firstNonEmptyField(row, [
+				"owner_name",
+				"ownerName",
+				"owner company",
+				"owner_company",
+				"owner",
+				"building_name"
+			]);
+			var amountPaid = "";
+			if (row.amount_paid != null && String(row.amount_paid).trim() !== "") {
+				var num = Number(String(row.amount_paid).replace(/,/g, ""));
+				amountPaid = isNaN(num)
+					? String(row.amount_paid)
+					: num.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+			}
+			var datePaid = row.date_paid ? fmtDateLong(row.date_paid) : "";
+			var validDate = row.date_valid ? fmtDateOrdinalLong(row.date_valid) : "";
+
+			replacePlaceholders({
+				"<control_number>": row.control_number || "",
+				"<DATE>": fmtDateLong(certDate),
+				"<Building Name>": row.building_name || "",
+				"<ADDRESS>": row.address || "",
+				"<Owner/Company>": ownerCompany,
+				"<Day Issued>": dayIssued,
+				"<Month and Year Issued>": monthYearIssued,
+				"<Date Valid>": validDate,
+				"<amount_paid>": amountPaid,
+				"<OR Number>": row.or_number || "",
+				"<Date Paid>": datePaid
+			});
+			enableEditableDataFields();
+		})();
+	</script>
 </body>
 
 </html>

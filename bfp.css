@@ -22,6 +22,51 @@
   display: flex;
 }
 
+/* ── Modal responsiveness (all overlays) ─────────────────────────────── */
+.modal-overlay .modal-dialog {
+  width: 100%;
+  /* Bootstrap's default margin can cause horizontal overflow on small screens */
+  margin: 0;
+  /* Reasonable desktop cap; mobile will naturally clamp via overlay padding */
+  max-width: 760px;
+}
+
+/* Let specific modals opt into larger widths via Bootstrap classes */
+.modal-overlay .modal-dialog.modal-lg {
+  max-width: 960px;
+}
+
+.modal-overlay .modal-dialog.modal-xl {
+  max-width: 1140px;
+}
+
+/* Keep modal content inside the viewport; body scrolls within */
+.modal-overlay .modal-content {
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+}
+
+.modal-overlay .modal-body {
+  max-height: calc(100vh - 40px - 120px);
+  overflow-y: auto;
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .modal-overlay .modal-content {
+    max-height: calc(100vh - 24px);
+    border-radius: 12px;
+  }
+
+  .modal-overlay .modal-body {
+    max-height: calc(100vh - 24px - 120px);
+  }
+}
+
 /* Photo attach preview (stacked above logbook modals) */
 #photo-preview-modal-overlay {
   z-index: 1600;
@@ -561,6 +606,7 @@ table#table-inspection-nophoto {
 
 table#table-occupancy,
 table#table-conveyance,
+table#table-fire_drill,
 table#table-fsec {
   min-width: 780px;
 }
@@ -1596,6 +1642,7 @@ body.is-map-view [data-view="map"] {
 [data-view="inspection"],
 [data-view="fsec"],
 [data-view="conveyance"],
+[data-view="fire_drill"],
 [data-view="occupancy"] {
   padding: 26px 18px 40px;
   max-width: 1200px;
@@ -1646,6 +1693,7 @@ body.is-map-view [data-view="map"] {
 }
 
 #table-conveyance,
+#table-fire_drill,
 #table-occupancy {
   min-width: 680px;
 }
@@ -1674,6 +1722,7 @@ body.is-map-view [data-view="map"] {
   #table-inspection-nophoto,
   #table-fsec,
   #table-conveyance,
+  #table-fire_drill,
   #table-occupancy {
     min-width: 0 !important;
     width: 100% !important;
@@ -1758,15 +1807,21 @@ body.is-map-view [data-view="map"] {
     max-width: 0;
   }
 
-  /* ── Conveyance / Occupancy (7 → 4 cols after hiding)
-     Keep: #(1) Date(2) IO Number(3) Action(7)
-     Hide: Owner(4) Inspectors(5) Remarks(6)                           */
+  /* ── Conveyance / Fire Drill / Occupancy (7 → 4 cols after hiding)
+     Conveyance & Occupancy: Keep #(1) Date(2) IO Number(3) Action(7); hide 4–6.
+     Fire Drill: Keep #(1) Cert. date(2) Control No.(3) Action(7); hide Building, Address, Valid until (4–6). */
   #table-conveyance th:nth-child(4),
   #table-conveyance td:nth-child(4),
   #table-conveyance th:nth-child(5),
   #table-conveyance td:nth-child(5),
   #table-conveyance th:nth-child(6),
   #table-conveyance td:nth-child(6),
+  #table-fire_drill th:nth-child(4),
+  #table-fire_drill td:nth-child(4),
+  #table-fire_drill th:nth-child(5),
+  #table-fire_drill td:nth-child(5),
+  #table-fire_drill th:nth-child(6),
+  #table-fire_drill td:nth-child(6),
   #table-occupancy th:nth-child(4),
   #table-occupancy td:nth-child(4),
   #table-occupancy th:nth-child(5),
@@ -1779,6 +1834,8 @@ body.is-map-view [data-view="map"] {
   /* Column widths: # | Date | IO Number | Action */
   #table-conveyance th:nth-child(1),
   #table-conveyance td:nth-child(1),
+  #table-fire_drill th:nth-child(1),
+  #table-fire_drill td:nth-child(1),
   #table-occupancy th:nth-child(1),
   #table-occupancy td:nth-child(1) {
     width: 28px;
@@ -1786,6 +1843,8 @@ body.is-map-view [data-view="map"] {
 
   #table-conveyance th:nth-child(2),
   #table-conveyance td:nth-child(2),
+  #table-fire_drill th:nth-child(2),
+  #table-fire_drill td:nth-child(2),
   #table-occupancy th:nth-child(2),
   #table-occupancy td:nth-child(2) {
     width: 80px;
@@ -1793,6 +1852,8 @@ body.is-map-view [data-view="map"] {
 
   #table-conveyance th:nth-child(3),
   #table-conveyance td:nth-child(3),
+  #table-fire_drill th:nth-child(3),
+  #table-fire_drill td:nth-child(3),
   #table-occupancy th:nth-child(3),
   #table-occupancy td:nth-child(3) {
     width: auto;
@@ -1800,9 +1861,19 @@ body.is-map-view [data-view="map"] {
 
   #table-conveyance th:nth-child(7),
   #table-conveyance td:nth-child(7),
+  #table-fire_drill th:nth-child(7),
+  #table-fire_drill td:nth-child(7),
   #table-occupancy th:nth-child(7),
   #table-occupancy td:nth-child(7) {
     width: 90px;
+  }
+
+  /* Fire Drill: truncate long control numbers on narrow screens */
+  #table-fire_drill td:nth-child(3) {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 0;
   }
 
   /* ── FSEC (7 → 5 cols after hiding)
@@ -1916,6 +1987,7 @@ body.is-map-view [data-view="map"] {
 #table-inspection-nophoto .col-action,
 #table-fsec .col-action,
 #table-conveyance .col-action,
+#table-fire_drill .col-action,
 #table-occupancy .col-action {
   white-space: nowrap;
   width: 1%;
@@ -2232,6 +2304,36 @@ body.is-map-view [data-view="map"] {
 
   #table-conveyance th:nth-child(6),
   #table-conveyance td:nth-child(6) {
+    width: 27%;
+  }
+
+  #table-fire_drill th:nth-child(1),
+  #table-fire_drill td:nth-child(1) {
+    width: 3%;
+  }
+
+  #table-fire_drill th:nth-child(2),
+  #table-fire_drill td:nth-child(2) {
+    width: 11%;
+  }
+
+  #table-fire_drill th:nth-child(3),
+  #table-fire_drill td:nth-child(3) {
+    width: 13%;
+  }
+
+  #table-fire_drill th:nth-child(4),
+  #table-fire_drill td:nth-child(4) {
+    width: 20%;
+  }
+
+  #table-fire_drill th:nth-child(5),
+  #table-fire_drill td:nth-child(5) {
+    width: 26%;
+  }
+
+  #table-fire_drill th:nth-child(6),
+  #table-fire_drill td:nth-child(6) {
     width: 27%;
   }
 

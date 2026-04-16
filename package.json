@@ -4,7 +4,8 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "sheet:fire-drill": "node -e \"console.log('In Google Sheets: Extensions → Apps Script → choose addFireDrillLogbookToSpreadsheet → Run (▶). Paste Code.gs there if this project is not yet linked.')\""
   },
   "dependencies": {
     "exif-js": "^2.3.0",

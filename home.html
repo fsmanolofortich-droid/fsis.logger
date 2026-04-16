@@ -42,6 +42,7 @@
         <a class="nav-link" href="#inspection" data-view-link="inspection">Inspection Logbook</a>
         <a class="nav-link" href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
         <a class="nav-link" href="#conveyance" data-view-link="conveyance">Conveyance Logbook</a>
+        <a class="nav-link" href="#fire_drill" data-view-link="fire_drill">Fire Drill Logbook</a>
         <a class="nav-link" href="#occupancy" data-view-link="occupancy">Occupancy Logbook</a>
       </nav>
     </div>
@@ -354,6 +355,226 @@
         </div>
       </div>
       <div class="toast bfp-toast position-fixed bottom-0 end-0 m-3" id="conveyance-toast" role="alert"></div>
+    </section>
+
+    <!-- ================================================================
+         FIRE DRILL LOGBOOK (certificate fields from fire_drill_certificate.html)
+         ================================================================ -->
+    <section data-view="fire_drill" hidden>
+      <div class="home-hero">
+        <h1>Fire Drill Logbook</h1>
+        <p>Record Fire Safety Seminar and Drill certification details (control number, venue, validity, and fees).</p>
+      </div>
+      <div class="home-embed">
+        <div id="fire_drill_list">
+          <div class="logbook-panel" id="panel-fire_drill">
+            <div class="print-header">
+              <h2>Bureau of Fire Protection</h2>
+              <p class="print-subtitle">Manolo Fortich Fire Station</p>
+              <p class="print-subtitle"><strong>Fire Drill Logbook</strong> &mdash; Fire safety seminar &amp; drill certificates</p>
+              <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
+                  id="fire_drill-print-date">&mdash;</span></p>
+            </div>
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document is generated from the BFP Inspection Management System.</div>
+            <div class="panel-header">
+              <div class="panel-title">
+                <span>Supplemental Logbook</span>
+                Fire Drill Logbook <span class="record-badge" id="fire_drill-record-count">0</span>
+              </div>
+              <button class="btn-panel-print" onclick="fireDrillPrintPanel()">
+                <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-print" onclick="exportTableToCSV('table-fire_drill', 'fire_drill_logbook.csv')">
+                <i class="bi bi-download"></i> CSV
+              </button>
+              <button class="btn-panel-add" onclick="fireDrillOpenModal()">+ Add Entry</button>
+            </div>
+            <div class="table-controls" id="filter-fire_drill" aria-label="Fire Drill filters">
+              <div class="control">
+                <label for="fire_drill-filter-q">Search</label>
+                <input id="fire_drill-filter-q" type="search" class="form-control form-control-sm"
+                  placeholder="Search control no., building, address, OR no.">
+              </div>
+              <div class="control">
+                <label for="fire_drill-filter-from">From</label>
+                <input id="fire_drill-filter-from" type="date" class="form-control form-control-sm">
+              </div>
+              <div class="control">
+                <label for="fire_drill-filter-to">To</label>
+                <input id="fire_drill-filter-to" type="date" class="form-control form-control-sm">
+              </div>
+              <div class="spacer"></div>
+              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+                onclick="fireDrillClearFilters()">Clear</button>
+            </div>
+            <div class="table-wrap">
+              <table id="table-fire_drill" class="table table-hover table-bordered table-sm align-middle mb-0">
+                <thead class="table-dark">
+                  <tr>
+                    <th>#</th>
+                    <th class="th-date">Cert. date</th>
+                    <th>Control No.</th>
+                    <th>Building</th>
+                    <th>Address</th>
+                    <th>Valid until</th>
+                    <th class="col-action">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-fire_drill"></tbody>
+              </table>
+            </div>
+            <div id="empty-fire_drill" class="empty-state" style="display:none;">
+              <div class="empty-icon" aria-hidden="true">&#x1F525;</div>
+              <strong>No Fire Drill Records Yet</strong>
+              <p>Add entries to track fire drill / seminar certification data for your records.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="text-center text-muted py-3 border-top small mt-4">
+        Bureau of Fire Protection &mdash; Inspection Management System &copy; 2026. All rights reserved.
+      </footer>
+
+      <div class="modal-overlay" id="fire_drill-modal-overlay" onclick="fireDrillCloseOnOverlay(event)">
+        <div class="modal fade show d-block" tabindex="-1" style="position:relative; z-index:auto;">
+          <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header bfp-header">
+                <div>
+                  <small id="fire_drill-modal-subtitle">Fire Drill Certificate Logbook</small>
+                  <h5 class="mb-0" id="fire_drill-modal-title">New Fire Drill Certificate Entry</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" onclick="fireDrillCloseModal()" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="modal-steps mb-4" id="fire_drill-modal-steps">
+                  <div class="step-item active" data-step="1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Certificate</div>
+                  </div>
+                  <div class="step-item" data-step="2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Issuance and fees</div>
+                  </div>
+                </div>
+
+                <form id="fire_drill-entry-form" onsubmit="fireDrillSaveEntry(event)">
+                  <!-- Step 1: same block as printed certificate (control no., DATE, building, ADDRESS line) -->
+                  <div class="step-content active" data-step="1">
+                    <div class="form-section">
+                      <div class="form-section-title">Certificate particulars</div>
+                      <div class="row g-3">
+                        <div class="col-6">
+                          <label class="form-label" for="fire_drill_control_number">Control number</label>
+                          <input type="text" id="fire_drill_control_number" class="form-control"
+                            placeholder="As indicated on the certificate" autocomplete="off">
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label" for="fire_drill_certificate_date">Certificate date</label>
+                          <input type="date" id="fire_drill_certificate_date" class="form-control">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="fire_drill_building_name">Name of building / structure / facility</label>
+                          <input type="text" id="fire_drill_building_name" class="form-control"
+                            placeholder="As indicated on the certificate">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="fire_drill_owner_name">Name of owner / company</label>
+                          <input type="text" id="fire_drill_owner_name" class="form-control"
+                            placeholder="As indicated on the certificate">
+                        </div>
+                        <div class="col-12">
+                          <div class="form-section-title mt-1">Address</div>
+                          <div class="row g-3">
+                            <div class="col-6">
+                              <label class="form-label" for="fire_drill_addr_region">Region</label>
+                              <input type="text" id="fire_drill_addr_region" class="form-control" value="X" readonly>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label" for="fire_drill_addr_province">Province</label>
+                              <input type="text" id="fire_drill_addr_province" class="form-control" value="Bukidnon" readonly>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label" for="fire_drill_addr_municipal">Municipal</label>
+                              <input type="text" id="fire_drill_addr_municipal" class="form-control" value="Manolo Fortich" readonly>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label" for="fire_drill_addr_barangay">Barangay</label>
+                              <select id="fire_drill_addr_barangay" class="form-select" aria-label="Select barangay">
+                                <option value="">Select barangay</option>
+                              </select>
+                            </div>
+                            <div class="col-12">
+                              <label class="form-label" for="fire_drill_addr_line">House no. / Street / Zone</label>
+                              <input type="text" id="fire_drill_addr_line" class="form-control" placeholder="e.g. Purok 3, Zone 1, National Highway">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Step 2: issuance, validity, fees (rest of certificate) -->
+                  <div class="step-content" data-step="2">
+                    <div class="form-section">
+                      <div class="form-section-title">Issuance, validity, and fees</div>
+                      <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                          <label class="form-label" for="fire_drill_date_issued">Date of issuance</label>
+                          <input type="date" id="fire_drill_date_issued" class="form-control">
+                          <div class="form-text">Day and month/year below are filled automatically from this date.</div>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label" for="fire_drill_day_issued">Day of issuance</label>
+                          <input type="text" id="fire_drill_day_issued" class="form-control" readonly tabindex="-1" aria-live="polite">
+                        </div>
+                        <div class="col-md-9">
+                          <label class="form-label" for="fire_drill_month_year_issued">Month and year of issuance</label>
+                          <input type="text" id="fire_drill_month_year_issued" class="form-control" readonly tabindex="-1" aria-live="polite">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="fire_drill_validity_type">Validity period</label>
+                          <select id="fire_drill_validity_type" class="form-select" aria-label="Select validity period">
+                            <option value="">Select period</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="midyear">Midyear (Semi-annual)</option>
+                            <option value="annual">Annual</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="fire_drill_date_valid">Valid until</label>
+                          <input type="date" id="fire_drill_date_valid" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="fire_drill_amount_paid">Amount paid (PHP)</label>
+                          <input type="text" id="fire_drill_amount_paid" class="form-control" placeholder="Amount in Philippine pesos">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="fire_drill_or_number">Official receipt number</label>
+                          <input type="text" id="fire_drill_or_number" class="form-control" placeholder="O.R. number, as indicated">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="fire_drill_date_paid">Date of payment</label>
+                          <input type="date" id="fire_drill_date_paid" class="form-control">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer bfp-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-auto" id="fire_drill-btn-back" onclick="fireDrillModalStep(-1)" style="display:none">Previous</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fireDrillCloseModal()" id="fire_drill-btn-cancel">Cancel</button>
+                <button type="button" class="btn btn-sm btn-dark" id="fire_drill-btn-next" onclick="fireDrillModalStep(1)">Next</button>
+                <button type="submit" class="btn btn-sm btn-dark" id="fire_drill-btn-save" form="fire_drill-entry-form" style="display:none">Submit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="toast bfp-toast position-fixed bottom-0 end-0 m-3" id="fire_drill-toast" role="alert"></div>
     </section>
 
     <!-- ================================================================

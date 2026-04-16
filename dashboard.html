@@ -325,6 +325,15 @@
         <div class="stat-label">Occupancy</div>
       </div>
 
+      <div class="stat-card">
+        <div class="stat-accent" style="background:#EF4444;"></div>
+        <div class="stat-icon" style="background:rgba(239,68,68,0.12);color:#EF4444;">
+          <i class="bi bi-fire"></i>
+        </div>
+        <div class="stat-value" id="cnt-fire-drill"><span class="skeleton" style="width:56px;height:2rem;display:block;"></span></div>
+        <div class="stat-label">Fire Drill</div>
+      </div>
+
     </div>
 
     <!-- Charts -->
@@ -496,17 +505,19 @@
     loading = true;
     setStatus("loading", "Loading…");
     try {
-      const [inspRes, fsecRes, convRes, occRes] = await Promise.all([
+      const [inspRes, fsecRes, convRes, occRes, fireDrillRes] = await Promise.all([
         gasRequest("read", { table: "inspection_logbook" }),
         gasRequest("read", { table: "fsec_building_plan_logbook" }),
         gasRequest("read", { table: "conveyance_logbook" }),
         gasRequest("read", { table: "occupancy_logbook" }),
+        gasRequest("read", { table: "fire_drill_logbook" }),
       ]);
 
       const insp = inspRes.data || [];
       const fsec = fsecRes.data || [];
       const conv = convRes.data || [];
       const occ  = occRes.data  || [];
+      const fireDrill = fireDrillRes.data || [];
 
       const withLoc   = insp.filter(r => r.latitude  != null && r.longitude != null);
       const noLoc     = insp.filter(r => r.latitude  == null || r.longitude == null);
@@ -519,6 +530,7 @@
       setCount("cnt-fsec",  fsec.length);
       setCount("cnt-conv",  conv.length);
       setCount("cnt-occ",   occ.length);
+      setCount("cnt-fire-drill", fireDrill.length);
 
       buildBar("chart-brgy", groupBy(insp, r => brgy(r)), "var(--fire)");
       buildBar("chart-type", groupBy(occ,  r => r.type_of_occupancy), "#F97316");
@@ -532,7 +544,7 @@
     } catch (err) {
       console.error(err);
       setStatus("error", "Failed to load");
-      ["cnt-insp","cnt-loc","cnt-noloc","cnt-photo","cnt-fsec","cnt-conv","cnt-occ"]
+      ["cnt-insp","cnt-loc","cnt-noloc","cnt-photo","cnt-fsec","cnt-conv","cnt-occ","cnt-fire-drill"]
         .forEach(id => setCount(id, "—"));
     } finally {
       loading = false;

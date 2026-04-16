@@ -204,6 +204,9 @@ function handleInsert(body) {
   if (!table) return { error: "table required." };
 
   var sheet = getSheet(table);
+  if (table === "fire_drill_logbook") {
+    ensureColumnExists(sheet, "owner_name");
+  }
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   var id = generateUUID();
@@ -231,6 +234,9 @@ function handleUpdate(body) {
   if (!table || !id) return { error: "table and id required." };
 
   var sheet = getSheet(table);
+  if (table === "fire_drill_logbook") {
+    ensureColumnExists(sheet, "owner_name");
+  }
   var rowNum = findRowById(sheet, id);
   if (rowNum < 0) return { error: "Record not found: " + id };
 
@@ -248,6 +254,15 @@ function handleUpdate(body) {
 
   sheet.getRange(rowNum, 1, 1, headers.length).setValues([newRow]);
   return { data: { id: id } };
+}
+
+function ensureColumnExists(sheet, columnName) {
+  if (!sheet || !columnName) return;
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return;
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (headers.indexOf(columnName) !== -1) return;
+  sheet.getRange(1, lastCol + 1).setValue(columnName);
 }
 
 /**
@@ -274,7 +289,7 @@ function handleDelete(body) {
  * Select "setupPhotoUrlColumns" from the dropdown → click ▶ Run
  */
 function setupPhotoUrlColumns() {
-  var tables = ["inspection_logbook", "occupancy_logbook"];
+  var tables = ["inspection_logbook", "occupancy_logbook", "fire_drill_logbook"];
   var columnsToAdd = ["photo_url", "photo_taken_at", "latitude", "longitude"];
 
   tables.forEach(function(tableName) {
@@ -296,6 +311,88 @@ function setupPhotoUrlColumns() {
   });
 
   Logger.log("Done — check your Google Sheet.");
+}
+
+/**
+ * RUN ONCE from the Apps Script editor to create the Fire Drill logbook tab
+ * with column headers matching `fire_drill_certificate.html` placeholders
+ * (&lt;control_number&gt;, &lt;DATE&gt;, &lt;Building Name&gt;, &lt;ADDRESS&gt;, etc.).
+ * Does not overwrite row 1 if it already has data.
+ */
+function setupFireDrillLogbookSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var name = "fire_drill_logbook";
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+  }
+
+  var headers = [
+    "id",
+    "created_at",
+    "control_number",
+    "certificate_date",
+    "building_name",
+    "owner_name",
+    "address",
+    "day_issued",
+    "month_year_issued",
+    "date_valid",
+    "amount_paid",
+    "or_number",
+    "date_paid",
+  ];
+
+  var a1 = sheet.getRange(1, 1).getValue();
+  if (a1 === "" || a1 === null) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    Logger.log("✅ Wrote header row on " + name);
+  } else {
+    Logger.log("⚠️ Row 1 already has data — left unchanged. Headers expected: " + headers.join(", "));
+  }
+
+  Logger.log("Fire Drill logbook tab ready. Run setupPhotoUrlColumns if you need photo/location columns.");
+}
+
+/**
+ * ONE-CLICK SETUP for Google Sheets (run from the Apps Script editor)
+ * ─────────────────────────────────────────────────────────────────────────
+ * 1. Open the spreadsheet bound to this script (or the spreadsheet
+ *    linked to this project).
+ * 2. Extensions → Apps Script → select "addFireDrillLogbookToSpreadsheet"
+ *    in the function dropdown → click Run ▶
+ * 3. Authorize if prompted.
+ *
+ * Creates the tab "fire_drill_logbook" with all certificate columns, then
+ * adds photo_url, photo_taken_at, latitude, longitude if missing (same as
+ * other logbooks). Safe to run more than once.
+ */
+function addFireDrillLogbookToSpreadsheet() {
+  setupFireDrillLogbookSheet();
+
+  var tableName = "fire_drill_logbook";
+  var sheet;
+  try {
+    sheet = getSheet(tableName);
+  } catch (e) {
+    Logger.log("❌ " + e.message);
+    return;
+  }
+
+  var columnsToAdd = ["owner_name", "photo_url", "photo_taken_at", "latitude", "longitude"];
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  columnsToAdd.forEach(function (col) {
+    if (headers.indexOf(col) === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(col);
+      Logger.log("✅ Added '" + col + "' to " + tableName);
+    } else {
+      Logger.log("✔️  '" + col + "' already exists in " + tableName);
+    }
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  });
+
+  Logger.log("Done — fire_drill_logbook is ready for the web app.");
 }
 
 /**
