@@ -942,9 +942,23 @@ function logbookFormatDate(d) {
  */
 function logbookFormatDateForInput(d) {
   if (!d) return "";
-  // If we already have an ISO date-time string from the sheet, avoid timezone shifts.
-  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}T/.test(d)) {
-    return d.slice(0, 10);
+  if (typeof d === "string") {
+    const s = d.trim();
+    // If we got an ISO datetime with Z (UTC) from older data, convert to *local* calendar date
+    // to match what users see in the sheet (prevents -1 day for UTC+ timezones).
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s) && /Z$/i.test(s)) {
+      const dt = new Date(s);
+      if (!isNaN(dt.getTime())) {
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const day = String(dt.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    }
+    // If we already have a YYYY-MM-DD prefix (with or without time), avoid parsing/timezones.
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      return s.slice(0, 10);
+    }
   }
   let dateObj;
   if (typeof d === 'string' && !d.includes('T')) {
@@ -1747,11 +1761,14 @@ window.addEventListener("message", (ev) => {
     if (!value) return null;
     const s = String(value).trim();
     if (!s) return null;
+    // If we receive any YYYY-MM-DD prefix (with or without time), keep the calendar date.
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
     // If already ISO date, keep it
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const dt = new Date(s);
     if (Number.isNaN(dt.getTime())) return null;
-    return dt.toISOString().slice(0, 10);
+    // Calendar-safe: use local components to avoid timezone shifting.
+    return logbookFormatDateForInput(dt) || null;
   }
 
   function normalizeAmount(value) {
@@ -1874,10 +1891,11 @@ window.addEventListener("message", (ev) => {
     if (!value) return null;
     const s = String(value).trim();
     if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const dt = new Date(s);
     if (Number.isNaN(dt.getTime())) return null;
-    return dt.toISOString().slice(0, 10);
+    return logbookFormatDateForInput(dt) || null;
   }
 
   let ds, idx;
