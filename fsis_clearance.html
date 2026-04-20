@@ -1405,7 +1405,7 @@
 				<div class="pdf24_01" style="left:15.1358em;top:65.1522em;"><span class="pdf24_75 pdf24_13 pdf24_46"
 						style="word-spacing:0.006em;">“FIRE SAFETY IS OUR MAIN CONCERN” &nbsp;</span></div>
 				<div class="pdf24_01" style="left:6.7083em;top:66.6952em;"><span class="pdf24_76 pdf24_08 pdf24_34"
-						style="word-spacing:0.0083em;">OBO COPY &nbsp;</span></div>
+						style="word-spacing:0.0083em;">BPLO COPY &nbsp;</span></div>
 				<div class="pdf24_01" style="left:2.2333em;top:68.0456em;"><span class="pdf24_44 pdf24_08 pdf24_77"
 						style="word-spacing:0.0023em;">BFP-QSF-FSED-005 Rev. 03 (03.03.20) &nbsp;</span></div>
 			</div>
@@ -1652,6 +1652,7 @@
 					amountText =
 						"PHP " +
 						n.toLocaleString("en-PH", {
+							minimumFractionDigits: 2,
 							maximumFractionDigits: 2,
 						});
 				}
@@ -1712,6 +1713,14 @@
 				return el ? normalizeText(el.textContent) : "";
 			}
 
+			/** Match home.js: PDF shows "PHP 1,234.56" but the sheet stores a number. */
+			function parseFeeFromDisplayText(t) {
+				if (t == null || t === "") return null;
+				var s = String(t).replace(/,/g, "").replace(/^PHP\s*/i, "").trim();
+				var n = Number(s);
+				return isFinite(n) ? n : null;
+			}
+
 			function showInlineNotice(msg) {
 				var el = document.getElementById("fsisSaveStatus");
 				if (!el) return;
@@ -1730,7 +1739,7 @@
 					fsic_number: getByField("fsic_number"),
 					fsic_valid_from: getByField("fsic_valid_from"),
 					fsic_valid_until: getByField("fsic_valid_until"),
-					fsic_fee_amount: getByField("fsic_fee_amount"),
+					fsic_fee_amount: parseFeeFromDisplayText(getByField("fsic_fee_amount")),
 					fsic_fee_or_number: getByField("fsic_fee_or_number"),
 					fsic_fee_date: getByField("fsic_fee_date"),
 					// optional (not currently rendered as explicit fields on the template)
@@ -1819,7 +1828,7 @@
 				var t = s.textContent.trim();
 
 				var isOwner = (t === "OWNER'S COPY" || t === "APPLICANT / OWNER'S COPY" || t === "OWNER COPY");
-				var isObo = (t === "OBO COPY");
+				var isObo = (t === "BPLO COPY");
 				var isBfp = (t === "BFP COPY");
 
 				if (isOwner || isObo || isBfp) {

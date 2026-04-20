@@ -69,15 +69,20 @@ function sheetToObjects(sheet) {
   if (data.length < 2) return [];
   var headers = data[0];
   var rows = [];
+  var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || Session.getScriptTimeZone() || "GMT";
   for (var i = 1; i < data.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
       var val = data[i][j];
+      var key = String(headers[j] || "").trim();
       // Convert Date objects to ISO strings
       if (val instanceof Date) {
-        obj[headers[j]] = val.toISOString();
+        // IMPORTANT: Using toISOString() converts to UTC and can shift the date (off-by-1/-2 days)
+        // depending on timezone. Most of our sheet dates are intended as calendar dates, so we
+        // return a YYYY-MM-DD string in the spreadsheet timezone.
+        obj[key] = Utilities.formatDate(val, tz, "yyyy-MM-dd");
       } else {
-        obj[headers[j]] = val === "" ? null : val;
+        obj[key] = val === "" ? null : val;
       }
     }
     rows.push(obj);

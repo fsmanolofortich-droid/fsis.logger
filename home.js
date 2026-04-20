@@ -60,6 +60,26 @@ function normalizeGeoNumber(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Parse a fee from modal input, sheet cells, or clearance PDF text (e.g. "PHP 1,234.56").
+ * Used when saving from fsis_clearance.html where the displayed amount includes a PHP prefix.
+ */
+function parseFeeAmountFromInput(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  let s = String(value).trim().replace(/,/g, "");
+  s = s.replace(/^PHP\s*/i, "").replace(/^\u20b1\s*/, "").trim();
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Format a stored fee for <input type="number"> (no currency prefix). */
+function formatFeeAmountForInput(value) {
+  const n = parseFeeAmountFromInput(value);
+  // Keep two decimals for clarity in the modal (e.g. 500.00).
+  return n != null ? n.toFixed(2) : "";
+}
+
 function getCurrentView() {
   const hash = (window.location.hash || "#map").replace(/^#/, "");
   if (
@@ -668,7 +688,28 @@ function init() {
   });
 
   // Burger button open/close is handled by Bootstrap Offcanvas (data-bs-toggle).
-  // We only need to close the sidebar when a nav overlay is clicked — BS handles that via its own backdrop.
+  // Hide the fixed burger while the drawer is open so it never paints over the sidebar.
+  const navSidebarEl = document.getElementById("navSidebar");
+  const burgerBtn = document.getElementById("burgerBtn");
+  if (navSidebarEl) {
+    navSidebarEl.addEventListener("show.bs.offcanvas", () => {
+      document.body.classList.add("nav-offcanvas-open");
+      if (burgerBtn) {
+        burgerBtn.setAttribute("aria-expanded", "true");
+        burgerBtn.setAttribute("aria-hidden", "true");
+      }
+    });
+    navSidebarEl.addEventListener("hide.bs.offcanvas", () => {
+      document.body.classList.remove("nav-offcanvas-open");
+      if (burgerBtn) {
+        burgerBtn.setAttribute("aria-expanded", "false");
+        burgerBtn.removeAttribute("aria-hidden");
+      }
+    });
+    if (navSidebarEl.classList.contains("show")) {
+      document.body.classList.add("nav-offcanvas-open");
+    }
+  }
 
   // Inspection sub‑nav (With location / No location yet)
   document.addEventListener("click", (e) => {
@@ -901,11 +942,18 @@ function logbookFormatDate(d) {
  */
 function logbookFormatDateForInput(d) {
   if (!d) return "";
+  // If we already have an ISO date-time string from the sheet, avoid timezone shifts.
+  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}T/.test(d)) {
+    return d.slice(0, 10);
+  }
   let dateObj;
   if (typeof d === 'string' && !d.includes('T')) {
     // Already in a simple date format?
     if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-    dateObj = new Date(d + "T00:00:00");
+    // Allow natural-language date strings coming from templates (e.g. "April 20, 2026").
+    // Try direct parsing first, then fall back to a midnight-local ISO-ish parse.
+    dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) dateObj = new Date(d + "T00:00:00");
   } else {
     dateObj = new Date(d);
   }
@@ -1592,12 +1640,13 @@ function inspectionOpenClearanceHtml(idx) {
     if (el) el.value = value || "";
   };
 
+  ensureSelectOption("clearance_purpose", row.fsic_purpose || "");
   setVal("clearance_fsic_number", row.fsic_number);
   setVal("clearance_purpose", row.fsic_purpose);
-  setVal("clearance_valid_until", row.fsic_valid_until);
-  setVal("clearance_fee_amount", row.fsic_fee_amount);
+  setVal("clearance_valid_until", logbookFormatDateForInput(row.fsic_valid_until));
+  setVal("clearance_fee_amount", formatFeeAmountForInput(row.fsic_fee_amount));
   setVal("clearance_fee_or_number", row.fsic_fee_or_number);
-  setVal("clearance_fee_date", row.fsic_fee_date);
+  setVal("clearance_fee_date", logbookFormatDateForInput(row.fsic_fee_date));
 
   const overlay = document.getElementById("clearance-modal-overlay");
   if (overlay) overlay.classList.add("open");
@@ -1622,6 +1671,39 @@ function clearanceProceed(e) {
 
   const getVal = (id) => (document.getElementById(id) || { value: "" }).value.trim();
 
+  const updates = {
+    fsic_number: getVal("clearance_fsic_number"),
+    fsic_purpose: getVal("clearance_purpose"),
+    fsic_valid_until: getVal("clearance_valid_until") || null,
+    fsic_fee_amount: parseFeeAmountFromInput(getVal("clearance_fee_amount")),
+    fsic_fee_or_number: getVal("clearance_fee_or_number"),
+    fsic_fee_date: getVal("clearance_fee_date") || null,
+  };
+
+  // Apply to in-memory row immediately so the modal/template reflects existing data.
+  row.fsic_number = updates.fsic_number;
+  row.fsic_purpose = updates.fsic_purpose;
+  row.fsic_valid_until = updates.fsic_valid_until;
+  row.fsic_fee_amount = updates.fsic_fee_amount;
+  row.fsic_fee_or_number = updates.fsic_fee_or_number;
+  row.fsic_fee_date = updates.fsic_fee_date;
+
+  inspectionSaveToLocal();
+  inspectionRenderTable?.();
+
+  // Also persist to the sheet when online, to avoid double entry confusion.
+  if (isSupabaseEnabled() && row.id) {
+    (async () => {
+      try {
+        await gasRequest("update", { table: "inspection_logbook", id: row.id, row: updates });
+        logbookShowToast?.("inspection-toast", "Saved to database.");
+      } catch (err) {
+        const msg = err?.message || String(err);
+        logbookShowToast?.("inspection-toast", "Save failed: " + msg);
+      }
+    })();
+  }
+
   // We save the inputs back to the row object that gets passed to the template
   const payload = {
     ...row,
@@ -1629,7 +1711,7 @@ function clearanceProceed(e) {
     fsic_purpose: getVal("clearance_purpose"),
     fsic_valid_from: row.business_name, // Hardcoded to business_name per user request
     fsic_valid_until: getVal("clearance_valid_until"),
-    fsic_fee_amount: getVal("clearance_fee_amount"),
+    fsic_fee_amount: updates.fsic_fee_amount,
     fsic_fee_or_number: getVal("clearance_fee_or_number"),
     fsic_fee_date: getVal("clearance_fee_date"),
   };
@@ -1673,9 +1755,7 @@ window.addEventListener("message", (ev) => {
   }
 
   function normalizeAmount(value) {
-    if (value == null || value === "") return null;
-    const n = typeof value === "number" ? value : Number(String(value).replace(/,/g, ""));
-    return Number.isFinite(n) ? n : null;
+    return parseFeeAmountFromInput(value);
   }
 
   let sourceLogbook = "inspection";
@@ -5428,12 +5508,13 @@ function occupancyClearanceOpenModal(idx) {
     if (el) el.value = value || "";
   };
 
+  ensureSelectOption("occ_clearance_purpose", row.fsic_purpose || "");
   setVal("occ_clearance_fsic_number", row.fsic_number);
   setVal("occ_clearance_purpose", row.fsic_purpose);
-  setVal("occ_clearance_valid_until", row.fsic_valid_until);
-  setVal("occ_clearance_fee_amount", row.fsic_fee_amount);
+  setVal("occ_clearance_valid_until", logbookFormatDateForInput(row.fsic_valid_until));
+  setVal("occ_clearance_fee_amount", formatFeeAmountForInput(row.fsic_fee_amount));
   setVal("occ_clearance_fee_or_number", row.fsic_fee_or_number);
-  setVal("occ_clearance_fee_date", row.fsic_fee_date);
+  setVal("occ_clearance_fee_date", logbookFormatDateForInput(row.fsic_fee_date));
 
   const overlay = document.getElementById("occupancy-clearance-modal-overlay");
   overlay?.classList.add("open");
@@ -5457,16 +5538,37 @@ function occupancyClearanceProceed(e) {
 
   const val = (id) => (document.getElementById(id) || { value: "" }).value.trim();
 
-  row.fsic_number = val("occ_clearance_fsic_number");
-  row.fsic_purpose = val("occ_clearance_purpose");
-  row.fsic_valid_until = val("occ_clearance_valid_until");
-  row.fsic_fee_amount = val("occ_clearance_fee_amount");
-  row.fsic_fee_or_number = val("occ_clearance_fee_or_number");
-  row.fsic_fee_date = val("occ_clearance_fee_date");
+  const updates = {
+    fsic_number: val("occ_clearance_fsic_number"),
+    fsic_purpose: val("occ_clearance_purpose"),
+    fsic_valid_until: val("occ_clearance_valid_until") || null,
+    fsic_fee_amount: parseFeeAmountFromInput(val("occ_clearance_fee_amount")),
+    fsic_fee_or_number: val("occ_clearance_fee_or_number"),
+    fsic_fee_date: val("occ_clearance_fee_date") || null,
+  };
+
+  row.fsic_number = updates.fsic_number;
+  row.fsic_purpose = updates.fsic_purpose;
+  row.fsic_valid_until = updates.fsic_valid_until;
+  row.fsic_fee_amount = updates.fsic_fee_amount;
+  row.fsic_fee_or_number = updates.fsic_fee_or_number;
+  row.fsic_fee_date = updates.fsic_fee_date;
 
   occupancySaveToLocal();
   occupancyRenderTable();
   occupancyClearanceCloseModal();
+
+  if (isSupabaseEnabled() && row.id) {
+    (async () => {
+      try {
+        await gasRequest("update", { table: "occupancy_logbook", id: row.id, row: updates });
+        logbookShowToast?.("occupancy-toast", "Saved to database.");
+      } catch (err) {
+        const msg = err?.message || String(err);
+        logbookShowToast?.("occupancy-toast", "Save failed: " + msg);
+      }
+    })();
+  }
 
   try {
     sessionStorage.setItem("fsis.clearance.current", JSON.stringify({ ...row, _sourceType: "occupancy" }));
@@ -5843,6 +5945,11 @@ async function occupancyLoadFromSupabase() {
     photo_url: r.photo_url ?? null,
     photo_taken_at: r.photo_taken_at ?? null,
     created_at: r.created_at,
+    fsic_purpose: r.fsic_purpose ?? null,
+    fsic_valid_until: r.fsic_valid_until ?? null,
+    fsic_fee_amount: r.fsic_fee_amount ?? null,
+    fsic_fee_or_number: r.fsic_fee_or_number ?? null,
+    fsic_fee_date: r.fsic_fee_date ?? null,
   }));
   occupancySaveToLocal();
 }

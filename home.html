@@ -15,7 +15,7 @@
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet">
   <!-- BFP Brand skin (loads after Bootstrap so overrides apply) -->
-  <link rel="stylesheet" href="./bfp.css?v=20260416d">
+  <link rel="stylesheet" href="./bfp.css?v=20260420d">
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -37,13 +37,14 @@
       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-2">
-      <nav class="nav flex-column">
-        <a class="nav-link" href="#map" data-view-link="map">Map</a>
-        <a class="nav-link" href="#inspection" data-view-link="inspection">Inspection Logbook</a>
-        <a class="nav-link" href="#fsec" data-view-link="fsec">FSEC Building Plan Logbook</a>
-        <a class="nav-link" href="#conveyance" data-view-link="conveyance">Conveyance Logbook</a>
-        <a class="nav-link" href="#fire_drill" data-view-link="fire_drill">Fire Drill Logbook</a>
-        <a class="nav-link" href="#occupancy" data-view-link="occupancy">Occupancy Logbook</a>
+      <p class="nav-offcanvas-section-label" id="navSidebarSectionNav">Navigate</p>
+      <nav class="nav flex-column" aria-labelledby="navSidebarSectionNav">
+        <a class="nav-link" href="#map" data-view-link="map"><i class="bi bi-map" aria-hidden="true"></i>Map</a>
+        <a class="nav-link" href="#inspection" data-view-link="inspection"><i class="bi bi-journal-text" aria-hidden="true"></i>Inspection Logbook</a>
+        <a class="nav-link" href="#fsec" data-view-link="fsec"><i class="bi bi-building" aria-hidden="true"></i>FSEC Building Plan Logbook</a>
+        <a class="nav-link" href="#conveyance" data-view-link="conveyance"><i class="bi bi-truck" aria-hidden="true"></i>Conveyance Logbook</a>
+        <a class="nav-link" href="#fire_drill" data-view-link="fire_drill"><i class="bi bi-fire" aria-hidden="true"></i>Fire Drill Logbook</a>
+        <a class="nav-link" href="#occupancy" data-view-link="occupancy"><i class="bi bi-house-door" aria-hidden="true"></i>Occupancy Logbook</a>
       </nav>
     </div>
     <div class="offcanvas-footer">
@@ -59,14 +60,14 @@
     </div>
   </div>
 
-  <main role="main">
+  <main role="main" class="app-main">
     <!-- ================================================================
          MAP VIEW
          ================================================================ -->
     <section data-view="map">
       <button type="button" class="fab-add-inspection" onclick="handleFabAddInspection()" aria-label="Add entry"
         title="Add entry">
-        +
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
       </button>
 
       <!-- Map add-type chooser modal -->
@@ -101,9 +102,10 @@
         </div>
       </div>
 
-      <div class="map-search-wrap">
+      <div class="map-search-wrap" role="search" aria-label="Search map markers">
         <input type="search" id="map-search-input" class="map-search-input"
-          placeholder="Search marked locations (business, IO, address, owner&hellip;)"
+          placeholder="Search markers"
+          title="Search by business, IO, address, owner, and other marker fields"
           aria-label="Search marked locations" autocomplete="off">
         <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
         <div class="map-filter" role="group" aria-label="Map markers filter">
@@ -1549,7 +1551,7 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js" defer></script>
-  <script src="./home.js?v=20260416d" defer></script>
+  <script src="./home.js?v=20260420c" defer></script>
 </body>
 
 </html>

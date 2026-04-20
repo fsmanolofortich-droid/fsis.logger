@@ -222,14 +222,18 @@ h2,
 
 /* ── Nav sidebar (Bootstrap Offcanvas skin) ── */
 #navSidebar {
-  background: var(--navy);
+  background: linear-gradient(180deg, var(--navy) 0%, #0a1522 100%);
   color: #fff;
-  width: 280px;
+  width: min(300px, 92vw);
+  box-shadow: 8px 0 32px rgba(13, 27, 42, 0.35);
+  /* Must sit above .burger-btn (1305); default BS offcanvas (~1045) caused the title to sit UNDER the burger */
+  z-index: 1310;
 }
 
 #navSidebar .offcanvas-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding: 18px 20px 14px;
+  background: rgba(0, 0, 0, 0.12);
 }
 
 #navSidebar .offcanvas-title {
@@ -250,19 +254,39 @@ h2,
   filter: invert(1) grayscale(100%) brightness(200%);
 }
 
+.nav-offcanvas-section-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 4px 12px 10px;
+}
+
 #navSidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0;
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.9rem;
   font-weight: 500;
   border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 2px;
-  transition: background 0.18s;
+  transition: background 0.18s, transform 0.15s;
+}
+
+#navSidebar .nav-link > i {
+  width: 1.5rem;
+  margin-right: 10px;
+  font-size: 1.05rem;
+  opacity: 0.88;
 }
 
 #navSidebar .nav-link:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
+  transform: translateX(2px);
 }
 
 #navSidebar .nav-link.is-active {
@@ -317,9 +341,9 @@ h2,
   left: 14px;
   width: 46px;
   height: 46px;
-  border-radius: 10px;
-  border: none;
-  background: var(--navy);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, var(--navy-mid), var(--navy));
   color: #fff;
   box-shadow: var(--shadow-lg);
   z-index: 1305;
@@ -327,13 +351,27 @@ h2,
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1.4rem;
-  transition: background 0.2s, transform 0.15s;
+  font-size: 1.35rem;
+  line-height: 1;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
 }
 
 .burger-btn:hover {
-  background: var(--navy-mid);
+  background: linear-gradient(145deg, var(--navy-light), var(--navy-mid));
   transform: scale(1.03);
+  box-shadow: 0 14px 36px rgba(13, 27, 42, 0.35);
+}
+
+.burger-btn:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 3px;
+}
+
+/* While the nav drawer is open, the fixed burger must not sit on top of the sidebar */
+body.nav-offcanvas-open .burger-btn,
+body:has(#navSidebar.show) .burger-btn {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ── Save indicator ── */
@@ -363,6 +401,20 @@ h2,
 /* ── Multi-line cell ── */
 .cell-pre {
   white-space: pre-line;
+}
+
+/* ── App shell ── */
+main.app-main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Softer offcanvas backdrop (Bootstrap) — between map UI and panel, above burger */
+.offcanvas-backdrop {
+  z-index: 1308;
+  background-color: rgba(13, 27, 42, 0.48);
+  backdrop-filter: blur(4px);
 }
 
 /* ── Home hero ── */
@@ -1115,7 +1167,22 @@ table#table-fsec {
 
 .fab-add-inspection:hover {
   background: var(--fire-light);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(193, 39, 45, 0.45);
+}
+
+.fab-add-inspection:active {
+  transform: translateY(0);
+}
+
+.fab-add-inspection .bi {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.fab-add-inspection:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.95);
+  outline-offset: 4px;
 }
 
 /* ── MAP view layout ── */
@@ -1151,26 +1218,66 @@ body.is-map-view [data-view="map"] {
   z-index: 100;
 }
 
-/* Map search panel */
+/* Map search panel — one band with burger (left) and Leaflet layers (right) */
 .map-search-wrap {
+  --map-toolbar-gap: 10px;
+  --map-corner-btn: 46px; /* matches .burger-btn */
+  --map-layer-slot: 50px; /* Leaflet .leaflet-control-layers-toggle ~44px + margin */
   position: fixed;
   top: 14px;
-  right: 64px; /* Clears top-right controls (default Leaflet layers) */
-  left: 114px; /* Clears top-left controls (Burger + Layers icon if adjacent) */
+  left: calc(14px + var(--map-corner-btn) + var(--map-toolbar-gap));
+  right: calc(14px + var(--map-layer-slot) + var(--map-toolbar-gap));
   z-index: 1040;
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: center;
   gap: 8px;
-  transition: all 0.2s ease-in-out;
+  min-height: var(--map-corner-btn);
+  box-sizing: border-box;
+  transition: left 0.2s ease-in-out, right 0.2s ease-in-out, top 0.2s ease-in-out;
+  padding: 4px 6px;
+  border-radius: 14px;
+  background: rgba(250, 247, 242, 0.78);
+  border: 1px solid rgba(13, 27, 42, 0.08);
+  box-shadow: 0 8px 28px rgba(13, 27, 42, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* Leaflet top-right: same vertical band as burger (14px) */
+[data-view="map"] #map .leaflet-top.leaflet-right {
+  top: 14px !important;
+  right: 14px !important;
 }
 
 @media (max-width: 600px) {
   .map-search-wrap {
-    top: 66px;
-    left: 14px;
-    right: 14px;
+    /* Same row as burger and layer control (no second row under burger) */
+    top: 14px;
+    left: calc(14px + var(--map-corner-btn) + 8px);
+    right: calc(14px + var(--map-layer-slot) + 8px);
     max-width: none;
+  }
+
+  #map-filter-select {
+    max-width: 100px;
+  }
+}
+
+@media (max-width: 380px) {
+  .map-search-wrap {
+    --map-toolbar-gap: 6px;
+    --map-layer-slot: 48px;
+  }
+
+  #map-filter-select {
+    max-width: 88px;
+    font-size: 0.8rem;
+  }
+
+  .map-search-input {
+    font-size: 0.88rem;
+    padding-left: 36px;
+    background-position: 12px center;
   }
 }
 
@@ -1184,8 +1291,8 @@ body.is-map-view [data-view="map"] {
   flex: 1;
   min-width: 0;
   padding: 10px 16px 10px 40px; /* Space for search icon */
-  border-radius: 12px;
-  border: 1px solid rgba(13, 27, 42, 0.12);
+  border-radius: 11px;
+  border: 1px solid rgba(13, 27, 42, 0.1);
   background: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-search' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -1208,18 +1315,24 @@ body.is-map-view [data-view="map"] {
 }
 
 #map-filter-select {
-  border-radius: 12px;
-  border: 1px solid rgba(13, 27, 42, 0.12);
+  border-radius: 11px;
+  border: 1px solid rgba(13, 27, 42, 0.1);
   background-color: #fff;
   font-size: 0.88rem;
   font-weight: 500;
   height: 100%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   padding-right: 32px;
   max-width: 140px; /* Prevents the dropdown from squishing the search bar */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (min-width: 900px) {
+  #map-filter-select {
+    max-width: 160px;
+  }
 }
 
 #map-filter-select:focus {
@@ -1312,14 +1425,16 @@ body.is-map-view [data-view="map"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(135deg, #111827, #1f2937);
+  padding: 14px 16px 13px;
+  border-bottom: 3px solid rgba(212, 168, 67, 0.45);
+  background: linear-gradient(135deg, var(--navy) 0%, #1a2332 55%, #243044 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .map-detail-title {
   font-family: 'Playfair Display', serif;
-  font-size: 0.96rem;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
 }
 
 .map-detail-close-btn {
@@ -1368,8 +1483,11 @@ body.is-map-view [data-view="map"] {
 }
 
 .map-detail-meta h3 {
-  font-size: 0.96rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.02rem;
   margin-bottom: 4px;
+  line-height: 1.25;
+  color: #fff;
 }
 
 .map-detail-meta p {
@@ -1433,6 +1551,49 @@ body.is-map-view [data-view="map"] {
   background: rgba(55, 65, 81, 0.95);
   border-color: rgba(248, 250, 252, 0.3);
   color: #f9fafb;
+}
+
+/* Logbook / IO (HTML): keep prior compact styling — do not restyle with emphasis tokens */
+#map-detail-view-logbook.map-detail-action-btn,
+#map-detail-open-io.map-detail-action-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 250, 252, 0.18);
+  background: rgba(31, 41, 55, 0.9);
+  color: #e5e7eb;
+  font-size: 0.76rem;
+}
+
+#map-detail-view-logbook.map-detail-action-btn:hover,
+#map-detail-open-io.map-detail-action-btn:hover {
+  background: rgba(55, 65, 81, 0.95);
+  border-color: rgba(248, 250, 252, 0.3);
+  color: #f9fafb;
+}
+
+/* Copy + directions: slightly stronger affordance */
+#map-detail-copy-coords.map-detail-action-btn {
+  border-color: rgba(212, 168, 67, 0.42);
+  background: rgba(212, 168, 67, 0.12);
+  color: var(--gold-light);
+}
+
+#map-detail-copy-coords.map-detail-action-btn:hover {
+  background: rgba(212, 168, 67, 0.22);
+  border-color: rgba(212, 168, 67, 0.55);
+  color: #fff8e5;
+}
+
+a.map-detail-directions-link.map-detail-action-btn {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+}
+
+a.map-detail-directions-link.map-detail-action-btn:hover {
+  background: rgba(59, 130, 246, 0.28);
+  border-color: rgba(147, 197, 253, 0.55);
+  color: #fff;
 }
 
 .map-detail-directions-link::after {
