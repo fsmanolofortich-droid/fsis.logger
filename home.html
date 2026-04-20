@@ -108,24 +108,6 @@
           title="Search by business, IO, address, owner, and other marker fields"
           aria-label="Search marked locations" autocomplete="off">
         <div id="map-search-results" class="map-search-results" role="listbox" aria-label="Search results" hidden></div>
-        <div class="map-filter" role="group" aria-label="Map markers filter">
-          <select id="map-filter-select" class="form-select form-select-sm" onchange="applyMapMarkerFilter(this.value)">
-            <option value="all">All</option>
-            <option value="businesses">Businesses (Inspection)</option>
-            <option value="occupancies">All Occupancies</option>
-            <optgroup label="By Type">
-              <option value="Mercantile">Mercantile</option>
-              <option value="Storage">Storage</option>
-              <option value="Places of Assembly">Places of Assembly</option>
-              <option value="Business">Business</option>
-              <option value="Institutional">Institutional</option>
-              <option value="Residential">Residential</option>
-              <option value="Health Care">Health Care</option>
-              <option value="Industrial">Industrial</option>
-              <option value="Miscellaneous">Miscellaneous</option>
-            </optgroup>
-          </select>
-        </div>
       </div>
       <div class="map-layout">
         <aside class="map-detail-panel" id="map-detail-panel" aria-hidden="true" aria-label="Inspection details">

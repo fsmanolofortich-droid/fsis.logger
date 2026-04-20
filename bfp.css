@@ -1257,21 +1257,12 @@ body.is-map-view [data-view="map"] {
     right: calc(14px + var(--map-layer-slot) + 8px);
     max-width: none;
   }
-
-  #map-filter-select {
-    max-width: 100px;
-  }
 }
 
 @media (max-width: 380px) {
   .map-search-wrap {
     --map-toolbar-gap: 6px;
     --map-layer-slot: 48px;
-  }
-
-  #map-filter-select {
-    max-width: 88px;
-    font-size: 0.8rem;
   }
 
   .map-search-input {
@@ -1309,33 +1300,34 @@ body.is-map-view [data-view="map"] {
   box-shadow: 0 4px 14px rgba(212, 168, 67, 0.25);
 }
 
-.map-filter {
-  display: flex;
-  flex-shrink: 0;
+/* Marker filter moved into Leaflet layers menu */
+.leaflet-control-layers .leaflet-map-filter-wrap {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(13, 27, 42, 0.08);
 }
 
-#map-filter-select {
-  border-radius: 11px;
-  border: 1px solid rgba(13, 27, 42, 0.1);
-  background-color: #fff;
-  font-size: 0.88rem;
+.leaflet-control-layers .leaflet-map-filter-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(13, 27, 42, 0.8);
+  margin: 2px 0 6px;
+}
+
+.leaflet-control-layers .leaflet-map-filter-select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(13, 27, 42, 0.14);
+  background: #fff;
+  padding: 8px 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.86rem;
   font-weight: 500;
-  height: 100%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding-right: 32px;
-  max-width: 140px; /* Prevents the dropdown from squishing the search bar */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  outline: none;
 }
 
-@media (min-width: 900px) {
-  #map-filter-select {
-    max-width: 160px;
-  }
-}
-
-#map-filter-select:focus {
+.leaflet-control-layers .leaflet-map-filter-select:focus {
   border-color: var(--gold);
   box-shadow: 0 4px 14px rgba(212, 168, 67, 0.25);
 }

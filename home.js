@@ -187,9 +187,11 @@ let inspectionActiveTab = "with-location";
 let inspectionFocusMapAfterSave = false;
 
 let mapMarkerFilter = "all"; // all | businesses | occupancies | Mercantile | Storage | etc
+let mapMarkerFilterSelectEl = null;
 
 function applyMapMarkerFilter(next) {
   mapMarkerFilter = next || "all";
+  if (mapMarkerFilterSelectEl) mapMarkerFilterSelectEl.value = mapMarkerFilter;
   if (!mapInstance) return;
   
   // Re-render all markers with the new filter
@@ -260,7 +262,7 @@ function initLeafletMap() {
   satelliteLayer.addTo(mapInstance);
 
   // Layer switcher so you can toggle between views
-  L.control
+  const layersControl = L.control
     .layers(
       {
         "Road map": osmLayer,
@@ -273,6 +275,53 @@ function initLeafletMap() {
       { position: "topright" }
     )
     .addTo(mapInstance);
+
+  // Put marker filter inside the existing Layers menu (instead of beside the search bar).
+  try {
+    const container = layersControl?.getContainer?.();
+    const list = container?.querySelector?.(".leaflet-control-layers-list") || container;
+    if (list) {
+      const wrap = document.createElement("div");
+      wrap.className = "leaflet-map-filter-wrap";
+
+      const label = document.createElement("div");
+      label.className = "leaflet-map-filter-label";
+      label.textContent = "Marker filter";
+      wrap.appendChild(label);
+
+      const sel = document.createElement("select");
+      sel.className = "leaflet-map-filter-select";
+      sel.setAttribute("aria-label", "Occupancy type filter");
+
+      // Keep "All" as a reset, but only show occupancy types in the list.
+      sel.appendChild(new Option("All", "all"));
+
+      const og = document.createElement("optgroup");
+      og.label = "Occupancy type";
+      [
+        "Mercantile",
+        "Storage",
+        "Places of Assembly",
+        "Business",
+        "Institutional",
+        "Residential",
+        "Health Care",
+        "Industrial",
+        "Miscellaneous",
+      ].forEach((v) => og.appendChild(new Option(v, v)));
+      sel.appendChild(og);
+
+      sel.value = mapMarkerFilter || "all";
+      sel.addEventListener("change", () => applyMapMarkerFilter(sel.value));
+      mapMarkerFilterSelectEl = sel;
+      wrap.appendChild(sel);
+
+      // Insert below the base/overlay layer checkboxes for a cleaner, grouped menu.
+      list.appendChild(wrap);
+    }
+  } catch (e) {
+    console.warn("Could not mount marker filter into layers control:", e);
+  }
 
   // Start tracking user's current location in real time
   startUserLocationTracking();
