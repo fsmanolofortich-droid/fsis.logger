@@ -212,15 +212,20 @@ function handleInsert(body) {
   if (table === "fire_drill_logbook") {
     ensureColumnExists(sheet, "owner_name");
   }
+  if (table === "inspection_logbook" || table === "occupancy_logbook") {
+    ensureColumnExists(sheet, "io_remarks");
+  }
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   var id = generateUUID();
   var createdAt = new Date().toISOString();
 
   var newRow = headers.map(function(h) {
-    if (h === "id") return id;
-    if (h === "created_at") return createdAt;
-    var v = row[h];
+    var key = String(h || "").trim();
+    if (key === "id") return id;
+    if (key === "created_at") return createdAt;
+    // Allow sheet headers with accidental trailing/leading spaces.
+    var v = row[key];
     return (v === undefined || v === null) ? "" : v;
   });
 
@@ -242,6 +247,9 @@ function handleUpdate(body) {
   if (table === "fire_drill_logbook") {
     ensureColumnExists(sheet, "owner_name");
   }
+  if (table === "inspection_logbook" || table === "occupancy_logbook") {
+    ensureColumnExists(sheet, "io_remarks");
+  }
   var rowNum = findRowById(sheet, id);
   if (rowNum < 0) return { error: "Record not found: " + id };
 
@@ -249,10 +257,12 @@ function handleUpdate(body) {
   var currentRow = sheet.getRange(rowNum, 1, 1, headers.length).getValues()[0];
 
   var newRow = headers.map(function(h, idx) {
-    if (h === "id") return currentRow[idx]; // never overwrite id
-    if (h === "created_at") return currentRow[idx]; // never overwrite created_at
-    if (updates.hasOwnProperty(h) && updates[h] !== undefined && updates[h] !== null) {
-      return updates[h];
+    var key = String(h || "").trim();
+    if (key === "id") return currentRow[idx]; // never overwrite id
+    if (key === "created_at") return currentRow[idx]; // never overwrite created_at
+    // Allow sheet headers with accidental trailing/leading spaces.
+    if (updates.hasOwnProperty(key) && updates[key] !== undefined && updates[key] !== null) {
+      return updates[key];
     }
     return currentRow[idx];
   });

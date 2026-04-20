@@ -428,7 +428,7 @@
           <td class="label">REMARKS</td>
           <td class="colon">:</td>
           <td class="value">
-            <div>To conduct Fire Safety Inspection(BUSINESS AND ROUTINE / ANNUAL INSPECTION) In accordance with the
+            <div id="io_remarks" contenteditable="true">To conduct Fire Safety Inspection(BUSINESS AND ROUTINE / ANNUAL INSPECTION) In accordance with the
               pertinent provision of Rule 9, Division 1 of the RIRR of the Fire Code of the Philippines(R.A. 9514)</div>
           </td>
         </tr>
@@ -583,7 +583,7 @@
       });
 
       const address = uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr;
-      const remarks = entry.remarks || "";
+      const remarks = (entry.io_remarks ?? entry.remarks ?? "").toString();
 
       const setText = (id, value) => {
         const el = document.getElementById(id);
@@ -603,7 +603,7 @@
       setText("io_address", proceedText);
       setText("io_duration_start", formatDateISOToLong(durationStart));
       setText("io_duration_end", formatDateISOToLong(durationEnd));
-      setText("io_remarks", remarks);
+      if (remarks) setText("io_remarks", remarks);
 
       // Save Logic
       function getById(id) {

@@ -1950,15 +1950,15 @@ window.addEventListener("message", (ev) => {
     return;
   }
 
-  app_save(row.id, updates, table)
-    .then((res) => {
-      if (res?.error) throw new Error(res.error);
+  (async () => {
+    try {
+      await gasRequest("update", { table, id: row.id, row: updates });
       respond(true, "Saved to database!");
-    })
-    .catch((err) => {
+    } catch (err) {
       console.error("IO Save error:", err);
       respond(false, err?.message || "Failed to save to cloud");
-    });
+    }
+  })();
 });
 
 async function inspectionDownloadPdf(idx) {
