@@ -3162,12 +3162,62 @@ function coordsFromExifJsTags(tags) {
   return null;
 }
 
+/** Options tuned for gallery picks (JPEG/HEIC/PNG/WebP, XMP, whole-file read for Blob). */
+const EXIFR_PARSE_OPTS = {
+  tiff: true,
+  ifd0: true,
+  ifd1: false,
+  exif: true,
+  gps: true,
+  xmp: true,
+  mergeOutput: true,
+  translateKeys: true,
+  translateValues: true,
+  reviveValues: true,
+  silentErrors: true,
+  chunked: false,
+};
+
 function exifToFinite(v) {
-  if (v == null) return null;
+  if (v == null || v === "") return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
   if (typeof v === "string") {
     const n = Number.parseFloat(v);
     return Number.isFinite(n) ? n : null;
+  }
+  if (typeof v === "object" && typeof v.valueOf === "function") {
+    const prim = v.valueOf();
+    if (typeof prim === "number" && Number.isFinite(prim)) return prim;
+    if (typeof prim === "string") {
+      const n = Number.parseFloat(prim);
+      return Number.isFinite(n) ? n : null;
+    }
+  }
+  return null;
+}
+
+/** Last resort: find decimal latitude/longitude pairs in nested exifr / XMP output. */
+function deepFindGpsCoords(obj, depth = 0, seen = new WeakSet()) {
+  if (!obj || typeof obj !== "object" || depth > 10) return null;
+  if (seen.has(obj)) return null;
+  seen.add(obj);
+  const plat = exifToFinite(obj.latitude ?? obj.lat ?? obj.Latitude);
+  const plng = exifToFinite(obj.longitude ?? obj.lng ?? obj.lon ?? obj.Longitude);
+  if (
+    plat != null &&
+    plng != null &&
+    Math.abs(plat) <= 90 &&
+    Math.abs(plng) <= 180
+  ) {
+    return { lat: plat, lng: plng };
+  }
+  for (const k of Object.keys(obj)) {
+    if (k === "errors" || k === "xmlns" || k === "buffer" || k === "byteLength") continue;
+    const child = obj[k];
+    if (child && typeof child === "object") {
+      const found = deepFindGpsCoords(child, depth + 1, seen);
+      if (found) return found;
+    }
   }
   return null;
 }
@@ -3186,13 +3236,34 @@ function pickGpsFromExifrParsed(parsed) {
   if (plat == null || plng == null) {
     const rawLat = parsed.GPSLatitude;
     const rawLng = parsed.GPSLongitude;
-    if (rawLat && rawLng) {
-      plat = dmsToDecimal(rawLat, parsed.GPSLatitudeRef, "lat");
-      plng = dmsToDecimal(rawLng, parsed.GPSLongitudeRef, "lng");
+    if (rawLat != null && rawLng != null) {
+      const dmsLat =
+        Array.isArray(rawLat) && rawLat.length === 3
+          ? dmsToDecimal(rawLat, parsed.GPSLatitudeRef, "lat")
+          : null;
+      const dmsLng =
+        Array.isArray(rawLng) && rawLng.length === 3
+          ? dmsToDecimal(rawLng, parsed.GPSLongitudeRef, "lng")
+          : null;
+      if (dmsLat != null && dmsLng != null) {
+        plat = dmsLat;
+        plng = dmsLng;
+      } else {
+        plat = exifToFinite(plat ?? rawLat);
+        plng = exifToFinite(plng ?? rawLng);
+      }
     }
   }
+  if (
+    (plat == null || plng == null) &&
+    parsed.exif &&
+    typeof parsed.exif === "object"
+  ) {
+    const inner = pickGpsFromExifrParsed(parsed.exif);
+    if (inner) return inner;
+  }
   if (plat != null && plng != null) return { lat: plat, lng: plng };
-  return null;
+  return deepFindGpsCoords(parsed);
 }
 
 function parseExifDateString(s) {
@@ -3248,11 +3319,8 @@ async function readGpsFromFile(file) {
         if (lat != null && lng != null) return { lat, lng };
       }
       if (typeof exifrApi.parse === "function") {
-        let parsed = await exifrApi.parse(input);
-        let found = pickGpsFromExifrParsed(parsed);
-        if (found) return found;
-        parsed = await exifrApi.parse(input, { tiff: true, ifd0: true, exif: true, gps: true, mergeOutput: true });
-        found = pickGpsFromExifrParsed(parsed);
+        const parsed = await exifrApi.parse(input, EXIFR_PARSE_OPTS);
+        const found = pickGpsFromExifrParsed(parsed);
         if (found) return found;
       }
     } catch (e) {
@@ -3263,6 +3331,15 @@ async function readGpsFromFile(file) {
 
   if (exifrApi) {
     try {
+      if (file instanceof Blob) {
+        const result = await tryExifr(file);
+        if (result) return result;
+      }
+    } catch (e) {
+      console.warn("exifr file read failed:", e);
+    }
+
+    try {
       if (typeof file?.arrayBuffer === "function") {
         const buf = await file.arrayBuffer();
         const result = await tryExifr(buf);
@@ -3270,13 +3347,6 @@ async function readGpsFromFile(file) {
       }
     } catch (e) {
       console.warn("exifr arrayBuffer read failed:", e);
-    }
-
-    try {
-      const result = await tryExifr(file);
-      if (result) return result;
-    } catch (e) {
-      console.warn("exifr file read failed:", e);
     }
   }
 
@@ -3334,24 +3404,26 @@ async function readPhotoExifMetadata(file) {
   let buf = null;
   try {
     if (typeof file?.arrayBuffer === "function") buf = await file.arrayBuffer();
-  } catch {
-    return { gps: null, takenAt: null, hasExif: false };
+  } catch (e) {
+    console.warn("readPhotoExifMetadata arrayBuffer:", e);
   }
 
   const exifrApi = getExifrNamespace();
   let parsed = null;
-  if (exifrApi?.parse && buf) {
-    try {
-      parsed = await exifrApi.parse(buf, {
-        tiff: true,
-        ifd0: true,
-        exif: true,
-        gps: true,
-        mergeOutput: true,
-      });
-    } catch (e) {
-      console.warn("exifr metadata parse failed:", e);
-    }
+  if (exifrApi?.parse) {
+    const parseOne = async (input) => {
+      if (input == null) return null;
+      try {
+        return await exifrApi.parse(input, EXIFR_PARSE_OPTS);
+      } catch (e) {
+        console.warn("exifr metadata parse failed:", e);
+        return null;
+      }
+    };
+    const fromBuf = buf ? await parseOne(buf) : null;
+    const fromFile = file instanceof Blob ? await parseOne(file) : null;
+    if (fromBuf && fromFile) parsed = { ...fromBuf, ...fromFile };
+    else parsed = fromFile || fromBuf;
   }
 
   let tagsJs = null;
