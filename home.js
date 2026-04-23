@@ -179,6 +179,7 @@ let occupancyExifProcessingPromise = null;
 
 /** Pending photo picker flow: confirm in preview modal before committing. */
 let photoPreviewContext = null;
+let photoPreviewPermissionStatus = "Tap 'Check permissions' to verify browser location access.";
 
 let inspectionMarkersLayer = null;
 let occupancyMarkersLayer = null;
@@ -3201,8 +3202,17 @@ function deepFindGpsCoords(obj, depth = 0, seen = new WeakSet()) {
   if (!obj || typeof obj !== "object" || depth > 10) return null;
   if (seen.has(obj)) return null;
   seen.add(obj);
-  const plat = exifToFinite(obj.latitude ?? obj.lat ?? obj.Latitude);
-  const plng = exifToFinite(obj.longitude ?? obj.lng ?? obj.lon ?? obj.Longitude);
+  const plat = exifToFinite(
+    obj.latitude ?? obj.lat ?? obj.gpsLatitude ?? obj.GPSLatitude ?? obj.Latitude
+  );
+  const plng = exifToFinite(
+    obj.longitude ??
+      obj.lng ??
+      obj.lon ??
+      obj.gpsLongitude ??
+      obj.GPSLongitude ??
+      obj.Longitude
+  );
   if (
     plat != null &&
     plng != null &&
@@ -3224,13 +3234,17 @@ function deepFindGpsCoords(obj, depth = 0, seen = new WeakSet()) {
 
 function pickGpsFromExifrParsed(parsed) {
   if (!parsed || typeof parsed !== "object") return null;
-  let plat = exifToFinite(parsed.latitude ?? parsed.lat);
-  let plng = exifToFinite(parsed.longitude ?? parsed.lng);
+  let plat = exifToFinite(
+    parsed.latitude ?? parsed.lat ?? parsed.gpsLatitude ?? parsed.GPSLatitude
+  );
+  let plng = exifToFinite(
+    parsed.longitude ?? parsed.lng ?? parsed.lon ?? parsed.gpsLongitude ?? parsed.GPSLongitude
+  );
   if (plat == null || plng == null) {
     const g = parsed.gps;
     if (g && typeof g === "object") {
-      plat = exifToFinite(plat ?? g.latitude ?? g.lat);
-      plng = exifToFinite(plng ?? g.longitude ?? g.lng);
+      plat = exifToFinite(plat ?? g.latitude ?? g.lat ?? g.gpsLatitude);
+      plng = exifToFinite(plng ?? g.longitude ?? g.lng ?? g.lon ?? g.gpsLongitude);
     }
   }
   if (plat == null || plng == null) {
@@ -3409,7 +3423,7 @@ async function readPhotoExifMetadata(file) {
   }
 
   const exifrApi = getExifrNamespace();
-  let parsed = null;
+  const parsedCandidates = [];
   if (exifrApi?.parse) {
     const parseOne = async (input) => {
       if (input == null) return null;
@@ -3422,8 +3436,8 @@ async function readPhotoExifMetadata(file) {
     };
     const fromBuf = buf ? await parseOne(buf) : null;
     const fromFile = file instanceof Blob ? await parseOne(file) : null;
-    if (fromBuf && fromFile) parsed = { ...fromBuf, ...fromFile };
-    else parsed = fromFile || fromBuf;
+    if (fromFile && typeof fromFile === "object") parsedCandidates.push(fromFile);
+    if (fromBuf && typeof fromBuf === "object") parsedCandidates.push(fromBuf);
   }
 
   let tagsJs = null;
@@ -3436,17 +3450,26 @@ async function readPhotoExifMetadata(file) {
   }
 
   const hasParsed =
-    parsed && typeof parsed === "object" && Object.keys(parsed).length > 0;
+    parsedCandidates.length > 0 &&
+    parsedCandidates.some((p) => p && typeof p === "object" && Object.keys(p).length > 0);
   const hasTagsJs =
     tagsJs && typeof tagsJs === "object" && Object.keys(tagsJs).length > 0;
 
-  let takenAt = exifDateFromExifrParsed(parsed);
+  let takenAt = null;
+  for (const p of parsedCandidates) {
+    takenAt = exifDateFromExifrParsed(p);
+    if (takenAt) break;
+  }
   if (!takenAt && hasTagsJs) {
     const ds = tagsJs.DateTimeOriginal || tagsJs.DateTime;
     if (typeof ds === "string") takenAt = parseExifDateString(ds);
   }
 
-  let gps = pickGpsFromExifrParsed(parsed);
+  let gps = null;
+  for (const p of parsedCandidates) {
+    gps = pickGpsFromExifrParsed(p);
+    if (gps) break;
+  }
   if (!gps && hasTagsJs) gps = coordsFromExifJsTags(tagsJs);
   if (!gps) gps = await readGpsFromFile(file);
 
@@ -3519,8 +3542,86 @@ function photoPreviewRenderExif(meta) {
   rows.push(
     `<dt>Date / time taken</dt><dd>${takenLabel || "Not found in EXIF."}</dd>`
   );
+  rows.push(
+    `<dt>Browser permission check</dt><dd id="photo-preview-permission-status">${photoPreviewPermissionStatus}</dd>`
+  );
 
   panel.innerHTML = `<dl>${rows.join("")}</dl>`;
+}
+
+function updatePhotoPreviewPermissionStatus(text) {
+  photoPreviewPermissionStatus = text || "Permission check unavailable.";
+  const el = document.getElementById("photo-preview-permission-status");
+  if (el) el.textContent = photoPreviewPermissionStatus;
+}
+
+async function runPhotoPermissionDiagnostics(requestPrompt = false) {
+  const lines = [];
+  const secure = window.isSecureContext === true;
+  lines.push(
+    secure
+      ? "Secure context: yes"
+      : "Secure context: no (location prompt usually blocked on non-HTTPS pages)."
+  );
+
+  if (!("geolocation" in navigator)) {
+    lines.push("Geolocation API: not available in this browser/app.");
+    return lines.join(" ");
+  }
+  lines.push("Geolocation API: available");
+
+  if (navigator.permissions?.query) {
+    try {
+      const result = await navigator.permissions.query({ name: "geolocation" });
+      lines.push(`Permission state: ${result.state}`);
+    } catch (e) {
+      console.warn("permissions.query(geolocation) failed:", e);
+      lines.push("Permission state: unavailable (query not supported).");
+    }
+  } else {
+    lines.push("Permission state: unavailable (Permissions API not supported).");
+  }
+
+  if (!requestPrompt) return lines.join(" ");
+
+  const promptResult = await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords?.latitude);
+        const lng = Number(pos.coords?.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          resolve(
+            `Prompt test: allowed (current location ${lat.toFixed(5)}, ${lng.toFixed(5)}).`
+          );
+          return;
+        }
+        resolve("Prompt test: allowed, but coordinates were unavailable.");
+      },
+      (err) => {
+        if (err?.code === 1) {
+          resolve("Prompt test: denied. Enable site/device location permission.");
+          return;
+        }
+        if (err?.code === 2) {
+          resolve("Prompt test: position unavailable. Try outdoors or enable device GPS.");
+          return;
+        }
+        if (err?.code === 3) {
+          resolve("Prompt test: timed out. Retry and keep location enabled.");
+          return;
+        }
+        resolve(`Prompt test: failed (${err?.message || "unknown error"}).`);
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 120000,
+        timeout: 10000,
+      }
+    );
+  });
+
+  lines.push(promptResult);
+  return lines.join(" ");
 }
 
 async function beginPhotoAttachFromPicker(context, file, sourceInput, options = {}) {
@@ -3549,6 +3650,7 @@ async function beginPhotoAttachFromPicker(context, file, sourceInput, options = 
     indicator,
     options,
   };
+  photoPreviewPermissionStatus = "Tap 'Check permissions' to verify browser location access.";
 
   const img = document.getElementById("photo-preview-modal-img");
   const statusEl = document.getElementById("photo-preview-modal-status");
@@ -3666,6 +3768,25 @@ function initPhotoPreviewModal() {
   document
     .getElementById("photo-preview-btn-confirm")
     ?.addEventListener("click", () => void photoPreviewConfirm());
+  document
+    .getElementById("photo-preview-btn-check-permissions")
+    ?.addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      if (!btn) return;
+      btn.disabled = true;
+      updatePhotoPreviewPermissionStatus("Checking permissions and requesting location…");
+      try {
+        const status = await runPhotoPermissionDiagnostics(true);
+        updatePhotoPreviewPermissionStatus(status);
+      } catch (err) {
+        console.warn("runPhotoPermissionDiagnostics failed:", err);
+        updatePhotoPreviewPermissionStatus(
+          "Permission check failed. Try again and ensure location is enabled."
+        );
+      } finally {
+        btn.disabled = false;
+      }
+    });
 }
 
 function initOccupancyPhotoExif() {
