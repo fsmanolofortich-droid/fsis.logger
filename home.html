@@ -571,11 +571,30 @@
       </div>
       <div class="home-embed">
         <div id="occupancy_list">
-          <div class="logbook-panel" id="panel-occupancy">
+          <div class="table-controls" id="filter-occupancy" aria-label="Occupancy filters">
+            <div class="control">
+              <label for="occupancy-filter-q">Search</label>
+              <input id="occupancy-filter-q" type="search" class="form-control form-control-sm"
+                placeholder="Search IO, owner, property, address, FSIC, inspector">
+            </div>
+            <div class="control">
+              <label for="occupancy-filter-from">From</label>
+              <input id="occupancy-filter-from" type="date" class="form-control form-control-sm">
+            </div>
+            <div class="control">
+              <label for="occupancy-filter-to">To</label>
+              <input id="occupancy-filter-to" type="date" class="form-control form-control-sm">
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+              onclick="occupancyClearFilters()">Clear</button>
+          </div>
+
+          <div class="logbook-panel visible" id="panel-occupancy">
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
-              <p class="print-subtitle"><strong>Occupancy Logbook</strong> &mdash; Occupancy inspections</p>
+              <p class="print-subtitle"><strong>Occupancy Logbook</strong> &mdash; Occupancy inspections with location</p>
               <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
                   id="occupancy-print-date">&mdash;</span></p>
             </div>
@@ -584,8 +603,18 @@
               is generated from the BFP Inspection Management System.</div>
             <div class="panel-header">
               <div class="panel-title">
-                <span>Supplemental Logbook</span>
+                <span>Active Logbook</span>
                 Occupancy Logbook <span class="record-badge" id="occupancy-record-count">0</span>
+              </div>
+              <div class="inspection-subnav" role="tablist" aria-label="Occupancy categories">
+                <button type="button" class="inspection-subnav-btn occupancy-subnav-btn is-active" data-occupancy-tab="with-location"
+                  role="tab" aria-selected="true">
+                  With location
+                </button>
+                <button type="button" class="inspection-subnav-btn occupancy-subnav-btn" data-occupancy-tab="no-location"
+                  role="tab" aria-selected="false">
+                  No location yet
+                </button>
               </div>
               <button class="btn-panel-print" onclick="occupancyPrintPanel()">
                 <i class="bi bi-printer"></i> Print
@@ -594,24 +623,6 @@
                 <i class="bi bi-download"></i> CSV
               </button>
               <button class="btn-panel-add" onclick="occupancyOpenModal()">+ Add Entry</button>
-            </div>
-            <div class="table-controls" id="filter-occupancy" aria-label="Occupancy filters">
-              <div class="control">
-                <label for="occupancy-filter-q">Search</label>
-                <input id="occupancy-filter-q" type="search" class="form-control form-control-sm"
-                  placeholder="Search IO, owner, inspectors, remarks/signature">
-              </div>
-              <div class="control">
-                <label for="occupancy-filter-from">From</label>
-                <input id="occupancy-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="occupancy-filter-to">To</label>
-                <input id="occupancy-filter-to" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
-                onclick="occupancyClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-occupancy" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -637,6 +648,66 @@
               <div class="empty-icon" aria-hidden="true">&#x1F3E0;</div>
               <strong>No Occupancy Records Yet</strong>
               <p>Use this logbook to track occupancy-related inspections based on IO numbers.</p>
+            </div>
+          </div>
+
+          <div class="logbook-panel" id="panel-occupancy-nolocation">
+            <div class="print-header">
+              <h2>Bureau of Fire Protection</h2>
+              <p class="print-subtitle">Manolo Fortich Fire Station</p>
+              <p class="print-subtitle"><strong>Occupancy Logbook</strong> &mdash; Occupancy inspections without location</p>
+              <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
+                  id="occupancy-print-date-nolocation">&mdash;</span></p>
+            </div>
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document is generated from the BFP Inspection Management System.</div>
+            <div class="panel-header">
+              <div class="panel-title">
+                <span>Pending locations</span>
+                Occupancy records without location <span class="record-badge" id="occupancy-nolocation-record-count">0</span>
+              </div>
+              <div class="inspection-subnav" role="tablist" aria-label="Occupancy categories">
+                <button type="button" class="inspection-subnav-btn occupancy-subnav-btn" data-occupancy-tab="with-location"
+                  role="tab" aria-selected="false">
+                  With location
+                </button>
+                <button type="button" class="inspection-subnav-btn occupancy-subnav-btn is-active" data-occupancy-tab="no-location"
+                  role="tab" aria-selected="true">
+                  No location yet
+                </button>
+              </div>
+              <button class="btn-panel-print" onclick="occupancyPrintPanel()">
+                <i class="bi bi-printer"></i> Print
+              </button>
+              <button class="btn-panel-print" onclick="exportTableToCSV('table-occupancy-nolocation', 'occupancy_nolocation_logbook.csv')">
+                <i class="bi bi-download"></i> CSV
+              </button>
+              <button class="btn-panel-add" onclick="occupancyOpenModal()">+ Add Entry</button>
+            </div>
+            <div class="table-wrap">
+              <table id="table-occupancy-nolocation" class="table table-hover table-bordered table-sm align-middle mb-0">
+                <thead class="table-dark">
+                  <tr>
+                    <th>#</th>
+                    <th>IO Number</th>
+                    <th>Name of Owner</th>
+                    <th>Owner Phone</th>
+                    <th>Residential / Property</th>
+                    <th>Address</th>
+                    <th class="th-date">Date</th>
+                    <th>Type</th>
+                    <th>FSIC Number</th>
+                    <th>Inspected By</th>
+                    <th class="col-action">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-occupancy-nolocation"></tbody>
+              </table>
+            </div>
+            <div id="empty-occupancy-nolocation" class="empty-state">
+              <div class="empty-icon" aria-hidden="true">&#x1F4CD;</div>
+              <strong>No pending occupancy locations</strong>
+              <p>All occupancy records already include map coordinates.</p>
             </div>
           </div>
         </div>
@@ -1391,8 +1462,8 @@
               <div class="photo-preview-exif-panel" id="photo-preview-modal-exif" hidden></div>
             </div>
             <div class="modal-footer bfp-footer">
-              <button type="button" class="btn btn-sm btn-outline-secondary me-auto"
-                id="photo-preview-btn-check-permissions">Check permissions</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                id="photo-preview-btn-use-current-location">Use current location</button>
               <button type="button" class="btn btn-sm btn-outline-secondary" id="photo-preview-btn-cancel">Cancel</button>
               <button type="button" class="btn btn-sm btn-dark" id="photo-preview-btn-confirm" disabled>Use this
                 photo</button>
@@ -1535,7 +1606,7 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js" defer></script>
-  <script src="./home.js?v=20260423b" defer></script>
+  <script src="./home.js?v=20260423e" defer></script>
 </body>
 
 </html>

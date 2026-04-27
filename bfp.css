@@ -657,6 +657,7 @@ table#table-inspection-nophoto {
 }
 
 table#table-occupancy,
+table#table-occupancy-nolocation,
 table#table-conveyance,
 table#table-fire_drill,
 table#table-fsec {
@@ -1847,7 +1848,8 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
 
 #table-conveyance,
 #table-fire_drill,
-#table-occupancy {
+#table-occupancy,
+#table-occupancy-nolocation {
   min-width: 680px;
 }
 
@@ -1876,7 +1878,8 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   #table-fsec,
   #table-conveyance,
   #table-fire_drill,
-  #table-occupancy {
+  #table-occupancy,
+  #table-occupancy-nolocation {
     min-width: 0 !important;
     width: 100% !important;
     table-layout: fixed !important;
@@ -1977,10 +1980,16 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   #table-fire_drill td:nth-child(6),
   #table-occupancy th:nth-child(4),
   #table-occupancy td:nth-child(4),
+  #table-occupancy-nolocation th:nth-child(4),
+  #table-occupancy-nolocation td:nth-child(4),
   #table-occupancy th:nth-child(5),
   #table-occupancy td:nth-child(5),
+  #table-occupancy-nolocation th:nth-child(5),
+  #table-occupancy-nolocation td:nth-child(5),
   #table-occupancy th:nth-child(6),
-  #table-occupancy td:nth-child(6) {
+  #table-occupancy td:nth-child(6),
+  #table-occupancy-nolocation th:nth-child(6),
+  #table-occupancy-nolocation td:nth-child(6) {
     display: none !important;
   }
 
@@ -1990,7 +1999,9 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   #table-fire_drill th:nth-child(1),
   #table-fire_drill td:nth-child(1),
   #table-occupancy th:nth-child(1),
-  #table-occupancy td:nth-child(1) {
+  #table-occupancy td:nth-child(1),
+  #table-occupancy-nolocation th:nth-child(1),
+  #table-occupancy-nolocation td:nth-child(1) {
     width: 28px;
   }
 
@@ -1999,7 +2010,9 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   #table-fire_drill th:nth-child(2),
   #table-fire_drill td:nth-child(2),
   #table-occupancy th:nth-child(2),
-  #table-occupancy td:nth-child(2) {
+  #table-occupancy td:nth-child(2),
+  #table-occupancy-nolocation th:nth-child(2),
+  #table-occupancy-nolocation td:nth-child(2) {
     width: 80px;
   }
 
@@ -2008,7 +2021,9 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   #table-fire_drill th:nth-child(3),
   #table-fire_drill td:nth-child(3),
   #table-occupancy th:nth-child(3),
-  #table-occupancy td:nth-child(3) {
+  #table-occupancy td:nth-child(3),
+  #table-occupancy-nolocation th:nth-child(3),
+  #table-occupancy-nolocation td:nth-child(3) {
     width: auto;
   }
 
@@ -2017,7 +2032,9 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   #table-fire_drill th:nth-child(7),
   #table-fire_drill td:nth-child(7),
   #table-occupancy th:nth-child(7),
-  #table-occupancy td:nth-child(7) {
+  #table-occupancy td:nth-child(7),
+  #table-occupancy-nolocation th:nth-child(7),
+  #table-occupancy-nolocation td:nth-child(7) {
     width: 90px;
   }
 
@@ -2141,20 +2158,22 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
 #table-fsec .col-action,
 #table-conveyance .col-action,
 #table-fire_drill .col-action,
-#table-occupancy .col-action {
+#table-occupancy .col-action,
+#table-occupancy-nolocation .col-action {
   white-space: nowrap;
   width: 1%;
 }
 
 /* ── PRINT STYLES ── */
 @page {
-  size: A4 landscape;
+  size: A4 portrait;
   margin: 10mm 14mm 12mm 14mm;
 }
 
 @media print {
 
   header,
+  .home-hero,
   .btn-panel-print,
   .btn-panel-add,
   .btn-panel-filter,
@@ -2194,6 +2213,14 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
     padding-top: 2mm;
   }
 
+  /* Print only the active sub-panel for multi-tab logbooks. */
+  #panel-occupancy:not(.visible),
+  #panel-occupancy-nolocation:not(.visible),
+  #panel-inspection:not(.visible),
+  #panel-inspection-nophoto:not(.visible) {
+    display: none !important;
+  }
+
   .panel-header {
     display: none !important;
   }
@@ -2206,7 +2233,11 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   #table-inspection th:nth-child(4),
   #table-inspection td:nth-child(4),
   #table-inspection-nophoto th:nth-child(4),
-  #table-inspection-nophoto td:nth-child(4) {
+  #table-inspection-nophoto td:nth-child(4),
+  #table-occupancy th:nth-child(4),
+  #table-occupancy td:nth-child(4),
+  #table-occupancy-nolocation th:nth-child(4),
+  #table-occupancy-nolocation td:nth-child(4) {
     display: none !important;
   }
 
@@ -2401,33 +2432,66 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   }
 
   #table-occupancy th:nth-child(1),
-  #table-occupancy td:nth-child(1) {
+  #table-occupancy td:nth-child(1),
+  #table-occupancy-nolocation th:nth-child(1),
+  #table-occupancy-nolocation td:nth-child(1) {
     width: 3%;
   }
 
   #table-occupancy th:nth-child(2),
-  #table-occupancy td:nth-child(2) {
+  #table-occupancy td:nth-child(2),
+  #table-occupancy-nolocation th:nth-child(2),
+  #table-occupancy-nolocation td:nth-child(2) {
     width: 11%;
   }
 
   #table-occupancy th:nth-child(3),
-  #table-occupancy td:nth-child(3) {
-    width: 13%;
-  }
-
-  #table-occupancy th:nth-child(4),
-  #table-occupancy td:nth-child(4) {
-    width: 20%;
+  #table-occupancy td:nth-child(3),
+  #table-occupancy-nolocation th:nth-child(3),
+  #table-occupancy-nolocation td:nth-child(3) {
+    width: 14%;
   }
 
   #table-occupancy th:nth-child(5),
-  #table-occupancy td:nth-child(5) {
-    width: 26%;
+  #table-occupancy td:nth-child(5),
+  #table-occupancy-nolocation th:nth-child(5),
+  #table-occupancy-nolocation td:nth-child(5) {
+    width: 18%;
   }
 
   #table-occupancy th:nth-child(6),
-  #table-occupancy td:nth-child(6) {
-    width: 27%;
+  #table-occupancy td:nth-child(6),
+  #table-occupancy-nolocation th:nth-child(6),
+  #table-occupancy-nolocation td:nth-child(6) {
+    width: 23%;
+  }
+
+  #table-occupancy th:nth-child(7),
+  #table-occupancy td:nth-child(7),
+  #table-occupancy-nolocation th:nth-child(7),
+  #table-occupancy-nolocation td:nth-child(7) {
+    width: 11%;
+  }
+
+  #table-occupancy th:nth-child(8),
+  #table-occupancy td:nth-child(8),
+  #table-occupancy-nolocation th:nth-child(8),
+  #table-occupancy-nolocation td:nth-child(8) {
+    width: 10%;
+  }
+
+  #table-occupancy th:nth-child(9),
+  #table-occupancy td:nth-child(9),
+  #table-occupancy-nolocation th:nth-child(9),
+  #table-occupancy-nolocation td:nth-child(9) {
+    width: 10%;
+  }
+
+  #table-occupancy th:nth-child(10),
+  #table-occupancy td:nth-child(10),
+  #table-occupancy-nolocation th:nth-child(10),
+  #table-occupancy-nolocation td:nth-child(10) {
+    width: 10%;
   }
 
   #table-conveyance th:nth-child(1),

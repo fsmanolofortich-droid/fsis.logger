@@ -179,12 +179,12 @@ let occupancyExifProcessingPromise = null;
 
 /** Pending photo picker flow: confirm in preview modal before committing. */
 let photoPreviewContext = null;
-let photoPreviewPermissionStatus = "Tap 'Check permissions' to verify browser location access.";
 
 let inspectionMarkersLayer = null;
 let occupancyMarkersLayer = null;
 let inspectionDataLoaded = false;
 let inspectionActiveTab = "with-location";
+let occupancyActiveTab = "with-location";
 let inspectionFocusMapAfterSave = false;
 
 let mapMarkerFilter = "all"; // all | businesses | occupancies | Mercantile | Storage | etc
@@ -770,6 +770,14 @@ function init() {
     setInspectionTab(tab);
   });
 
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest?.(".occupancy-subnav-btn");
+    if (!btn) return;
+    const tab = btn.getAttribute("data-occupancy-tab");
+    if (!tab) return;
+    setOccupancyTab(tab);
+  });
+
   // Keep the map sized correctly on window resize
   window.addEventListener("resize", () => {
     if (getCurrentView() === "map") {
@@ -1127,6 +1135,24 @@ function setInspectionTab(tab) {
 
   buttons.forEach((btn) => {
     const t = btn.getAttribute("data-inspection-tab");
+    const isActive = t === tab;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  if (panelWith) panelWith.style.display = tab === "with-location" ? "" : "none";
+  if (panelNoLocation) panelNoLocation.style.display = tab === "no-location" ? "" : "none";
+}
+
+function setOccupancyTab(tab) {
+  occupancyActiveTab = tab;
+
+  const panelWith = document.getElementById("panel-occupancy");
+  const panelNoLocation = document.getElementById("panel-occupancy-nolocation");
+  const buttons = document.querySelectorAll(".occupancy-subnav-btn");
+
+  buttons.forEach((btn) => {
+    const t = btn.getAttribute("data-occupancy-tab");
     const isActive = t === tab;
     btn.classList.toggle("is-active", isActive);
     btn.setAttribute("aria-selected", isActive ? "true" : "false");
@@ -1625,6 +1651,7 @@ async function occupancyAddPhoto(idx) {
               occupancyData[idx].lat = exLat;
               occupancyData[idx].lng = exLng;
             }
+            occupancySaveToLocal();
             occupancyRenderTable();
             renderOccupancyMarkersBatched();
           }
@@ -2912,10 +2939,21 @@ function viewOccupancyInLogbook(entry) {
   showView("occupancy");
   if (getCurrentView() !== "occupancy") window.location.hash = "occupancy";
 
-  const qEl = document.getElementById("occupancy-filter-q");
-  if (qEl) qEl.value = (entry.io_number || entry.owner_name || "").trim();
-  occupancyRenderTable?.();
-  document.getElementById("table-occupancy")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  occupancyClearFilters();
+  setOccupancyTab(entry.lat != null && entry.lng != null ? "with-location" : "no-location");
+
+  const idx = occupancyData.findIndex((r) => {
+    if (entry.id && r.id) return r.id === entry.id;
+    if (entry.io_number && r.io_number) return r.io_number === entry.io_number;
+    return false;
+  });
+  if (idx < 0) return;
+
+  const rowEl = document.getElementById(`occupancy-row-${idx}`);
+  if (!rowEl) return;
+  rowEl.classList.add("row-highlight");
+  rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
 }
 
 function viewInspectionInLogbook(entry) {
@@ -3197,6 +3235,20 @@ function exifToFinite(v) {
   return null;
 }
 
+/** Parse ISO 6709 style coordinates (common in Apple/HEIC metadata), e.g. "+08.3693+124.8678/". */
+function parseIso6709Coords(value) {
+  if (value == null) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const m = s.match(/([+-]\d{1,2}(?:\.\d+)?)([+-]\d{1,3}(?:\.\d+)?)/);
+  if (!m) return null;
+  const lat = Number.parseFloat(m[1]);
+  const lng = Number.parseFloat(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+
 /** Last resort: find decimal latitude/longitude pairs in nested exifr / XMP output. */
 function deepFindGpsCoords(obj, depth = 0, seen = new WeakSet()) {
   if (!obj || typeof obj !== "object" || depth > 10) return null;
@@ -3221,6 +3273,19 @@ function deepFindGpsCoords(obj, depth = 0, seen = new WeakSet()) {
   ) {
     return { lat: plat, lng: plng };
   }
+  // Some HEIC/Apple images store coordinates as ISO6709 in a single string field.
+  const isoCandidates = [
+    obj.GPSCoordinates,
+    obj.gpsCoordinates,
+    obj.coordinates,
+    obj.location,
+    obj["com.apple.quicktime.location.ISO6709"],
+    obj.locationISO6709,
+  ];
+  for (const c of isoCandidates) {
+    const parsedIso = parseIso6709Coords(c);
+    if (parsedIso) return parsedIso;
+  }
   for (const k of Object.keys(obj)) {
     if (k === "errors" || k === "xmlns" || k === "buffer" || k === "byteLength") continue;
     const child = obj[k];
@@ -3234,6 +3299,16 @@ function deepFindGpsCoords(obj, depth = 0, seen = new WeakSet()) {
 
 function pickGpsFromExifrParsed(parsed) {
   if (!parsed || typeof parsed !== "object") return null;
+  const isoFirst = parseIso6709Coords(
+    parsed.GPSCoordinates ??
+      parsed.gpsCoordinates ??
+      parsed.coordinates ??
+      parsed.location ??
+      parsed["com.apple.quicktime.location.ISO6709"] ??
+      parsed.locationISO6709
+  );
+  if (isoFirst) return isoFirst;
+
   let plat = exifToFinite(
     parsed.latitude ?? parsed.lat ?? parsed.gpsLatitude ?? parsed.GPSLatitude
   );
@@ -3415,6 +3490,43 @@ async function readGpsFromFile(file) {
  * GPS, capture time, and whether EXIF-like metadata was found (for preview UI).
  */
 async function readPhotoExifMetadata(file) {
+  // Try backend ExifTool first (more complete parsing for HEIC/JPG variants).
+  try {
+    if (file instanceof Blob) {
+      const resp = await fetch("/api/exif/read", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "X-File-Name": encodeURIComponent(file.name || "photo.bin"),
+        },
+        body: file,
+      });
+      if (resp.ok) {
+        const serverMeta = await resp.json();
+        const serverGps = serverMeta?.gps;
+        const serverTakenAt =
+          typeof serverMeta?.takenAt === "string" ? serverMeta.takenAt : null;
+        if (
+          serverGps &&
+          Number.isFinite(serverGps.lat) &&
+          Number.isFinite(serverGps.lng)
+        ) {
+          return {
+            gps: { lat: Number(serverGps.lat), lng: Number(serverGps.lng) },
+            takenAt: serverTakenAt,
+            hasExif: true,
+          };
+        }
+        if (serverTakenAt || serverMeta?.hasExif) {
+          return { gps: null, takenAt: serverTakenAt, hasExif: true };
+        }
+      }
+    }
+  } catch (e) {
+    // Backend may be unavailable when opened as static file; keep existing client-side fallback.
+    console.warn("backend exiftool parse unavailable:", e);
+  }
+
   let buf = null;
   try {
     if (typeof file?.arrayBuffer === "function") buf = await file.arrayBuffer();
@@ -3517,6 +3629,7 @@ function photoPreviewRenderExif(meta) {
   panel.removeAttribute("hidden");
   const has = meta?.hasExif;
   const gps = meta?.gps;
+  const fallbackGps = photoPreviewContext?.fallbackGps || null;
   const taken = meta?.takenAt;
   const takenLabel = taken ? toFriendlyDate(taken) : null;
 
@@ -3539,89 +3652,47 @@ function photoPreviewRenderExif(meta) {
       `<dt>Location (from photo)</dt><dd>Not embedded. After you confirm, the app may use your device location if allowed.</dd>`
     );
   }
+  if (
+    fallbackGps &&
+    Number.isFinite(fallbackGps.lat) &&
+    Number.isFinite(fallbackGps.lng)
+  ) {
+    rows.push(
+      `<dt>Current device location</dt><dd>${fallbackGps.lat.toFixed(6)}, ${fallbackGps.lng.toFixed(
+        6
+      )} (will be used if photo has no GPS)</dd>`
+    );
+  }
   rows.push(
     `<dt>Date / time taken</dt><dd>${takenLabel || "Not found in EXIF."}</dd>`
   );
-  rows.push(
-    `<dt>Browser permission check</dt><dd id="photo-preview-permission-status">${photoPreviewPermissionStatus}</dd>`
-  );
-
   panel.innerHTML = `<dl>${rows.join("")}</dl>`;
 }
 
-function updatePhotoPreviewPermissionStatus(text) {
-  photoPreviewPermissionStatus = text || "Permission check unavailable.";
-  const el = document.getElementById("photo-preview-permission-status");
-  if (el) el.textContent = photoPreviewPermissionStatus;
-}
-
-async function runPhotoPermissionDiagnostics(requestPrompt = false) {
-  const lines = [];
-  const secure = window.isSecureContext === true;
-  lines.push(
-    secure
-      ? "Secure context: yes"
-      : "Secure context: no (location prompt usually blocked on non-HTTPS pages)."
-  );
-
-  if (!("geolocation" in navigator)) {
-    lines.push("Geolocation API: not available in this browser/app.");
-    return lines.join(" ");
-  }
-  lines.push("Geolocation API: available");
-
-  if (navigator.permissions?.query) {
-    try {
-      const result = await navigator.permissions.query({ name: "geolocation" });
-      lines.push(`Permission state: ${result.state}`);
-    } catch (e) {
-      console.warn("permissions.query(geolocation) failed:", e);
-      lines.push("Permission state: unavailable (query not supported).");
+async function requestPreviewDeviceLocation() {
+  return new Promise((resolve, reject) => {
+    if (!("geolocation" in navigator)) {
+      reject(new Error("Geolocation not supported"));
+      return;
     }
-  } else {
-    lines.push("Permission state: unavailable (Permissions API not supported).");
-  }
-
-  if (!requestPrompt) return lines.join(" ");
-
-  const promptResult = await new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const lat = Number(pos.coords?.latitude);
-        const lng = Number(pos.coords?.longitude);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          resolve(
-            `Prompt test: allowed (current location ${lat.toFixed(5)}, ${lng.toFixed(5)}).`
-          );
+        const lat = normalizeGeoNumber(pos?.coords?.latitude);
+        const lng = normalizeGeoNumber(pos?.coords?.longitude);
+        if (lat == null || lng == null) {
+          reject(new Error("Coordinates unavailable"));
           return;
         }
-        resolve("Prompt test: allowed, but coordinates were unavailable.");
+        resolve({ lat, lng });
       },
-      (err) => {
-        if (err?.code === 1) {
-          resolve("Prompt test: denied. Enable site/device location permission.");
-          return;
-        }
-        if (err?.code === 2) {
-          resolve("Prompt test: position unavailable. Try outdoors or enable device GPS.");
-          return;
-        }
-        if (err?.code === 3) {
-          resolve("Prompt test: timed out. Retry and keep location enabled.");
-          return;
-        }
-        resolve(`Prompt test: failed (${err?.message || "unknown error"}).`);
-      },
+      (err) => reject(err || new Error("Location request failed")),
       {
-        enableHighAccuracy: false,
-        maximumAge: 120000,
+        enableHighAccuracy: true,
         timeout: 10000,
+        maximumAge: 60000,
       }
     );
   });
-
-  lines.push(promptResult);
-  return lines.join(" ");
 }
 
 async function beginPhotoAttachFromPicker(context, file, sourceInput, options = {}) {
@@ -3649,14 +3720,18 @@ async function beginPhotoAttachFromPicker(context, file, sourceInput, options = 
     inputLibrary,
     indicator,
     options,
+    fallbackGps: null,
   };
-  photoPreviewPermissionStatus = "Tap 'Check permissions' to verify browser location access.";
 
   const img = document.getElementById("photo-preview-modal-img");
   const statusEl = document.getElementById("photo-preview-modal-status");
   const panel = document.getElementById("photo-preview-modal-exif");
   const btnConfirm = document.getElementById("photo-preview-btn-confirm");
+  const btnUseCurrentLocation = document.getElementById(
+    "photo-preview-btn-use-current-location"
+  );
   if (btnConfirm) btnConfirm.disabled = true;
+  if (btnUseCurrentLocation) btnUseCurrentLocation.disabled = true;
   if (statusEl) statusEl.textContent = "Reading photo…";
   if (panel) {
     panel.innerHTML = "";
@@ -3692,6 +3767,7 @@ async function beginPhotoAttachFromPicker(context, file, sourceInput, options = 
       "Review the preview and EXIF details below, then confirm to attach.";
   }
   if (btnConfirm) btnConfirm.disabled = false;
+  if (btnUseCurrentLocation) btnUseCurrentLocation.disabled = false;
 }
 
 async function photoPreviewConfirm() {
@@ -3718,26 +3794,34 @@ async function photoPreviewConfirm() {
     const isInspection = context === "inspection";
     const exLat = normalizeGeoNumber(meta?.gps?.lat);
     const exLng = normalizeGeoNumber(meta?.gps?.lng);
+    const fbLat = normalizeGeoNumber(ctx?.fallbackGps?.lat);
+    const fbLng = normalizeGeoNumber(ctx?.fallbackGps?.lng);
+    const finalLat = exLat != null && exLng != null ? exLat : fbLat;
+    const finalLng = exLat != null && exLng != null ? exLng : fbLng;
     if (isInspection) {
-      currentExifLat = exLat;
-      currentExifLng = exLng;
+      currentExifLat = finalLat;
+      currentExifLng = finalLng;
       currentExifTakenAt = meta?.takenAt ?? null;
       currentExifPreviewUrl = typeof dataUrl === "string" ? dataUrl : null;
       currentExifFile = file;
     } else {
-      occupancyExifLat = exLat;
-      occupancyExifLng = exLng;
+      occupancyExifLat = finalLat;
+      occupancyExifLng = finalLng;
       occupancyExifTakenAt = meta?.takenAt ?? null;
       occupancyExifPreviewUrl = typeof dataUrl === "string" ? dataUrl : null;
       occupancyExifFile = file;
     }
 
     if (indicator) {
-      const hasGps = exLat != null && exLng != null;
+      const fromPhoto = exLat != null && exLng != null;
+      const fromFallback = !fromPhoto && finalLat != null && finalLng != null;
+      const hasGps = fromPhoto || fromFallback;
       indicator.className = "photo-attach-indicator";
       indicator.classList.add(hasGps ? "is-attached" : "is-missing-gps");
       let t = `Photo attached: ${file.name || "image"}`;
-      if (hasGps) t += ` (GPS: ${exLat.toFixed(5)}, ${exLng.toFixed(5)})`;
+      if (fromPhoto) t += ` (GPS from photo: ${exLat.toFixed(5)}, ${exLng.toFixed(5)})`;
+      else if (fromFallback)
+        t += ` (GPS from device: ${finalLat.toFixed(5)}, ${finalLng.toFixed(5)})`;
       else t += " (no GPS in file)";
       indicator.textContent = t;
     }
@@ -3769,20 +3853,28 @@ function initPhotoPreviewModal() {
     .getElementById("photo-preview-btn-confirm")
     ?.addEventListener("click", () => void photoPreviewConfirm());
   document
-    .getElementById("photo-preview-btn-check-permissions")
+    .getElementById("photo-preview-btn-use-current-location")
     ?.addEventListener("click", async (e) => {
       const btn = e.currentTarget;
-      if (!btn) return;
+      const statusEl = document.getElementById("photo-preview-modal-status");
+      if (!photoPreviewContext || !btn) return;
       btn.disabled = true;
-      updatePhotoPreviewPermissionStatus("Checking permissions and requesting location…");
+      if (statusEl) statusEl.textContent = "Requesting your current location…";
       try {
-        const status = await runPhotoPermissionDiagnostics(true);
-        updatePhotoPreviewPermissionStatus(status);
+        const gps = await requestPreviewDeviceLocation();
+        if (photoPreviewContext) photoPreviewContext.fallbackGps = gps;
+        photoPreviewRenderExif(photoPreviewContext?.meta || null);
+        if (statusEl) {
+          statusEl.textContent = `Current device location captured: ${gps.lat.toFixed(
+            5
+          )}, ${gps.lng.toFixed(5)}.`;
+        }
       } catch (err) {
-        console.warn("runPhotoPermissionDiagnostics failed:", err);
-        updatePhotoPreviewPermissionStatus(
-          "Permission check failed. Try again and ensure location is enabled."
-        );
+        console.warn("requestPreviewDeviceLocation failed:", err);
+        if (statusEl) {
+          statusEl.textContent =
+            "Unable to get current location. Check browser/site location permission and try again.";
+        }
       } finally {
         btn.disabled = false;
       }
@@ -4627,13 +4719,16 @@ function conveyanceClearFilters() {
 
 function occupancySetPrintDate() {
   const el = document.getElementById("occupancy-print-date");
-  if (!el) return;
+  const elNoLocation = document.getElementById("occupancy-print-date-nolocation");
+  if (!el && !elNoLocation) return;
   const now = new Date();
-  el.textContent = now.toLocaleDateString("en-PH", {
+  const formatted = now.toLocaleDateString("en-PH", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  if (el) el.textContent = formatted;
+  if (elNoLocation) elNoLocation.textContent = formatted;
 }
 
 function occupancyPrintPanel() {
@@ -5596,11 +5691,22 @@ function occupancySaveToLocal() {
 
 function occupancyRenderTable() {
   const tbody = document.getElementById("tbody-occupancy");
+  const tbodyNoLocation = document.getElementById("tbody-occupancy-nolocation");
   const empty = document.getElementById("empty-occupancy");
+  const emptyNoLocation = document.getElementById("empty-occupancy-nolocation");
   const tableWrap = document.getElementById("table-occupancy")?.closest(".table-wrap");
+  const tableWrapNoLocation = document.getElementById("table-occupancy-nolocation")?.closest(".table-wrap");
   const countBadge = document.getElementById("occupancy-record-count");
+  const noLocationCountBadge = document.getElementById("occupancy-nolocation-record-count");
   if (!tbody || !empty) return;
-  if (countBadge) countBadge.textContent = String(occupancyData.length || 0);
+  if (tbodyNoLocation) tbodyNoLocation.innerHTML = "";
+
+  let withLocationCount = 0;
+  let noLocationCount = 0;
+  const totalWithLocation = occupancyData.filter((r) => r.lat != null && r.lng != null).length;
+  const totalNoLocation = occupancyData.filter((r) => r.lat == null || r.lng == null).length;
+  if (countBadge) countBadge.textContent = String(totalWithLocation);
+  if (noLocationCountBadge) noLocationCountBadge.textContent = String(totalNoLocation);
 
   const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
   const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
@@ -5630,26 +5736,30 @@ function occupancyRenderTable() {
     });
 
   tbody.innerHTML = "";
-  if (occupancyData.length === 0) {
+  if (occupancyData.length > 0 && filtered.length === 0) {
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
+    if (emptyNoLocation) emptyNoLocation.style.display = "block";
+    if (tableWrapNoLocation) tableWrapNoLocation.style.display = "none";
     return;
   }
 
-  if (filtered.length === 0) {
+  if (occupancyData.length === 0) {
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
+    if (emptyNoLocation) emptyNoLocation.style.display = "block";
+    if (tableWrapNoLocation) tableWrapNoLocation.style.display = "none";
     return;
   }
 
   empty.style.display = "none";
   if (tableWrap) tableWrap.style.display = "";
 
-  filtered.forEach(({ row, idx }, displayIdx) => {
-    const tr = document.createElement("tr");
-    tr.id = `occupancy-row-${idx}`;
-    tr.innerHTML = `
-      <td data-label="#">${displayIdx + 1}</td>
+  filtered.forEach(({ row, idx }) => {
+    const hasLocation = row.lat != null && row.lng != null;
+    const rowNum = hasLocation ? ++withLocationCount : ++noLocationCount;
+    const baseRowHtml = `
+      <td data-label="#">${rowNum}</td>
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Owner">${logbookEsc(row.owner_name)}</td>
       <td data-label="Owner Phone">${logbookEsc(row.owner_phone)}</td>
@@ -5659,6 +5769,31 @@ function occupancyRenderTable() {
       <td data-label="Type">${logbookEsc(row.type_of_occupancy)}</td>
       <td data-label="FSIC Number"><strong>${logbookEsc(row.fsic_number)}</strong></td>
       <td data-label="Inspected By"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
+    `;
+
+    if (hasLocation) {
+      const tr = document.createElement("tr");
+      tr.id = `occupancy-row-${idx}`;
+      tr.innerHTML = `
+      ${baseRowHtml}
+      <td class="col-action" data-label="Action">
+        <select class="action-select" aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
+          <option value="">Actions…</option>
+          <option value="view_on_map">View on map</option>
+          <option value="edit">Edit</option>
+          <option value="add_photo">Add photo</option>
+          <option value="open_io_html">Open IO (HTML)</option>
+          <option value="open_clearance_html">Release clearance (FSIC)</option>
+          <option value="delete">Delete</option>
+        </select>
+      </td>
+    `;
+      tbody.appendChild(tr);
+    } else if (tbodyNoLocation) {
+      const tr = document.createElement("tr");
+      tr.id = `occupancy-row-${idx}`;
+      tr.innerHTML = `
+      ${baseRowHtml}
       <td class="col-action" data-label="Action">
         <select class="action-select" aria-label="Row actions" onchange="occupancyHandleAction(this.value, ${idx}); this.selectedIndex = 0;">
           <option value="">Actions…</option>
@@ -5670,17 +5805,43 @@ function occupancyRenderTable() {
         </select>
       </td>
     `;
-    tbody.appendChild(tr);
+      tbodyNoLocation.appendChild(tr);
+    }
   });
+
+  if (tbodyNoLocation && emptyNoLocation) {
+    if (noLocationCount === 0) {
+      emptyNoLocation.style.display = "block";
+      if (tableWrapNoLocation) tableWrapNoLocation.style.display = "none";
+    } else {
+      emptyNoLocation.style.display = "none";
+      if (tableWrapNoLocation) tableWrapNoLocation.style.display = "";
+    }
+  }
 }
 
 function occupancyHandleAction(action, idx) {
   if (!action) return;
+  if (action === "view_on_map") return occupancyViewOnMap(idx);
   if (action === "edit") return occupancyEditEntry(idx);
   if (action === "add_photo") return occupancyAddPhoto(idx);
   if (action === "open_io_html") return occupancyOpenIoHtml(idx);
   if (action === "open_clearance_html") return occupancyClearanceOpenModal(idx);
   if (action === "delete") return occupancyDeleteEntry(idx);
+}
+
+function occupancyViewOnMap(idx) {
+  const row = occupancyData[idx];
+  if (!row || row.lat == null || row.lng == null) return;
+  showView("map");
+  window.location.hash = "map";
+  closeNavSidebar();
+  setTimeout(() => {
+    if (mapInstance) {
+      mapInstance.setView([row.lat, row.lng], 16);
+      openOccupancyDetailPanel(row);
+    }
+  }, 100);
 }
 
 function occupancyOpenIoHtml(idx) {
@@ -5929,9 +6090,18 @@ function occupancyDeleteEntry(idx) {
 
 async function occupancySaveEntry(e) {
   if (e?.preventDefault) e.preventDefault();
+  if (occupancySaveEntry._lastRun && Date.now() - occupancySaveEntry._lastRun < 800) return;
+  occupancySaveEntry._lastRun = Date.now();
+
+  // Immediate feedback so "Save" never feels dead.
+  logbookShowToast("occupancy-toast", "Saving...");
 
   if (occupancyExifProcessingPromise) {
-    await occupancyExifProcessingPromise;
+    try {
+      await occupancyExifProcessingPromise;
+    } catch {
+      // ignore
+    }
   }
 
   let barangay = (document.getElementById("occupancy_addr_barangay") || { value: "" }).value.trim();
@@ -6058,6 +6228,15 @@ async function occupancySaveEntry(e) {
           if (uploadResult?.data?.url) {
             occPhotoUploadedUrl = uploadResult.data.url;
             entry.photo_url = occPhotoUploadedUrl;
+            // Sync Drive URL back into the local in-memory record immediately
+            const localIdx = occupancyEditingIdx !== null
+              ? occupancyEditingIdx
+              : occupancyData.length - 1;
+            if (occupancyData[localIdx]) {
+              occupancyData[localIdx].photo_url = occPhotoUploadedUrl;
+              occupancySaveToLocal();
+            }
+            logbookShowToast("occupancy-toast", "Photo uploaded ✓");
           } else {
             logbookShowToast("occupancy-toast", "⚠️ Upload returned no URL — check Drive folder.");
           }
@@ -6138,40 +6317,21 @@ async function occupancySaveEntry(e) {
 
       const hasLocation =
         Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
-      const isEdit = occupancyEditingId != null;
-      if (hasLocation && !isEdit) {
-        // No longer jumping to map as per user request.
-        // Stay in the logbook and highlight the new row.
-        showView("occupancy");
-        window.location.hash = "occupancy";
-        occupancyRenderTable();
-
-        setTimeout(() => {
-          const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
-          if (idx >= 0) {
-            const rowEl = document.getElementById(`occupancy-row-${idx}`);
-            if (rowEl) {
-              rowEl.classList.add("row-highlight");
-              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
-              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
-            }
+      showView("occupancy");
+      window.location.hash = "occupancy";
+      setOccupancyTab(hasLocation ? "with-location" : "no-location");
+      occupancyRenderTable();
+      setTimeout(() => {
+        const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
+        if (idx >= 0) {
+          const rowEl = document.getElementById(`occupancy-row-${idx}`);
+          if (rowEl) {
+            rowEl.classList.add("row-highlight");
+            rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
           }
-        }, 200);
-      } else {
-        showView("occupancy");
-        window.location.hash = "occupancy";
-        setTimeout(() => {
-          const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
-          if (idx >= 0) {
-            const rowEl = document.getElementById(`occupancy-row-${idx}`);
-            if (rowEl) {
-              rowEl.classList.add("row-highlight");
-              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
-              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
-            }
-          }
-        }, 200);
-      }
+        }
+      }, 200);
     } catch (err) {
       const msg = err?.message || String(err);
       logbookShowToast("occupancy-toast", "Save failed: " + msg);
@@ -6218,13 +6378,17 @@ async function occupancyInitData() {
   if (occupancyDataLoaded) return;
   occupancyDataLoaded = true;
   localStorage.removeItem(OCCUPANCY_STORAGE_KEY);
+  occupancySetPrintDate();
   occupancyRenderTable();
   renderOccupancyMarkersBatched();
+  setOccupancyTab(occupancyActiveTab);
   if (!isGasEnabled()) return;
   try {
     await occupancyLoadFromSupabase();
+    occupancySetPrintDate();
     occupancyRenderTable();
     renderOccupancyMarkersBatched();
+    setOccupancyTab(occupancyActiveTab);
   } catch (err) {
     console.warn("Occupancy load from GAS failed:", err);
     logbookShowToast("occupancy-toast", "Could not load data from server.");
