@@ -2046,17 +2046,17 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
     max-width: 0;
   }
 
-  /* ── FSEC (7 → 5 cols after hiding)
-     Keep: #(1) Owner(2) Project(3) Date(5) Action(7)
-     Hide: Address(4) Contact(6)                                        */
-  #table-fsec th:nth-child(4),
-  #table-fsec td:nth-child(4),
-  #table-fsec th:nth-child(6),
-  #table-fsec td:nth-child(6) {
+  /* ── FSEC (8 → 6 cols after hiding)
+     Keep: #(1) FSEC No(2) Owner(3) Project(4) Date(6) Action(8)
+     Hide: Address(5) Contact(7)                                         */
+  #table-fsec th:nth-child(5),
+  #table-fsec td:nth-child(5),
+  #table-fsec th:nth-child(7),
+  #table-fsec td:nth-child(7) {
     display: none !important;
   }
 
-  /* Column widths: # | Owner | Project | Date | Action */
+  /* Column widths: # | FSEC No | Owner | Project | Date | Action */
   #table-fsec th:nth-child(1),
   #table-fsec td:nth-child(1) {
     width: 28px;
@@ -2064,7 +2064,7 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
 
   #table-fsec th:nth-child(2),
   #table-fsec td:nth-child(2) {
-    width: 80px;
+    width: 94px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -2073,6 +2073,15 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
 
   #table-fsec th:nth-child(3),
   #table-fsec td:nth-child(3) {
+    width: 120px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 0;
+  }
+
+  #table-fsec th:nth-child(4),
+  #table-fsec td:nth-child(4) {
     width: auto;
     overflow: hidden;
     white-space: nowrap;
@@ -2080,13 +2089,13 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
     max-width: 0;
   }
 
-  #table-fsec th:nth-child(5),
-  #table-fsec td:nth-child(5) {
+  #table-fsec th:nth-child(6),
+  #table-fsec td:nth-child(6) {
     width: 70px;
   }
 
-  #table-fsec th:nth-child(7),
-  #table-fsec td:nth-child(7) {
+  #table-fsec th:nth-child(8),
+  #table-fsec td:nth-child(8) {
     width: 90px;
   }
 
@@ -2561,27 +2570,32 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
 
   #table-fsec th:nth-child(2),
   #table-fsec td:nth-child(2) {
-    width: 20%;
+    width: 11%;
   }
 
   #table-fsec th:nth-child(3),
   #table-fsec td:nth-child(3) {
-    width: 27%;
+    width: 16%;
   }
 
   #table-fsec th:nth-child(4),
   #table-fsec td:nth-child(4) {
-    width: 28%;
+    width: 21%;
   }
 
   #table-fsec th:nth-child(5),
   #table-fsec td:nth-child(5) {
-    width: 12%;
+    width: 27%;
   }
 
   #table-fsec th:nth-child(6),
   #table-fsec td:nth-child(6) {
     width: 10%;
+  }
+
+  #table-fsec th:nth-child(7),
+  #table-fsec td:nth-child(7) {
+    width: 12%;
   }
 
   .home-embed .logbook-panel {
