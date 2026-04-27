@@ -4407,6 +4407,7 @@ function fsecRenderTable() {
       const hay = normalizeQuery(
         [
           row.fsec_owner,
+          row.fsec_number,
           row.proposed_project,
           fsecFormatAddressDisplay(row),
           row.contact_number,
@@ -4434,6 +4435,7 @@ function fsecRenderTable() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td data-label="#">${displayIdx + 1}</td>
+      <td data-label="FSEC No.">${logbookEsc(row.fsec_number)}</td>
       <td data-label="Name of Owner">${logbookEsc(row.fsec_owner)}</td>
       <td data-label="Proposed Project"><strong>${logbookEsc(row.proposed_project)}</strong></td>
       <td data-label="Address">${logbookEsc(fsecFormatAddressDisplay(row))}</td>
@@ -4479,6 +4481,7 @@ async function fsecEditEntry(idx) {
   };
 
   setVal("fsec_owner", row.fsec_owner);
+  setVal("fsec_number", row.fsec_number);
   setVal("proposed_project", row.proposed_project);
   setVal("fsec_date", logbookFormatDateForInput(row.fsec_date));
   setVal("contact_number", row.contact_number);
@@ -4575,6 +4578,7 @@ function fsecCloseOnOverlay(e) {
 function fsecClearForm() {
   [
     "fsec_owner",
+    "fsec_number",
     "proposed_project",
     "fsec_addr_barangay",
     "fsec_addr_line",
@@ -4615,6 +4619,7 @@ function fsecSaveEntry(e) {
 
   const entry = {
     fsec_owner: (document.getElementById("fsec_owner") || { value: "" }).value.trim(),
+    fsec_number: (document.getElementById("fsec_number") || { value: "" }).value.trim(),
     proposed_project: (document.getElementById("proposed_project") || { value: "" }).value.trim(),
     fsec_address: mergedAddress,
     addr_barangay: barangay,
@@ -4672,6 +4677,7 @@ function fsecSaveEntry(e) {
     try {
       const payload = {
         owner_name: entry.fsec_owner,
+        fsec_number: entry.fsec_number || null,
         proposed_project: entry.proposed_project,
         address: entry.fsec_address,
         date: entry.fsec_date,
@@ -4800,6 +4806,7 @@ async function fsecLoadFromSupabase() {
   fsecData = (result.data || []).map((r) => ({
     id: r.id,
     fsec_owner: r.owner_name,
+    fsec_number: r.fsec_number || r.fsec_no || "",
     proposed_project: r.proposed_project,
     fsec_address: r.address,
     fsec_date: r.date,

@@ -215,6 +215,9 @@ function handleInsert(body) {
   if (table === "inspection_logbook" || table === "occupancy_logbook") {
     ensureColumnExists(sheet, "io_remarks");
   }
+  if (table === "fsec_building_plan_logbook") {
+    ensureColumnExists(sheet, "fsec_number");
+  }
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   var id = generateUUID();
@@ -249,6 +252,9 @@ function handleUpdate(body) {
   }
   if (table === "inspection_logbook" || table === "occupancy_logbook") {
     ensureColumnExists(sheet, "io_remarks");
+  }
+  if (table === "fsec_building_plan_logbook") {
+    ensureColumnExists(sheet, "fsec_number");
   }
   var rowNum = findRowById(sheet, id);
   if (rowNum < 0) return { error: "Record not found: " + id };
@@ -408,6 +414,29 @@ function addFireDrillLogbookToSpreadsheet() {
   });
 
   Logger.log("Done — fire_drill_logbook is ready for the web app.");
+}
+
+/**
+ * RUN ONCE to add FSEC No. column on FSEC logbook table.
+ * Function name to run in Apps Script: addFsecNumberColumn
+ */
+function addFsecNumberColumn() {
+  var tableName = "fsec_building_plan_logbook";
+  var sheet;
+  try {
+    sheet = getSheet(tableName);
+  } catch (e) {
+    Logger.log("❌ " + e.message);
+    return;
+  }
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf("fsec_number") === -1) {
+    sheet.getRange(1, sheet.getLastColumn() + 1).setValue("fsec_number");
+    Logger.log("✅ Added 'fsec_number' to " + tableName);
+  } else {
+    Logger.log("✔️  'fsec_number' already exists in " + tableName);
+  }
 }
 
 /**
