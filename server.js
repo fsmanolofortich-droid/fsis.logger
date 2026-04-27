@@ -46,6 +46,79 @@ function pickFirstFiniteNumber(values) {
   return null;
 }
 
+function safeDecodeHeader(value) {
+  const s = String(value || "");
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
+function readTag(tags, names) {
+  for (const name of names) {
+    if (Object.prototype.hasOwnProperty.call(tags, name) && tags[name] != null) {
+      return tags[name];
+    }
+  }
+  return null;
+}
+
+function parseExifCoordValue(value) {
+  const direct = pickFirstFiniteNumber([value]);
+  if (direct != null) return direct;
+  if (typeof value !== "string") return null;
+  const s = value.trim();
+  if (!s) return null;
+
+  // DMS style fallback (e.g. "8 deg 22' 09.94\"")
+  const dms = s.match(
+    /^(-?\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)(?:\D|$)/i
+  );
+  if (!dms) return null;
+  const deg = Number.parseFloat(dms[1]);
+  const min = Number.parseFloat(dms[2]);
+  const sec = Number.parseFloat(dms[3]);
+  if (![deg, min, sec].every(Number.isFinite)) return null;
+  const sign = deg < 0 ? -1 : 1;
+  const absDeg = Math.abs(deg);
+  return sign * (absDeg + min / 60 + sec / 3600);
+}
+
+function applyGpsRefSign(value, ref, axis) {
+  if (!Number.isFinite(value)) return null;
+  const r = String(ref || "").trim().toUpperCase();
+  if (!r) return value;
+  if (axis === "lat" && (r === "S" || r === "SOUTH")) return -Math.abs(value);
+  if (axis === "lng" && (r === "W" || r === "WEST")) return -Math.abs(value);
+  if (axis === "lat" && (r === "N" || r === "NORTH")) return Math.abs(value);
+  if (axis === "lng" && (r === "E" || r === "EAST")) return Math.abs(value);
+  return value;
+}
+
+function pickGpsFromTags(tags) {
+  if (!tags || typeof tags !== "object") return null;
+  const latRaw = readTag(tags, [
+    "GPSLatitude",
+    "CompositeGPSLatitude",
+    "Composite:GPSLatitude",
+  ]);
+  const lngRaw = readTag(tags, [
+    "GPSLongitude",
+    "CompositeGPSLongitude",
+    "Composite:GPSLongitude",
+  ]);
+  if (latRaw == null || lngRaw == null) return null;
+
+  const latRef = readTag(tags, ["GPSLatitudeRef", "Composite:GPSLatitudeRef"]);
+  const lngRef = readTag(tags, ["GPSLongitudeRef", "Composite:GPSLongitudeRef"]);
+  const lat = applyGpsRefSign(parseExifCoordValue(latRaw), latRef, "lat");
+  const lng = applyGpsRefSign(parseExifCoordValue(lngRaw), lngRef, "lng");
+  if (lat == null || lng == null) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+
 function toIsoStringFromExifDate(value) {
   if (!value || typeof value !== "string") return null;
   const m = value
@@ -69,7 +142,7 @@ app.post(
       return;
     }
 
-    const rawName = decodeURIComponent(String(req.headers["x-file-name"] || "photo.bin"));
+    const rawName = safeDecodeHeader(req.headers["x-file-name"] || "photo.bin");
     const ext = path.extname(rawName) || ".bin";
     const tmpPath = path.join(
       os.tmpdir(),
@@ -80,27 +153,16 @@ app.post(
       await fs.writeFile(tmpPath, body);
       const tags = await runExiftoolJson(tmpPath);
 
-      const lat = pickFirstFiniteNumber([
-        tags.GPSLatitude,
-        tags.CompositeGPSLatitude,
-        tags["Composite:GPSLatitude"],
-      ]);
-      const lng = pickFirstFiniteNumber([
-        tags.GPSLongitude,
-        tags.CompositeGPSLongitude,
-        tags["Composite:GPSLongitude"],
-      ]);
-
       const takenAt =
-        toIsoStringFromExifDate(tags.DateTimeOriginal) ||
-        toIsoStringFromExifDate(tags.CreateDate) ||
-        toIsoStringFromExifDate(tags.ModifyDate) ||
+        toIsoStringFromExifDate(
+          readTag(tags, ["DateTimeOriginal", "EXIF:DateTimeOriginal", "SubSecDateTimeOriginal"])
+        ) ||
+        toIsoStringFromExifDate(readTag(tags, ["CreateDate", "EXIF:CreateDate"])) ||
+        toIsoStringFromExifDate(readTag(tags, ["ModifyDate", "EXIF:ModifyDate"])) ||
+        toIsoStringFromExifDate(readTag(tags, ["GPSDateTime", "XMP:GPSDateTime"])) ||
         null;
 
-      const gps =
-        lat != null && lng != null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
-          ? { lat, lng }
-          : null;
+      const gps = pickGpsFromTags(tags);
 
       res.status(200).json({
         gps,
