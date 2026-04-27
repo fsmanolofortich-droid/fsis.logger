@@ -3394,6 +3394,31 @@ function getExifrNamespace() {
   return null;
 }
 
+/** exif-app style helper: EXIF.getData(file, cb) then read file.exifdata. */
+function exifJsGetDataAsync(target) {
+  return new Promise((resolve) => {
+    if (!window.EXIF || typeof window.EXIF.getData !== "function" || !target) {
+      resolve(null);
+      return;
+    }
+    let done = false;
+    const finish = (tags) => {
+      if (done) return;
+      done = true;
+      resolve(tags && typeof tags === "object" ? tags : null);
+    };
+    try {
+      window.EXIF.getData(target, function () {
+        finish(this?.exifdata || target?.exifdata || null);
+      });
+      setTimeout(() => finish(target?.exifdata || null), 2500);
+    } catch (e) {
+      console.warn("EXIF.getData async failed:", e);
+      finish(null);
+    }
+  });
+}
+
 // Shared GPS extraction (used by both inspection and occupancy) to ensure consistent behavior.
 async function readGpsFromFile(file) {
   const exifrApi = getExifrNamespace();
@@ -3449,6 +3474,15 @@ async function readGpsFromFile(file) {
       }
     } catch (e) {
       console.warn("exif-js readFromBinaryFile failed:", e);
+    }
+
+    // Use the same approach as cliffamadeus/exif-app: EXIF.getData(file, ...)
+    try {
+      const fileTags = await exifJsGetDataAsync(file);
+      const fromFile = coordsFromExifJsTags(fileTags || {});
+      if (fromFile) return fromFile;
+    } catch (e) {
+      console.warn("exif-js getData(file) failed:", e);
     }
 
     let objectUrl = null;
@@ -3558,6 +3592,14 @@ async function readPhotoExifMetadata(file) {
       tagsJs = window.EXIF.readFromBinaryFile(buf);
     } catch {
       /* non-JPEG or unreadable */
+    }
+  }
+  if (!tagsJs || Object.keys(tagsJs).length === 0) {
+    try {
+      const fileTags = await exifJsGetDataAsync(file);
+      if (fileTags && typeof fileTags === "object") tagsJs = fileTags;
+    } catch (e) {
+      console.warn("exif-js metadata getData(file) failed:", e);
     }
   }
 
