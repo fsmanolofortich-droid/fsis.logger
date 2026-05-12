@@ -173,6 +173,34 @@
       </div>
       <div class="home-embed">
         <div id="conveyance_list">
+          <div class="table-controls" id="filter-conveyance" aria-label="Conveyance filters">
+            <div class="control">
+              <label for="conveyance-filter-q">Search</label>
+              <input id="conveyance-filter-q" type="search" class="form-control form-control-sm"
+                placeholder="Search IO, owner, inspectors, remarks/signature">
+            </div>
+            <div class="control">
+              <label for="conveyance-filter-year">Year</label>
+              <select id="conveyance-filter-year" class="form-select form-select-sm" aria-label="Filter by year">
+                <option value="">All years</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="conveyance-filter-month">Month</label>
+              <select id="conveyance-filter-month" class="form-select form-select-sm" aria-label="Filter by month" disabled>
+                <option value="">All months</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="conveyance-filter-day">Day</label>
+              <select id="conveyance-filter-day" class="form-select form-select-sm" aria-label="Filter by day" disabled>
+                <option value="">All days</option>
+              </select>
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+              onclick="conveyanceClearFilters()">Clear</button>
+          </div>
           <div class="logbook-panel" id="panel-conveyance">
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
@@ -196,24 +224,6 @@
                 <i class="bi bi-download"></i> CSV
               </button>
               <button class="btn-panel-add" onclick="conveyanceOpenModal()">+ Add Entry</button>
-            </div>
-            <div class="table-controls" id="filter-conveyance" aria-label="Conveyance filters">
-              <div class="control">
-                <label for="conveyance-filter-q">Search</label>
-                <input id="conveyance-filter-q" type="search" class="form-control form-control-sm"
-                  placeholder="Search IO, owner, inspectors, remarks/signature">
-              </div>
-              <div class="control">
-                <label for="conveyance-filter-from">From</label>
-                <input id="conveyance-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="conveyance-filter-to">To</label>
-                <input id="conveyance-filter-to" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
-                onclick="conveyanceClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-conveyance" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -351,6 +361,34 @@
       </div>
       <div class="home-embed">
         <div id="fire_drill_list">
+          <div class="table-controls" id="filter-fire_drill" aria-label="Fire Drill filters">
+            <div class="control">
+              <label for="fire_drill-filter-q">Search</label>
+              <input id="fire_drill-filter-q" type="search" class="form-control form-control-sm"
+                placeholder="Search control no., building, address, OR no.">
+            </div>
+            <div class="control">
+              <label for="fire_drill-filter-year">Year</label>
+              <select id="fire_drill-filter-year" class="form-select form-select-sm" aria-label="Filter by year">
+                <option value="">All years</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="fire_drill-filter-month">Month</label>
+              <select id="fire_drill-filter-month" class="form-select form-select-sm" aria-label="Filter by month" disabled>
+                <option value="">All months</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="fire_drill-filter-day">Day</label>
+              <select id="fire_drill-filter-day" class="form-select form-select-sm" aria-label="Filter by day" disabled>
+                <option value="">All days</option>
+              </select>
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+              onclick="fireDrillClearFilters()">Clear</button>
+          </div>
           <div class="logbook-panel" id="panel-fire_drill">
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
@@ -373,24 +411,6 @@
                 <i class="bi bi-download"></i> CSV
               </button>
               <button class="btn-panel-add" onclick="fireDrillOpenModal()">+ Add Entry</button>
-            </div>
-            <div class="table-controls" id="filter-fire_drill" aria-label="Fire Drill filters">
-              <div class="control">
-                <label for="fire_drill-filter-q">Search</label>
-                <input id="fire_drill-filter-q" type="search" class="form-control form-control-sm"
-                  placeholder="Search control no., building, address, OR no.">
-              </div>
-              <div class="control">
-                <label for="fire_drill-filter-from">From</label>
-                <input id="fire_drill-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="fire_drill-filter-to">To</label>
-                <input id="fire_drill-filter-to" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
-                onclick="fireDrillClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-fire_drill" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -578,12 +598,22 @@
                 placeholder="Search IO, owner, property, address, FSIC, inspector">
             </div>
             <div class="control">
-              <label for="occupancy-filter-from">From</label>
-              <input id="occupancy-filter-from" type="date" class="form-control form-control-sm">
+              <label for="occupancy-filter-year">Year</label>
+              <select id="occupancy-filter-year" class="form-select form-select-sm" aria-label="Filter by year">
+                <option value="">All years</option>
+              </select>
             </div>
             <div class="control">
-              <label for="occupancy-filter-to">To</label>
-              <input id="occupancy-filter-to" type="date" class="form-control form-control-sm">
+              <label for="occupancy-filter-month">Month</label>
+              <select id="occupancy-filter-month" class="form-select form-select-sm" aria-label="Filter by month" disabled>
+                <option value="">All months</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="occupancy-filter-day">Day</label>
+              <select id="occupancy-filter-day" class="form-select form-select-sm" aria-label="Filter by day" disabled>
+                <option value="">All days</option>
+              </select>
             </div>
             <div class="spacer"></div>
             <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
@@ -739,12 +769,22 @@
                 placeholder="Search IO, owner, business, address, FSIC, inspector">
             </div>
             <div class="control">
-              <label for="inspection-filter-from">From</label>
-              <input id="inspection-filter-from" type="date" class="form-control form-control-sm">
+              <label for="inspection-filter-year">Year</label>
+              <select id="inspection-filter-year" class="form-select form-select-sm" aria-label="Filter by year">
+                <option value="">All years</option>
+              </select>
             </div>
             <div class="control">
-              <label for="inspection-filter-to">To</label>
-              <input id="inspection-filter-to" type="date" class="form-control form-control-sm">
+              <label for="inspection-filter-month">Month</label>
+              <select id="inspection-filter-month" class="form-select form-select-sm" aria-label="Filter by month" disabled>
+                <option value="">All months</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="inspection-filter-day">Day</label>
+              <select id="inspection-filter-day" class="form-select form-select-sm" aria-label="Filter by day" disabled>
+                <option value="">All days</option>
+              </select>
             </div>
             <div class="spacer"></div>
             <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
@@ -892,6 +932,34 @@
       </div>
       <div class="home-embed">
         <div id="fsec_list">
+          <div class="table-controls" id="filter-fsec" aria-label="FSEC filters">
+            <div class="control">
+              <label for="fsec-filter-q">Search</label>
+              <input id="fsec-filter-q" type="search" class="form-control form-control-sm"
+                placeholder="Search owner, project, address, contact">
+            </div>
+            <div class="control">
+              <label for="fsec-filter-year">Year</label>
+              <select id="fsec-filter-year" class="form-select form-select-sm" aria-label="Filter by year">
+                <option value="">All years</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="fsec-filter-month">Month</label>
+              <select id="fsec-filter-month" class="form-select form-select-sm" aria-label="Filter by month" disabled>
+                <option value="">All months</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="fsec-filter-day">Day</label>
+              <select id="fsec-filter-day" class="form-select form-select-sm" aria-label="Filter by day" disabled>
+                <option value="">All days</option>
+              </select>
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
+              onclick="fsecClearFilters()">Clear</button>
+          </div>
           <div class="logbook-panel visible" id="panel-fsec">
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
@@ -916,24 +984,6 @@
                 <i class="bi bi-download"></i> CSV
               </button>
               <button class="btn-panel-add" onclick="fsecOpenModal()">+ Add Entry</button>
-            </div>
-            <div class="table-controls" id="filter-fsec" aria-label="FSEC filters">
-              <div class="control">
-                <label for="fsec-filter-q">Search</label>
-                <input id="fsec-filter-q" type="search" class="form-control form-control-sm"
-                  placeholder="Search owner, project, address, contact">
-              </div>
-              <div class="control">
-                <label for="fsec-filter-from">From</label>
-                <input id="fsec-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="fsec-filter-to">To</label>
-                <input id="fsec-filter-to" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="spacer"></div>
-              <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
-                onclick="fsecClearFilters()">Clear</button>
             </div>
             <div class="table-wrap">
               <table id="table-fsec" class="table table-hover table-bordered table-sm align-middle mb-0">

@@ -560,6 +560,22 @@ main.app-main {
   margin-bottom: 0;
 }
 
+/* Logbook filter strip above the white panel (inspection, occupancy, conveyance, fire drill, FSEC) */
+.home-embed [id$="_list"] > .table-controls {
+  margin-bottom: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(13, 27, 42, 0.08);
+  box-shadow: 0 2px 10px rgba(13, 27, 42, 0.05);
+}
+
+.table-controls .control .form-control,
+.table-controls .control .form-select {
+  font-family: "DM Sans", sans-serif;
+  border-radius: 8px;
+  border-color: rgba(13, 27, 42, 0.14);
+  background-color: #fff;
+}
+
 .table-controls .spacer {
   flex: 1;
   min-width: 30px;

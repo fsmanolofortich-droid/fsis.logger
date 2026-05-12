@@ -1071,6 +1071,83 @@ function inDateRange(dateStr, fromStr, toStr) {
   return true;
 }
 
+/**
+ * Cascading year/month/day dropdowns (same behavior as FSEC). idPrefix e.g. "inspection-filter"
+ * builds ids `${idPrefix}-year`, `-month`, `-day`.
+ */
+function logbookSyncYmdFilterUi(idPrefix, rows, getDate) {
+  const yearSel = document.getElementById(`${idPrefix}-year`);
+  const monthSel = document.getElementById(`${idPrefix}-month`);
+  const daySel = document.getElementById(`${idPrefix}-day`);
+  if (!yearSel || !monthSel || !daySel) return;
+
+  const prevY = yearSel.value;
+  const prevM = monthSel.value;
+  const prevD = daySel.value;
+
+  const keys = [];
+  for (const row of rows) {
+    const k = logbookFormatDateForInput(getDate(row));
+    if (k && /^\d{4}-\d{2}-\d{2}$/.test(k)) keys.push(k);
+  }
+
+  const uniqueYears = [...new Set(keys.map((k) => k.slice(0, 4)))].sort(
+    (a, b) => Number(b) - Number(a)
+  );
+  yearSel.innerHTML =
+    '<option value="">All years</option>' +
+    uniqueYears.map((y) => `<option value="${y}">${y}</option>`).join("");
+
+  const yKeep = prevY && uniqueYears.includes(prevY) ? prevY : "";
+  yearSel.value = yKeep;
+
+  let monthsForYear = [];
+  if (yKeep) {
+    monthsForYear = [
+      ...new Set(keys.filter((k) => k.startsWith(yKeep + "-")).map((k) => k.slice(5, 7))),
+    ].sort((a, b) => Number(a) - Number(b));
+  }
+  monthSel.disabled = !yKeep;
+  monthSel.innerHTML =
+    '<option value="">All months</option>' +
+    monthsForYear
+      .map((mm) => {
+        const label = new Date(Number(yKeep), Number(mm) - 1, 1).toLocaleDateString("en-PH", {
+          month: "long",
+        });
+        return `<option value="${mm}">${logbookEsc(label)}</option>`;
+      })
+      .join("");
+
+  const mKeep = yKeep && prevM && monthsForYear.includes(prevM) ? prevM : "";
+  monthSel.value = mKeep;
+
+  let daysFor = [];
+  if (yKeep && mKeep) {
+    const prefix = `${yKeep}-${mKeep}`;
+    daysFor = [
+      ...new Set(keys.filter((k) => k.startsWith(prefix + "-")).map((k) => k.slice(8, 10))),
+    ].sort((a, b) => Number(a) - Number(b));
+  }
+  daySel.disabled = !(yKeep && mKeep);
+  daySel.innerHTML =
+    '<option value="">All days</option>' +
+    daysFor.map((dd) => `<option value="${dd}">${Number(dd)}</option>`).join("");
+
+  const dKeep = yKeep && mKeep && prevD && daysFor.includes(prevD) ? prevD : "";
+  daySel.value = dKeep;
+}
+
+function logbookRowMatchesYmdFilter(row, year, month, day, getDate) {
+  if (!year && !month && !day) return true;
+  const k = logbookFormatDateForInput(getDate(row));
+  if (!k || !/^\d{4}-\d{2}-\d{2}$/.test(k)) return false;
+  if (year && k.slice(0, 4) !== year) return false;
+  if (month && k.slice(5, 7) !== month) return false;
+  if (day && k.slice(8, 10) !== day) return false;
+  return true;
+}
+
 function initTableFilters() {
   const debounce = (fn, wait = 150) => {
     let t = null;
@@ -1091,22 +1168,43 @@ function initTableFilters() {
   };
 
   bind(
-    ["inspection-filter-q", "inspection-filter-from", "inspection-filter-to"],
+    [
+      "inspection-filter-q",
+      "inspection-filter-year",
+      "inspection-filter-month",
+      "inspection-filter-day",
+    ],
     () => inspectionRenderTable()
   );
-  bind(["fsec-filter-q", "fsec-filter-from", "fsec-filter-to"], () =>
-    fsecRenderTable()
+  bind(
+    ["fsec-filter-q", "fsec-filter-year", "fsec-filter-month", "fsec-filter-day"],
+    () => fsecRenderTable()
   );
   bind(
-    ["conveyance-filter-q", "conveyance-filter-from", "conveyance-filter-to"],
+    [
+      "conveyance-filter-q",
+      "conveyance-filter-year",
+      "conveyance-filter-month",
+      "conveyance-filter-day",
+    ],
     () => conveyanceRenderTable()
   );
   bind(
-    ["fire_drill-filter-q", "fire_drill-filter-from", "fire_drill-filter-to"],
+    [
+      "fire_drill-filter-q",
+      "fire_drill-filter-year",
+      "fire_drill-filter-month",
+      "fire_drill-filter-day",
+    ],
     () => fireDrillRenderTable()
   );
   bind(
-    ["occupancy-filter-q", "occupancy-filter-from", "occupancy-filter-to"],
+    [
+      "occupancy-filter-q",
+      "occupancy-filter-year",
+      "occupancy-filter-month",
+      "occupancy-filter-day",
+    ],
     () => occupancyRenderTable()
   );
 }
@@ -1288,15 +1386,17 @@ function inspectionRenderTable() {
   const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
   if (noPhotoBadge) noPhotoBadge.textContent = String(totalNoLocation);
 
+  logbookSyncYmdFilterUi("inspection-filter", inspectionData, (r) => r.date_inspected);
+
   const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
-  const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
-  const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
+  const year = (document.getElementById("inspection-filter-year")?.value || "").trim();
+  const month = (document.getElementById("inspection-filter-month")?.value || "").trim();
+  const day = (document.getElementById("inspection-filter-day")?.value || "").trim();
   const filtered = inspectionData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.date_inspected, from, to)) return false;
-      }
+      if (!logbookRowMatchesYmdFilter(row, year, month, day, (r) => r.date_inspected))
+        return false;
       if (!q) return true;
       const hay = normalizeQuery(
         [
@@ -2694,11 +2794,13 @@ function inspectionSetPrintDate() {
 
 function inspectionClearFilters() {
   const q = document.getElementById("inspection-filter-q");
-  const from = document.getElementById("inspection-filter-from");
-  const to = document.getElementById("inspection-filter-to");
+  const year = document.getElementById("inspection-filter-year");
+  const month = document.getElementById("inspection-filter-month");
+  const day = document.getElementById("inspection-filter-day");
   if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
+  if (year) year.value = "";
+  if (month) month.value = "";
+  if (day) day.value = "";
   inspectionRenderTable();
 }
 
@@ -4348,6 +4450,14 @@ function fsecSave() {
   if (!isSupabaseEnabled()) fsecSaveToLocal();
 }
 
+function fsecSyncDateFilterUi() {
+  logbookSyncYmdFilterUi("fsec-filter", fsecData, (r) => r.fsec_date);
+}
+
+function fsecRowMatchesYmdFilter(row, year, month, day) {
+  return logbookRowMatchesYmdFilter(row, year, month, day, (r) => r.fsec_date);
+}
+
 function fsecFormatAddressDisplay(row) {
   const addrLine = row.addr_line;
   const addrBarangay = row.addr_barangay;
@@ -4393,16 +4503,17 @@ function fsecRenderTable() {
   if (!tbody || !empty) return;
   if (countBadge) countBadge.textContent = String(fsecData.length || 0);
 
+  fsecSyncDateFilterUi();
+
   const q = normalizeQuery(document.getElementById("fsec-filter-q")?.value);
-  const from = (document.getElementById("fsec-filter-from")?.value || "").trim();
-  const to = (document.getElementById("fsec-filter-to")?.value || "").trim();
+  const year = (document.getElementById("fsec-filter-year")?.value || "").trim();
+  const month = (document.getElementById("fsec-filter-month")?.value || "").trim();
+  const day = (document.getElementById("fsec-filter-day")?.value || "").trim();
 
   const filtered = fsecData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.fsec_date, from, to)) return false;
-      }
+      if (!fsecRowMatchesYmdFilter(row, year, month, day)) return false;
       if (!q) return true;
       const hay = normalizeQuery(
         [
@@ -4724,11 +4835,13 @@ function fsecPrintPanel() {
 
 function fsecClearFilters() {
   const q = document.getElementById("fsec-filter-q");
-  const from = document.getElementById("fsec-filter-from");
-  const to = document.getElementById("fsec-filter-to");
+  const year = document.getElementById("fsec-filter-year");
+  const month = document.getElementById("fsec-filter-month");
+  const day = document.getElementById("fsec-filter-day");
   if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
+  if (year) year.value = "";
+  if (month) month.value = "";
+  if (day) day.value = "";
   fsecRenderTable();
 }
 
@@ -4757,11 +4870,13 @@ function conveyancePrintPanel() {
 
 function conveyanceClearFilters() {
   const q = document.getElementById("conveyance-filter-q");
-  const from = document.getElementById("conveyance-filter-from");
-  const to = document.getElementById("conveyance-filter-to");
+  const year = document.getElementById("conveyance-filter-year");
+  const month = document.getElementById("conveyance-filter-month");
+  const day = document.getElementById("conveyance-filter-day");
   if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
+  if (year) year.value = "";
+  if (month) month.value = "";
+  if (day) day.value = "";
   conveyanceRenderTable();
 }
 
@@ -4793,11 +4908,13 @@ function occupancyPrintPanel() {
 
 function occupancyClearFilters() {
   const q = document.getElementById("occupancy-filter-q");
-  const from = document.getElementById("occupancy-filter-from");
-  const to = document.getElementById("occupancy-filter-to");
+  const year = document.getElementById("occupancy-filter-year");
+  const month = document.getElementById("occupancy-filter-month");
+  const day = document.getElementById("occupancy-filter-day");
   if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
+  if (year) year.value = "";
+  if (month) month.value = "";
+  if (day) day.value = "";
   occupancyRenderTable();
 }
 
@@ -4858,16 +4975,18 @@ function conveyanceRenderTable() {
   if (!tbody || !empty) return;
   if (countBadge) countBadge.textContent = String(conveyanceData.length || 0);
 
+  logbookSyncYmdFilterUi("conveyance-filter", conveyanceData, (r) => r.log_date);
+
   const q = normalizeQuery(document.getElementById("conveyance-filter-q")?.value);
-  const from = (document.getElementById("conveyance-filter-from")?.value || "").trim();
-  const to = (document.getElementById("conveyance-filter-to")?.value || "").trim();
+  const year = (document.getElementById("conveyance-filter-year")?.value || "").trim();
+  const month = (document.getElementById("conveyance-filter-month")?.value || "").trim();
+  const day = (document.getElementById("conveyance-filter-day")?.value || "").trim();
 
   const filtered = conveyanceData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.log_date, from, to)) return false;
-      }
+      if (!logbookRowMatchesYmdFilter(row, year, month, day, (r) => r.log_date))
+        return false;
       if (!q) return true;
       const hay = normalizeQuery(
         [row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | ")
@@ -5336,11 +5455,13 @@ function fireDrillPrintPanel() {
 
 function fireDrillClearFilters() {
   const q = document.getElementById("fire_drill-filter-q");
-  const from = document.getElementById("fire_drill-filter-from");
-  const to = document.getElementById("fire_drill-filter-to");
+  const year = document.getElementById("fire_drill-filter-year");
+  const month = document.getElementById("fire_drill-filter-month");
+  const day = document.getElementById("fire_drill-filter-day");
   if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
+  if (year) year.value = "";
+  if (month) month.value = "";
+  if (day) day.value = "";
   fireDrillRenderTable();
 }
 
@@ -5352,16 +5473,18 @@ function fireDrillRenderTable() {
   if (!tbody || !empty) return;
   if (countBadge) countBadge.textContent = String(fireDrillData.length || 0);
 
+  logbookSyncYmdFilterUi("fire_drill-filter", fireDrillData, (r) => r.certificate_date);
+
   const q = normalizeQuery(document.getElementById("fire_drill-filter-q")?.value);
-  const from = (document.getElementById("fire_drill-filter-from")?.value || "").trim();
-  const to = (document.getElementById("fire_drill-filter-to")?.value || "").trim();
+  const year = (document.getElementById("fire_drill-filter-year")?.value || "").trim();
+  const month = (document.getElementById("fire_drill-filter-month")?.value || "").trim();
+  const day = (document.getElementById("fire_drill-filter-day")?.value || "").trim();
 
   const filtered = fireDrillData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.certificate_date, from, to)) return false;
-      }
+      if (!logbookRowMatchesYmdFilter(row, year, month, day, (r) => r.certificate_date))
+        return false;
       if (!q) return true;
       const hay = normalizeQuery(
         [
@@ -5757,16 +5880,18 @@ function occupancyRenderTable() {
   if (countBadge) countBadge.textContent = String(totalWithLocation);
   if (noLocationCountBadge) noLocationCountBadge.textContent = String(totalNoLocation);
 
+  logbookSyncYmdFilterUi("occupancy-filter", occupancyData, (r) => r.log_date);
+
   const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
-  const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
-  const to = (document.getElementById("occupancy-filter-to")?.value || "").trim();
+  const year = (document.getElementById("occupancy-filter-year")?.value || "").trim();
+  const month = (document.getElementById("occupancy-filter-month")?.value || "").trim();
+  const day = (document.getElementById("occupancy-filter-day")?.value || "").trim();
 
   const filtered = occupancyData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.log_date, from, to)) return false;
-      }
+      if (!logbookRowMatchesYmdFilter(row, year, month, day, (r) => r.log_date))
+        return false;
       if (!q) return true;
       const hay = normalizeQuery(
         [
