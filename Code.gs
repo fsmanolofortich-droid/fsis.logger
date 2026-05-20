@@ -11,7 +11,7 @@
 var DRIVE_FOLDER_ID = "1dZPGdfM8hKxN8LzrP_XrkxD2-hs9LYZA";
 
 // 2. Replace with a strong secret used by the admin panel
-var ADMIN_SECRET = "YOUR_ADMIN_SECRET_HERE";
+var ADMIN_SECRET = "HelloKalibutan";
 // ────────────────────────────────────────────────────────────
 
 /**
@@ -35,6 +35,7 @@ function doPost(e) {
     else if (action === "upload")  result = handleUpload(body);
     else if (action === "patch_photo_url") result = handlePatchPhotoUrl(body);
     else if (action === "patch_lat_lng") result = handlePatchLatLng(body);
+    else if (action === "patch_expires_on") result = handlePatchExpiresOn(body);
     else result = { error: "Unknown action: " + action };
 
   } catch (err) {
@@ -65,12 +66,15 @@ function getSheet(name) {
 
 /** Read all rows from a sheet tab and return as array of objects */
 function sheetToObjects(sheet) {
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2) return [];
-  var headers = data[0];
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) return [];
+  // Use full header width (not getDataRange) so new columns like expires_on are never skipped.
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var data = sheet.getRange(2, 1, lastRow, lastCol).getValues();
   var rows = [];
   var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || Session.getScriptTimeZone() || "GMT";
-  for (var i = 1; i < data.length; i++) {
+  for (var i = 0; i < data.length; i++) {
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
       var val = data[i][j];
@@ -215,6 +219,9 @@ function handleInsert(body) {
   if (table === "inspection_logbook" || table === "occupancy_logbook") {
     ensureColumnExists(sheet, "io_remarks");
   }
+  if (table === "inspection_logbook") {
+    ensureColumnExists(sheet, "expires_on");
+  }
   if (table === "fsec_building_plan_logbook") {
     ensureColumnExists(sheet, "fsec_number");
   }
@@ -229,10 +236,21 @@ function handleInsert(body) {
     if (key === "created_at") return createdAt;
     // Allow sheet headers with accidental trailing/leading spaces.
     var v = row[key];
+    if ((v === undefined || v === null || v === "") && row.expires_on) {
+      if (key === "expires_on" || key === "Expires On" || key === "expire_date" || key === "fsic_valid_until") {
+        v = row.expires_on;
+      }
+    }
+    if ((v === undefined || v === null || v === "") && row.fsic_valid_until && key === "fsic_valid_until") {
+      v = row.fsic_valid_until;
+    }
     return (v === undefined || v === null) ? "" : v;
   });
 
   sheet.appendRow(newRow);
+  if (table === "inspection_logbook" && (row.expires_on || row.fsic_valid_until)) {
+    writeExpiresOnForRow(sheet, id, row.expires_on || row.fsic_valid_until);
+  }
   return { data: { id: id, created_at: createdAt } };
 }
 
@@ -253,6 +271,9 @@ function handleUpdate(body) {
   if (table === "inspection_logbook" || table === "occupancy_logbook") {
     ensureColumnExists(sheet, "io_remarks");
   }
+  if (table === "inspection_logbook") {
+    ensureColumnExists(sheet, "expires_on");
+  }
   if (table === "fsec_building_plan_logbook") {
     ensureColumnExists(sheet, "fsec_number");
   }
@@ -270,11 +291,50 @@ function handleUpdate(body) {
     if (updates.hasOwnProperty(key) && updates[key] !== undefined && updates[key] !== null) {
       return updates[key];
     }
+    if (updates.expires_on && (key === "expires_on" || key === "Expires On" || key === "expire_date" || key === "fsic_valid_until")) {
+      return updates.expires_on;
+    }
+    if (updates.fsic_valid_until && key === "fsic_valid_until") {
+      return updates.fsic_valid_until;
+    }
     return currentRow[idx];
   });
 
   sheet.getRange(rowNum, 1, 1, headers.length).setValues([newRow]);
+  if (table === "inspection_logbook" && (updates.expires_on || updates.fsic_valid_until)) {
+    writeExpiresOnForRow(sheet, id, updates.expires_on || updates.fsic_valid_until);
+  }
   return { data: { id: id } };
+}
+
+function writeExpiresOnForRow(sheet, rowId, expiresOn) {
+  if (!sheet || !rowId || !expiresOn) return false;
+  var rowNum = findRowById(sheet, rowId);
+  if (rowNum < 0) return false;
+  var value = String(expiresOn).trim();
+  var wrote = false;
+  ensureColumnExists(sheet, "expires_on");
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var colIdx = findHeaderIndex(headers, "expires_on");
+  if (colIdx >= 0) {
+    sheet.getRange(rowNum, colIdx + 1).setValue(value);
+    wrote = true;
+  }
+  // Fallback: many FSIS sheets already have fsic_valid_until from clearance workflow.
+  colIdx = findHeaderIndex(headers, "fsic_valid_until");
+  if (colIdx >= 0) {
+    sheet.getRange(rowNum, colIdx + 1).setValue(value);
+    wrote = true;
+  }
+  return wrote;
+}
+
+function findHeaderIndex(headers, columnName) {
+  var target = String(columnName || "").trim();
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i] || "").trim() === target) return i;
+  }
+  return -1;
 }
 
 function ensureColumnExists(sheet, columnName) {
@@ -282,7 +342,7 @@ function ensureColumnExists(sheet, columnName) {
   var lastCol = sheet.getLastColumn();
   if (lastCol < 1) return;
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  if (headers.indexOf(columnName) !== -1) return;
+  if (findHeaderIndex(headers, columnName) !== -1) return;
   sheet.getRange(1, lastCol + 1).setValue(columnName);
 }
 
@@ -317,6 +377,10 @@ function setupPhotoUrlColumns() {
     var sheet;
     try { sheet = getSheet(tableName); }
     catch(e) { Logger.log("⚠️ Sheet not found: " + tableName); return; }
+
+    if (tableName === "inspection_logbook") {
+      ensureColumnExists(sheet, "expires_on");
+    }
 
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     Logger.log("📋 " + tableName + " columns: " + headers.join(", "));
@@ -437,6 +501,56 @@ function addFsecNumberColumn() {
   } else {
     Logger.log("✔️  'fsec_number' already exists in " + tableName);
   }
+}
+
+/**
+ * RUN ONCE to add Expires On column on Inspection logbook.
+ * Function name to run in Apps Script: addInspectionExpiresOnColumn
+ */
+function addInspectionExpiresOnColumn() {
+  var tableName = "inspection_logbook";
+  var sheet;
+  try {
+    sheet = getSheet(tableName);
+  } catch (e) {
+    Logger.log("❌ " + e.message);
+    return;
+  }
+
+  ensureColumnExists(sheet, "expires_on");
+  Logger.log("✅ Column 'expires_on' is ready on " + tableName);
+}
+
+/**
+ * PATCH EXPIRES ON — write expires_on cell by row id (creates column if missing).
+ * Body: { table, id, expires_on }  (YYYY-MM-DD)
+ */
+function handlePatchExpiresOn(body) {
+  var table = body.table || "";
+  var id = body.id || "";
+  var expiresOn = body.expires_on;
+  if (!table || !id) return { error: "table and id required." };
+  if (!expiresOn) return { error: "expires_on required." };
+
+  var sheet = getSheet(table);
+  if (table === "inspection_logbook") {
+    ensureColumnExists(sheet, "expires_on");
+  }
+
+  var rowNum = findRowById(sheet, id);
+  if (rowNum < 0) return { error: "Record not found: " + id };
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var colIdx = findHeaderIndex(headers, "expires_on");
+  if (colIdx === -1) {
+    ensureColumnExists(sheet, "expires_on");
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    colIdx = findHeaderIndex(headers, "expires_on");
+  }
+  if (colIdx === -1) return { error: "Could not resolve expires_on column." };
+
+  sheet.getRange(rowNum, colIdx + 1).setValue(String(expiresOn).trim());
+  return { data: { id: id, expires_on: String(expiresOn).trim() } };
 }
 
 /**
