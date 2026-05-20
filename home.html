@@ -622,7 +622,7 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-occupancy', 'occupancy_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-add" onclick="occupancyOpenModal()">+ Add Entry</button>
+              <button class="btn-panel-add" onclick="occupancyPromptAddEntry()">+ Add Entry</button>
             </div>
             <div class="table-wrap">
               <table id="table-occupancy" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -682,7 +682,7 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-occupancy-nolocation', 'occupancy_nolocation_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-add" onclick="occupancyOpenModal()">+ Add Entry</button>
+              <button class="btn-panel-add" onclick="occupancyPromptAddEntry()">+ Add Entry</button>
             </div>
             <div class="table-wrap">
               <table id="table-occupancy-nolocation" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -784,7 +784,7 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-inspection', 'inspection_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-add" onclick="inspectionOpenModal()">+ Add Entry</button>
+              <button class="btn-panel-add" onclick="inspectionPromptAddEntry()">+ Add Entry</button>
             </div>
             <div class="table-wrap">
               <table id="table-inspection" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -847,7 +847,7 @@
               <button class="btn-panel-print" onclick="exportTableToCSV('table-inspection-nophoto', 'inspection_nophoto_logbook.csv')">
                 <i class="bi bi-download"></i> CSV
               </button>
-              <button class="btn-panel-add" onclick="inspectionOpenModal()">+ Add Entry</button>
+              <button class="btn-panel-add" onclick="inspectionPromptAddEntry()">+ Add Entry</button>
             </div>
             <div class="table-wrap">
               <table id="table-inspection-nophoto" class="table table-hover table-bordered table-sm align-middle mb-0">
@@ -1081,6 +1081,42 @@
     </section>
 
     <!-- ================================================================
+         GLOBAL IO SOURCE CHOOSER (map + inspection + occupancy add entry)
+         ================================================================ -->
+    <div class="modal-overlay" id="io-source-modal-overlay" style="display:none" onclick="ioSourceCloseOnOverlay(event)">
+      <div class="modal fade show d-block" style="position:relative; z-index:auto;" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+          <div class="modal-content">
+            <div class="modal-header bfp-header">
+              <div>
+                <small>IO number</small>
+                <h5 class="mb-0">How to assign IO</h5>
+              </div>
+              <button class="btn-close btn-close-white" onclick="closeIoSourceChooser()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted small mb-3">Choose how this entry gets its Inspection Order number.</p>
+              <div class="d-grid gap-2">
+                <button type="button" class="btn btn-dark" onclick="ioSourceChoose('online')">
+                  From online
+                  <span class="d-block small fw-normal opacity-75">Enter your ON-… number</span>
+                </button>
+                <button type="button" class="btn btn-outline-dark" onclick="ioSourceChoose('manual')">
+                  Manual (station IO)
+                  <span class="d-block small fw-normal opacity-75">Auto-increment (e.g. 10-8728945)</span>
+                </button>
+              </div>
+            </div>
+            <div class="modal-footer bfp-footer">
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                onclick="closeIoSourceChooser()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================
          GLOBAL INSPECTION MODAL (map + inspection views)
          ================================================================ -->
     <div class="modal-overlay" id="inspection-modal-overlay" onclick="inspectionCloseOnOverlay(event)">
@@ -1120,9 +1156,15 @@
                   <div class="form-section">
                     <div class="form-section-title">Record details</div>
                     <div class="row g-3">
-                      <div class="col-6">
+                      <div class="col-12">
                         <label class="form-label" for="inspection_io_number">IO Number</label>
-                        <input type="text" id="inspection_io_number" class="form-control" placeholder="e.g. IO-2025-001">
+                        <input type="text" id="inspection_io_number" class="form-control" placeholder="e.g. 10-8728945">
+                        <div class="input-group mt-1" id="inspection_io_online_wrap" style="display:none">
+                          <span class="input-group-text">ON-</span>
+                          <input type="text" id="inspection_io_online_part" class="form-control"
+                            placeholder="Online IO number" autocomplete="off">
+                        </div>
+                        <small id="inspection_io_number_hint" class="text-muted"></small>
                       </div>
                       <div class="col-6">
                         <label class="form-label" for="inspection_fsic_number">FSIC Number</label>
@@ -1299,9 +1341,15 @@
                   <div class="form-section">
                     <div class="form-section-title">Record details</div>
                     <div class="row g-3">
-                      <div class="col-6">
+                      <div class="col-12">
                         <label class="form-label" for="occupancy_io_number">IO Number</label>
-                        <input type="text" id="occupancy_io_number" class="form-control" placeholder="e.g. IO-2026-001">
+                        <input type="text" id="occupancy_io_number" class="form-control" placeholder="e.g. 10-8728945">
+                        <div class="input-group mt-1" id="occupancy_io_online_wrap" style="display:none">
+                          <span class="input-group-text">ON-</span>
+                          <input type="text" id="occupancy_io_online_part" class="form-control"
+                            placeholder="Online IO number" autocomplete="off">
+                        </div>
+                        <small id="occupancy_io_number_hint" class="text-muted"></small>
                       </div>
                       <div class="col-6">
                         <label class="form-label" for="occupancy_fsic_number">FSIC Number</label>
@@ -1611,7 +1659,7 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js" defer></script>
-  <script src="./home.js?v=20260427c" defer></script>
+  <script src="./home.js?v=20260427d" defer></script>
 </body>
 
 </html>

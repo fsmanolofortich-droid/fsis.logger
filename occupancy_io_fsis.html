@@ -473,7 +473,12 @@
     const toName = inspectors;
     const toPosition = rankCodeToTitle(firstCode);
 
-    const owner = (entry.owner_name || "").toString().trim();
+    const businessName = (entry.business_name || "").toString().trim();
+    const ownerName = (entry.owner_name || "").toString().trim();
+    const bizOwner =
+      businessName && ownerName
+        ? `${businessName}/${ownerName}`
+        : businessName || ownerName;
     const lat = entry.lat ?? entry.latitude ?? null;
     const lng = entry.lng ?? entry.longitude ?? null;
     const coords =
@@ -481,7 +486,7 @@
         ? `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`
         : "";
     const proceedLines = [
-      owner ? `Residential premises of: ${owner}` : "",
+      bizOwner ? `Residential premises of: ${bizOwner}` : "",
       "Manolo Fortich, Bukidnon, Region X",
       coords ? `Coordinates: ${coords}` : "",
     ].filter(Boolean);

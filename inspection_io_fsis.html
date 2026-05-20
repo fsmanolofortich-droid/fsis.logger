@@ -528,8 +528,8 @@
       const includedPosition = entry.included_personnel_position || "";
       // Prefer structured address fields; if missing (e.g. from DB), parse merged address.
       // Merged format (legacy): "Region X, Province, Municipal, Barangay Name, Street/Line"
-      let business_name = entry.business_name || "";
-      let owner_name = entry.owner_name || "";
+      let business_name = (entry.business_name || "").toString().trim();
+      let owner_name = (entry.owner_name || entry.insp_owner || "").toString().trim();
       let addrLine = entry.addr_line || "";
       let addrBarangay = entry.addr_barangay || "";
       let addrMunicipal = entry.addr_municipal || "";
@@ -598,7 +598,10 @@
       setText("io_to_position", toPosition ? "" + toPosition : "");
       setText("io_included_name", includedName);
       setText("io_included_position", includedPosition);
-      const bizOwner = [business_name.trim(), owner_name.trim()].filter(Boolean).join(" / ");
+      const bizOwner =
+        business_name && owner_name
+          ? `${business_name}/${owner_name}`
+          : business_name || owner_name;
       const proceedText = [bizOwner, address].filter(Boolean).join("\n");
       setText("io_address", proceedText);
       setText("io_duration_start", formatDateISOToLong(durationStart));

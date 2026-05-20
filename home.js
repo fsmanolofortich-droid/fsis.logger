@@ -383,13 +383,160 @@ function mapAddCloseOnOverlay(e) {
   if (e.target === overlay) closeMapAddChooser();
 }
 
+let pendingAddLogbookType = null;
+
+const MANUAL_IO_NUMBER_RE = /^(\d+)-(\d+)$/;
+
+function collectAllIoNumbers() {
+  const rows = [
+    ...(Array.isArray(inspectionData) ? inspectionData : []),
+    ...(Array.isArray(occupancyData) ? occupancyData : []),
+  ];
+  return rows
+    .map((r) => (r?.io_number || "").toString().trim())
+    .filter(Boolean);
+}
+
+function parseManualIoNumber(io) {
+  const m = (io || "").toString().trim().match(MANUAL_IO_NUMBER_RE);
+  if (!m) return null;
+  const seq = parseInt(m[2], 10);
+  if (!Number.isFinite(seq)) return null;
+  return { prefix: m[1], seq };
+}
+
+function getNextManualIoNumber() {
+  let best = null;
+  for (const io of collectAllIoNumbers()) {
+    if (/^ON-/i.test(io)) continue;
+    const parsed = parseManualIoNumber(io);
+    if (!parsed) continue;
+    if (!best || parsed.seq > best.seq) best = parsed;
+  }
+  if (!best) return "10-1";
+  return `${best.prefix}-${best.seq + 1}`;
+}
+
+function normalizeOnlineIoNumber(raw) {
+  const stripped = (raw || "").toString().trim().replace(/^ON-?/i, "");
+  if (!stripped) return "";
+  return "ON-" + stripped;
+}
+
+function isIoOnlineWrapVisible(prefix) {
+  const wrap = document.getElementById(`${prefix}_io_online_wrap`);
+  return !!(wrap && wrap.style.display !== "none");
+}
+
+function getIoNumberFromForm(prefix) {
+  if (isIoOnlineWrapVisible(prefix)) {
+    const part = document.getElementById(`${prefix}_io_online_part`);
+    return normalizeOnlineIoNumber(part?.value || "");
+  }
+  const input = document.getElementById(`${prefix}_io_number`);
+  return (input?.value || "").toString().trim();
+}
+
+function configureIoNumberField(prefix, mode) {
+  const input = document.getElementById(`${prefix}_io_number`);
+  const onlineWrap = document.getElementById(`${prefix}_io_online_wrap`);
+  const onlinePart = document.getElementById(`${prefix}_io_online_part`);
+  const hint = document.getElementById(`${prefix}_io_number_hint`);
+  if (!input) return;
+
+  if (onlineWrap) onlineWrap.style.display = "none";
+  input.style.display = "";
+  input.disabled = false;
+  input.readOnly = false;
+  input.classList.remove("bg-light");
+
+  if (onlinePart) onlinePart.value = "";
+
+  if (mode === "edit") {
+    input.placeholder = "e.g. 10-8728945 or ON-12345";
+    if (hint) hint.textContent = "";
+    return;
+  }
+
+  if (mode === "manual") {
+    input.value = getNextManualIoNumber();
+    input.readOnly = true;
+    input.classList.add("bg-light");
+    input.placeholder = "";
+    if (hint) {
+      hint.textContent =
+        "Next station IO number (auto-incremented from inspection and occupancy records).";
+    }
+    return;
+  }
+
+  if (mode === "online") {
+    input.value = "";
+    input.style.display = "none";
+    if (onlineWrap) onlineWrap.style.display = "";
+    if (hint) {
+      hint.textContent = "Enter the online IO number (saved with ON- prefix).";
+    }
+    setTimeout(() => onlinePart?.focus?.(), 0);
+  }
+}
+
+function inspectionPromptAddEntry() {
+  promptIoSourceForAdd("inspection");
+}
+
+function occupancyPromptAddEntry() {
+  promptIoSourceForAdd("occupancy");
+}
+
+function promptIoSourceForAdd(logbookType) {
+  pendingAddLogbookType = logbookType;
+  openIoSourceChooser();
+}
+
+function openIoSourceChooser() {
+  const overlay = document.getElementById("io-source-modal-overlay");
+  if (!overlay) {
+    const type = pendingAddLogbookType;
+    pendingAddLogbookType = null;
+    if (type === "occupancy") occupancyOpenModal("manual");
+    else inspectionOpenModal("manual");
+    return;
+  }
+  overlay.style.display = "";
+  overlay.classList.add("open");
+}
+
+function closeIoSourceChooser() {
+  const overlay = document.getElementById("io-source-modal-overlay");
+  if (overlay) {
+    overlay.classList.remove("open");
+    overlay.style.display = "none";
+  }
+  pendingAddLogbookType = null;
+}
+
+function ioSourceCloseOnOverlay(e) {
+  const overlay = document.getElementById("io-source-modal-overlay");
+  if (!overlay) return;
+  if (e.target === overlay) closeIoSourceChooser();
+}
+
+function ioSourceChoose(mode) {
+  const logbookType = pendingAddLogbookType;
+  closeIoSourceChooser();
+  if (!logbookType) return;
+  if (logbookType === "occupancy") occupancyOpenModal(mode);
+  else inspectionOpenModal(mode);
+}
+
 function mapAddChoose(type) {
   closeMapAddChooser();
   if (type === "occupancy") {
-    occupancyOpenModal?.();
+    promptIoSourceForAdd("occupancy");
     return;
   }
-  inspectionOpenModal?.();
+  promptIoSourceForAdd("inspection");
 }
 
 // Used so a second showView(sameName) from hashchange does not scroll to top
@@ -1494,6 +1641,8 @@ async function inspectionEditEntry(idx) {
   const btn = document.getElementById("inspection-btn-save");
   if (btn) btn.textContent = "Update Record";
 
+  configureIoNumberField("inspection", "edit");
+
   // Reset to first step
   updateModalStepUI('inspection', 1);
 }
@@ -2110,7 +2259,7 @@ function inspectionDeleteEntry(idx) {
   })();
 }
 
-function inspectionOpenModal() {
+function inspectionOpenModal(ioMode) {
   inspectionEditingIdx = null;
   inspectionEditingId = null;
   inspectionFocusMapAfterSave = false;
@@ -2132,6 +2281,7 @@ function inspectionOpenModal() {
   if (btn) btn.textContent = "Save Record";
 
   inspectionClearForm();
+  configureIoNumberField("inspection", ioMode || "manual");
   const date = document.getElementById("inspection_date_inspected");
   if (date) date.value = new Date().toISOString().slice(0, 10);
 
@@ -2288,6 +2438,10 @@ function inspectionClearForm() {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
+  const onlinePart = document.getElementById("inspection_io_online_part");
+  if (onlinePart) onlinePart.value = "";
+  const hint = document.getElementById("inspection_io_number_hint");
+  if (hint) hint.textContent = "";
 }
 
 async function inspectionSaveEntry(e) {
@@ -2332,10 +2486,22 @@ async function inspectionSaveEntry(e) {
     .filter((p) => String(p || "").trim())
     .join(", ");
 
+  const io_number = getIoNumberFromForm("inspection");
+  if (!inspectionEditingIdx && inspectionEditingId == null && !io_number) {
+    logbookShowToast(
+      "inspection-toast",
+      "⚠️ Please enter an IO number (online ON-… or use auto manual IO)."
+    );
+    updateModalStepUI("inspection", 1);
+    const focusEl = isIoOnlineWrapVisible("inspection")
+      ? document.getElementById("inspection_io_online_part")
+      : document.getElementById("inspection_io_number");
+    focusEl?.focus?.();
+    return;
+  }
+
   const entry = {
-    io_number: (
-      document.getElementById("inspection_io_number") || { value: "" }
-    ).value.trim(),
+    io_number,
     fsic_number: (
       document.getElementById("inspection_fsic_number") || { value: "" }
     ).value.trim(),
@@ -5957,6 +6123,8 @@ async function occupancyEditEntry(idx) {
   const btn = document.getElementById("occupancy-btn-save");
   if (btn) btn.textContent = "Update Record";
 
+  configureIoNumberField("occupancy", "edit");
+
   const overlay = document.getElementById("occupancy-modal-overlay");
   overlay?.classList.add("open");
 
@@ -6049,7 +6217,7 @@ function occupancyClearanceProceed(e) {
   window.open("./fsis_clearance.html", "_blank");
 }
 
-function occupancyOpenModal() {
+function occupancyOpenModal(ioMode) {
   occupancyEditingIdx = null;
   occupancyEditingId = null;
 
@@ -6080,6 +6248,12 @@ function occupancyOpenModal() {
     const el = getEl(id);
     if (el) el.selectedIndex = 0;
   });
+  const onlinePart = getEl("occupancy_io_online_part");
+  if (onlinePart) onlinePart.value = "";
+  const ioHint = getEl("occupancy_io_number_hint");
+  if (ioHint) ioHint.textContent = "";
+
+  configureIoNumberField("occupancy", ioMode || "manual");
 
   const photoInput = document.getElementById("occupancy_photo");
   if (photoInput) photoInput.value = "";
@@ -6161,9 +6335,23 @@ async function occupancySaveEntry(e) {
     barangay = "";
   }
 
+  const io_number = getIoNumberFromForm("occupancy");
+  if (occupancyEditingIdx === null && !io_number) {
+    logbookShowToast(
+      "occupancy-toast",
+      "⚠️ Please enter an IO number (online ON-… or use auto manual IO)."
+    );
+    updateModalStepUI("occupancy", 1);
+    const focusEl = isIoOnlineWrapVisible("occupancy")
+      ? document.getElementById("occupancy_io_online_part")
+      : document.getElementById("occupancy_io_number");
+    focusEl?.focus?.();
+    return;
+  }
+
   const entry = {
     log_date: (document.getElementById("occupancy_date") || { value: "" }).value,
-    io_number: (document.getElementById("occupancy_io_number") || { value: "" }).value.trim(),
+    io_number,
     fsic_number: (document.getElementById("occupancy_fsic_number") || { value: "" }).value.trim(),
     owner_name: (document.getElementById("occupancy_owner_name") || { value: "" }).value.trim(),
     owner_phone: (document.getElementById("occupancy_owner_phone") || { value: "" }).value.trim(),
