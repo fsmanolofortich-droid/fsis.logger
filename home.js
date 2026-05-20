@@ -459,13 +459,12 @@ function configureIoNumberField(prefix, mode) {
   }
 
   if (mode === "manual") {
-    input.value = getNextManualIoNumber();
-    input.readOnly = true;
-    input.classList.add("bg-light");
-    input.placeholder = "";
+    input.value = "";
+    input.readOnly = false;
+    input.classList.remove("bg-light");
+    input.placeholder = "e.g. 10-8728945";
     if (hint) {
-      hint.textContent =
-        "Next station IO number (auto-incremented from inspection and occupancy records).";
+      hint.textContent = "Enter station IO number manually.";
     }
     return;
   }
@@ -1185,33 +1184,6 @@ function logbookFormatDateForInput(d) {
   return `${year}-${month}-${day}`;
 }
 
-/** Normalize a date for sheet storage (YYYY-MM-DD) or null if empty/invalid. */
-function logbookNormalizeDateForStorage(value) {
-  if (value == null) return null;
-  const s = String(value).trim();
-  if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  const viaInput = logbookFormatDateForInput(s);
-  return viaInput || null;
-}
-
-function inspectionPickExpiresOn(row) {
-  if (!row || typeof row !== "object") return null;
-  const keys = [
-    "expires_on",
-    "expire_date",
-    "expiration_date",
-    "Expires On",
-    "expires on",
-    "fsic_valid_until",
-  ];
-  for (const k of keys) {
-    const v = row[k];
-    if (v != null && String(v).trim() !== "") return v;
-  }
-  return null;
-}
-
 function logbookShowToast(id, msg) {
   const t = document.getElementById(id);
   if (!t) return;
@@ -1525,7 +1497,6 @@ function inspectionRenderTable() {
         <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
         <td data-label="Address">${logbookEsc(inspectionFormatAddressShort(row))}</td>
         <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
-        <td class="td-date" data-label="Expires On">${logbookFormatDate(row.expires_on)}</td>
         <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
         <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
       `;
@@ -1643,7 +1614,6 @@ async function inspectionEditEntry(idx) {
   setVal("inspection_owner_phone", row.insp_owner_phone);
   setVal("inspection_business_name", row.business_name);
   setVal("inspection_date_inspected", logbookFormatDateForInput(row.date_inspected));
-  setVal("inspection_expires_on", logbookFormatDateForInput(row.expires_on));
   // Optional IO-specific fields (may not exist on older records or in the DOM)
   setVal("inspection_inspector_position", row.inspector_position);
   setVal("inspection_included_personnel_name", row.included_personnel_name);
@@ -2457,7 +2427,6 @@ function inspectionClearForm() {
     "inspection_addr_barangay",
     "inspection_addr_line",
     "inspection_date_inspected",
-    "inspection_expires_on",
     "inspection_inspected_by",
     "inspection_inspector_position",
     "inspection_included_personnel_name",
@@ -2550,9 +2519,6 @@ async function inspectionSaveEntry(e) {
     date_inspected: (
       document.getElementById("inspection_date_inspected") || { value: "" }
     ).value,
-    expires_on: (
-      document.getElementById("inspection_expires_on") || { value: "" }
-    ).value,
     inspected_by:
       (document.getElementById("inspection_inspected_by") || { value: "" })
         .value.trim(),
@@ -2584,7 +2550,6 @@ async function inspectionSaveEntry(e) {
     photo_taken_at: currentExifTakenAt,
     created_at: new Date().toISOString(),
   };
-  entry.expires_on = logbookNormalizeDateForStorage(entry.expires_on);
 
   // When editing:
   // - If user didn't pick a new photo, keep existing photo URL/meta and coordinates.
@@ -2728,8 +2693,6 @@ async function inspectionSaveEntry(e) {
         business_name: entry.business_name,
         address: entry.insp_address,
         date_inspected: entry.date_inspected,
-        expires_on: entry.expires_on,
-        fsic_valid_until: entry.expires_on || null,
         fsic_number: entry.fsic_number,
         inspected_by: entry.inspected_by || null,
         inspector_position: entry.inspector_position || null,
@@ -2761,8 +2724,6 @@ async function inspectionSaveEntry(e) {
           "business_name",
           "address",
           "date_inspected",
-          "expires_on",
-          "fsic_valid_until",
           "fsic_number",
           "photo_url",     // protect — upload may have just set this
           "latitude",
@@ -2776,7 +2737,6 @@ async function inspectionSaveEntry(e) {
         });
       }
 
-      console.log("[FSIS] DB payload expires_on:", payload.expires_on ?? "(none)");
       console.log("[FSIS] DB payload photo_url:", payload.photo_url ?? "(none)");
 
       let savedId = inspectionEditingId; // will be set for edits
@@ -2785,22 +2745,6 @@ async function inspectionSaveEntry(e) {
       } else {
         const insertResult = await gasRequest("insert", { table: "inspection_logbook", row: payload });
         savedId = insertResult?.data?.id ?? null;
-      }
-
-      // Force expire date into sheet (expires_on and/or existing fsic_valid_until column).
-      if (savedId && entry.expires_on) {
-        try {
-          await gasRequest("update", {
-            table: "inspection_logbook",
-            id: savedId,
-            row: {
-              expires_on: entry.expires_on,
-              fsic_valid_until: entry.expires_on,
-            },
-          });
-        } catch (expiresUpdateErr) {
-          console.warn("[FSIS] expires_on follow-up update failed:", expiresUpdateErr);
-        }
       }
 
       // ── Guaranteed photo_url patch ─────────────────────────────────────
@@ -2836,54 +2780,11 @@ async function inspectionSaveEntry(e) {
         }
       }
 
-      if (savedId && entry.expires_on) {
-        try {
-          await gasRequest("patch_expires_on", {
-            table: "inspection_logbook",
-            id: savedId,
-            expires_on: entry.expires_on,
-          });
-        } catch (patchErr) {
-          // Optional on older deployments; insert/update may still save expires_on.
-          console.warn("[FSIS] patch_expires_on failed:", patchErr);
-        }
-      }
-
       await inspectionLoadFromSupabase();
-
-      let expiresOnSaveFailed = false;
-      if (savedId && entry.expires_on) {
-        const savedIdx = inspectionData.findIndex((r) => r.id === savedId);
-        const savedRow = savedIdx >= 0 ? inspectionData[savedIdx] : null;
-        const got = logbookNormalizeDateForStorage(
-          inspectionPickExpiresOn(savedRow || {})
-        );
-        if (got !== entry.expires_on) {
-          expiresOnSaveFailed = true;
-          if (savedIdx >= 0) {
-            inspectionData[savedIdx] = {
-              ...inspectionData[savedIdx],
-              expires_on: entry.expires_on,
-            };
-            inspectionSaveToLocal();
-          }
-        }
-      }
-
       inspectionRenderTable();
       renderInspectionMarkersBatched();
       inspectionCloseModal();
-      if (expiresOnSaveFailed) {
-        logbookShowToast(
-          "inspection-toast",
-          "⚠️ Expires On not in Google Sheet yet. Open the spreadsheet → inspection_logbook tab → row 1 → add a column named exactly: expires_on → Save the script (Code.gs) → Deploy new version → try again."
-        );
-      } else {
-        logbookShowToast(
-          "inspection-toast",
-          photoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database."
-        );
-      }
+      logbookShowToast("inspection-toast", photoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database.");
 
       const hasLocation =
         Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
@@ -4541,7 +4442,6 @@ async function inspectionLoadFromSupabase() {
     business_name: r.business_name,
     insp_address: r.address,
     date_inspected: r.date_inspected,
-    expires_on: logbookNormalizeDateForStorage(inspectionPickExpiresOn(r)),
     inspected_by: r.inspected_by || "",
     inspector_position: r.inspector_position || "",
     included_personnel_name: r.included_personnel_name || "",

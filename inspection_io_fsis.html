@@ -672,6 +672,24 @@
       btn.style.cursor = "pointer";
       btn.onclick = sendSave;
 
+      const printBtn = document.createElement("button");
+      printBtn.type = "button";
+      printBtn.id = "fsisPrintBtn";
+      printBtn.textContent = "Print";
+      printBtn.style.position = "fixed";
+      printBtn.style.right = "170px";
+      printBtn.style.bottom = "16px";
+      printBtn.style.zIndex = "9999";
+      printBtn.style.padding = "10px 14px";
+      printBtn.style.borderRadius = "10px";
+      printBtn.style.border = "1px solid rgba(0,0,0,0.25)";
+      printBtn.style.background = "#ffffff";
+      printBtn.style.color = "#0D1B2A";
+      printBtn.style.fontFamily = btn.style.fontFamily;
+      printBtn.style.fontSize = "14px";
+      printBtn.style.cursor = "pointer";
+      printBtn.onclick = () => window.print();
+
       const status = document.createElement("div");
       status.id = "fsisSaveStatus";
       status.style.position = "fixed";
@@ -689,6 +707,7 @@
       status.style.display = "none";
 
       document.body.appendChild(btn);
+      document.body.appendChild(printBtn);
       document.body.appendChild(status);
 
       window.addEventListener("message", function (ev) {
@@ -701,7 +720,7 @@
 
       // Hide controls in print
       const style = document.createElement("style");
-      style.textContent = "@media print { #fsisSaveBtn, #fsisSaveStatus { display: none !important; } }";
+      style.textContent = "@media print { #fsisSaveBtn, #fsisPrintBtn, #fsisSaveStatus { display: none !important; } }";
       document.head.appendChild(style);
 
     })();

@@ -860,6 +860,29 @@
 				"<Date Paid>": datePaid
 			});
 			enableEditableDataFields();
+
+			var printBtn = document.createElement("button");
+			printBtn.type = "button";
+			printBtn.id = "fdPrintBtn";
+			printBtn.textContent = "Print";
+			printBtn.style.position = "fixed";
+			printBtn.style.right = "16px";
+			printBtn.style.bottom = "16px";
+			printBtn.style.zIndex = "9999";
+			printBtn.style.padding = "10px 14px";
+			printBtn.style.borderRadius = "10px";
+			printBtn.style.border = "1px solid rgba(0,0,0,0.25)";
+			printBtn.style.background = "#0D1B2A";
+			printBtn.style.color = "#fff";
+			printBtn.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+			printBtn.style.fontSize = "14px";
+			printBtn.style.cursor = "pointer";
+			printBtn.onclick = function () { window.print(); };
+			document.body.appendChild(printBtn);
+
+			var style = document.createElement("style");
+			style.textContent = "@media print { #fdPrintBtn { display: none !important; } }";
+			document.head.appendChild(style);
 		})();
 	</script>
 </body>
