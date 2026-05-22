@@ -108,8 +108,8 @@ function toggleFilters(logbookType) {
 const BARANGAYS = [
   "Agusan Canyon", "Alae", "Dahilayan", "Dalirig", "Damilag", "Diclum",
   "Guilang-guilang", "Kalugmanan", "Lindaban", "Lingion", "Lunocan", "Maluko",
-  "Mambatangan", "Mampayag", "Minsuro", "Mantibugao", "Tankulan (Poblacion)",
-  "San Miguel", "Sankanan", "Santiago", "Santo Niño", "Ticala",
+  "Mambatangan", "Mampayag", "Minsuro", "Mantibugao",
+  "San Miguel", "Sankanan", "Santiago", "Santo Niño", , "Tankulan", "Ticala",
 ];
 
 const FIRE_PERSONNEL_META = [
