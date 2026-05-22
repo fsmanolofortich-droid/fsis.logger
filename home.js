@@ -1434,29 +1434,7 @@ function inspectionRenderTable() {
   const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
   if (noPhotoBadge) noPhotoBadge.textContent = String(totalNoLocation);
 
-  const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
-  const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
-  const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
-  const filtered = inspectionData
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.date_inspected, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [
-          row.io_number,
-          row.insp_owner,
-          row.insp_owner_phone,
-          row.business_name,
-          inspectionFormatAddressDisplay(row),
-          row.fsic_number,
-          row.inspected_by,
-        ].join(" | ")
-      );
-      return hay.includes(q);
-    });
+  const filtered = inspectionGetFilteredEntries();
 
   // If there are inspection records but the current filters hide everything,
   // show the empty state (otherwise it looks like "search/filter not working").
@@ -1559,7 +1537,11 @@ function inspectionRenderTable() {
   }
 
   // ── Filter result info bars ──────────────────────────────────────────
-  const isFiltered = !!(q || from || to);
+  const isFiltered = !!(
+    normalizeQuery(document.getElementById("inspection-filter-q")?.value) ||
+    (document.getElementById("inspection-filter-from")?.value || "").trim() ||
+    (document.getElementById("inspection-filter-to")?.value || "").trim()
+  );
   const resultsBadge = document.getElementById("inspection-results-badge");
   if (resultsBadge) {
     if (isFiltered && inspectionData.length > 0) {
@@ -5922,32 +5904,7 @@ function occupancyRenderTable() {
   if (countBadge) countBadge.textContent = String(totalWithLocation);
   if (noLocationCountBadge) noLocationCountBadge.textContent = String(totalNoLocation);
 
-  const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
-  const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
-  const to = (document.getElementById("occupancy-filter-to")?.value || "").trim();
-
-  const filtered = occupancyData
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.log_date, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [
-          row.io_number,
-          row.owner_name,
-          row.owner_phone,
-          row.business_name,
-          row.fsic_number,
-          row.inspectors,
-          row.remarks_signature,
-          row.lat,
-          row.lng,
-        ].join(" | ")
-      );
-      return hay.includes(q);
-    });
+  const filtered = occupancyGetFilteredEntries();
 
   tbody.innerHTML = "";
   if (occupancyData.length > 0 && filtered.length === 0) {
@@ -6633,37 +6590,324 @@ async function occupancyInitData() {
   }
 }
 
+function inspectionGetFilteredEntries() {
+  const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
+  const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
+  const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
+  return inspectionData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => inspectionRowMatchesFilters(row, q, from, to));
+}
+
+function inspectionRowMatchesFilters(row, q, from, to) {
+  if (from || to) {
+    if (!inDateRange(row.date_inspected, from, to)) return false;
+  }
+  if (!q) return true;
+  const hay = normalizeQuery(
+    [
+      row.io_number,
+      row.insp_owner,
+      row.insp_owner_phone,
+      row.business_name,
+      inspectionFormatAddressDisplay(row),
+      row.fsic_number,
+      row.inspected_by,
+    ].join(" | ")
+  );
+  return hay.includes(q);
+}
+
+function occupancyGetFilteredEntries() {
+  const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
+  const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
+  const to = (document.getElementById("occupancy-filter-to")?.value || "").trim();
+  return occupancyData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => occupancyRowMatchesFilters(row, q, from, to));
+}
+
+function occupancyRowMatchesFilters(row, q, from, to) {
+  if (from || to) {
+    if (!inDateRange(row.log_date, from, to)) return false;
+  }
+  if (!q) return true;
+  const hay = normalizeQuery(
+    [
+      row.io_number,
+      row.owner_name,
+      row.owner_phone,
+      row.business_name,
+      row.fsic_number,
+      row.inspectors,
+      row.remarks_signature,
+      row.lat,
+      row.lng,
+    ].join(" | ")
+  );
+  return hay.includes(q);
+}
+
+function conveyanceGetFilteredEntries() {
+  const q = normalizeQuery(document.getElementById("conveyance-filter-q")?.value);
+  const from = (document.getElementById("conveyance-filter-from")?.value || "").trim();
+  const to = (document.getElementById("conveyance-filter-to")?.value || "").trim();
+  return conveyanceData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.log_date, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery(
+        [row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | ")
+      );
+      return hay.includes(q);
+    });
+}
+
+function fireDrillGetFilteredEntries() {
+  const q = normalizeQuery(document.getElementById("fire_drill-filter-q")?.value);
+  const from = (document.getElementById("fire_drill-filter-from")?.value || "").trim();
+  const to = (document.getElementById("fire_drill-filter-to")?.value || "").trim();
+  return fireDrillData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.certificate_date, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery(
+        [row.control_number, row.building_name, row.address, row.or_number, row.amount_paid]
+          .filter(Boolean)
+          .join(" | ")
+      );
+      return hay.includes(q);
+    });
+}
+
+function fsecGetFilteredEntries() {
+  const q = normalizeQuery(document.getElementById("fsec-filter-q")?.value);
+  const from = (document.getElementById("fsec-filter-from")?.value || "").trim();
+  const to = (document.getElementById("fsec-filter-to")?.value || "").trim();
+  return fsecData
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (from || to) {
+        if (!inDateRange(row.fsec_date, from, to)) return false;
+      }
+      if (!q) return true;
+      const hay = normalizeQuery(
+        [
+          row.fsec_owner,
+          row.fsec_number,
+          row.proposed_project,
+          fsecFormatAddressDisplay(row),
+          row.contact_number,
+        ].join(" | ")
+      );
+      return hay.includes(q);
+    });
+}
+
 // --- CSV Export Utility ---
+function escapeCsvCell(value) {
+  let data = String(value ?? "")
+    .replace(/(\r\n|\n|\r)/gm, " ")
+    .replace(/(\s\s)/gm, " ");
+  data = data.replace(/"/g, '""');
+  return `"${data}"`;
+}
+
+function downloadCsvFile(filename, headers, dataRows) {
+  const lines = [headers.map(escapeCsvCell).join(",")];
+  dataRows.forEach((row) => lines.push(row.map(escapeCsvCell).join(",")));
+  const csvString = lines.join("\n");
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  if (navigator.msSaveBlob) {
+    navigator.msSaveBlob(blob, filename);
+    return;
+  }
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+}
+
 function exportTableToCSV(tableId, filename) {
   const table = document.getElementById(tableId);
   if (!table) return;
-  const rows = table.querySelectorAll('tr');
-  const csv = [];
-  for (let i = 0; i < rows.length; i++) {
-    const row = [], cols = rows[i].querySelectorAll('td, th');
-    for (let j = 0; j < cols.length; j++) {
-      let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ');
-      data = data.replace(/"/g, '""');
-      row.push('"' + data + '"');
-    }
-    csv.push(row.join(','));
+  const trs = Array.from(table.querySelectorAll("tr"));
+  if (!trs.length) return;
+  const headers = Array.from(trs[0].querySelectorAll("th, td")).map((c) => c.innerText);
+  const dataRows = trs.slice(1).map((tr) =>
+    Array.from(tr.querySelectorAll("td, th")).map((c) => c.innerText)
+  );
+  downloadCsvFile(filename, headers, dataRows);
+}
+
+function inspectionExportCSV() {
+  const filtered = inspectionGetFilteredEntries();
+  if (!filtered.length) {
+    logbookShowToast("inspection-toast", "No records match the current filters.");
+    return;
   }
-  const csvString = csv.join('\n');
-  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-  // IE11 & Edge support
-  if (navigator.msSaveBlob) {
-    navigator.msSaveBlob(blob, filename);
-  } else {
-    // Other browsers
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+  const headers = [
+    "#",
+    "IO Number",
+    "Name of Owner",
+    "Owner phone",
+    "Business / Establishment",
+    "Address",
+    "Date Inspected",
+    "FSIC Number",
+    "Inspected By",
+    "Has location",
+    "Latitude",
+    "Longitude",
+  ];
+  const dataRows = filtered.map(({ row }, i) => {
+    const hasLocation = row.lat != null && row.lng != null;
+    return [
+      i + 1,
+      row.io_number,
+      row.insp_owner,
+      row.insp_owner_phone,
+      row.business_name,
+      inspectionFormatAddressDisplay(row),
+      logbookFormatDate(row.date_inspected),
+      row.fsic_number,
+      row.inspected_by,
+      hasLocation ? "Yes" : "No",
+      hasLocation ? row.lat : "",
+      hasLocation ? row.lng : "",
+    ];
+  });
+  downloadCsvFile("inspection_logbook.csv", headers, dataRows);
+}
+
+function occupancyExportCSV() {
+  const filtered = occupancyGetFilteredEntries();
+  if (!filtered.length) {
+    logbookShowToast("occupancy-toast", "No records match the current filters.");
+    return;
   }
+  const headers = [
+    "#",
+    "IO Number",
+    "Name of Owner",
+    "Owner Phone",
+    "Residential / Property",
+    "Address",
+    "Date",
+    "Type of Occupancy",
+    "FSIC Number",
+    "Inspected By",
+    "Has location",
+    "Latitude",
+    "Longitude",
+  ];
+  const dataRows = filtered.map(({ row }, i) => {
+    const hasLocation = row.lat != null && row.lng != null;
+    return [
+      i + 1,
+      row.io_number,
+      row.owner_name,
+      row.owner_phone,
+      row.business_name,
+      inspectionFormatAddressDisplay(row),
+      logbookFormatDate(row.log_date),
+      row.type_of_occupancy,
+      row.fsic_number,
+      row.inspectors,
+      hasLocation ? "Yes" : "No",
+      hasLocation ? row.lat : "",
+      hasLocation ? row.lng : "",
+    ];
+  });
+  downloadCsvFile("occupancy_logbook.csv", headers, dataRows);
+}
+
+function conveyanceExportCSV() {
+  const filtered = conveyanceGetFilteredEntries();
+  if (!filtered.length) {
+    logbookShowToast("conveyance-toast", "No records match the current filters.");
+    return;
+  }
+  const headers = [
+    "#",
+    "Date",
+    "IO Number",
+    "Name of Owner",
+    "Name of Inspectors",
+    "Remarks / Signature",
+  ];
+  const dataRows = filtered.map(({ row }, i) => [
+    i + 1,
+    logbookFormatDate(row.log_date),
+    row.io_number,
+    row.owner_name,
+    row.inspectors,
+    row.remarks_signature,
+  ]);
+  downloadCsvFile("conveyance_logbook.csv", headers, dataRows);
+}
+
+function fireDrillExportCSV() {
+  const filtered = fireDrillGetFilteredEntries();
+  if (!filtered.length) {
+    logbookShowToast("fire_drill-toast", "No records match the current filters.");
+    return;
+  }
+  const headers = [
+    "#",
+    "Certificate date",
+    "Control No.",
+    "Building",
+    "Address",
+    "Valid until",
+  ];
+  const dataRows = filtered.map(({ row }, i) => [
+    i + 1,
+    logbookFormatDate(row.certificate_date),
+    row.control_number,
+    row.building_name,
+    row.address,
+    logbookFormatDate(row.date_valid),
+  ]);
+  downloadCsvFile("fire_drill_logbook.csv", headers, dataRows);
+}
+
+function fsecExportCSV() {
+  const filtered = fsecGetFilteredEntries();
+  if (!filtered.length) {
+    logbookShowToast("fsec-toast", "No records match the current filters.");
+    return;
+  }
+  const headers = [
+    "#",
+    "FSEC No.",
+    "Name of Owner",
+    "Proposed Project",
+    "Address",
+    "Date",
+    "Contact Number",
+  ];
+  const dataRows = filtered.map(({ row }, i) => [
+    i + 1,
+    row.fsec_number,
+    row.fsec_owner,
+    row.proposed_project,
+    fsecFormatAddressDisplay(row),
+    logbookFormatDate(row.fsec_date),
+    row.contact_number,
+  ]);
+  downloadCsvFile("fsec_logbook.csv", headers, dataRows);
 }
