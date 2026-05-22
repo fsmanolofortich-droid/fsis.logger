@@ -113,25 +113,13 @@ const BARANGAYS = [
 ];
 
 const FIRE_PERSONNEL_META = [
-  { name: "SF03 Rafael I. Corona Jr", rank: "SF03" },
-  { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01" },
   { name: "SF01 Cedric B. Gamolo", rank: "SF01" },
-  { name: "FO3 Rey Edward S. Descallar", rank: "FO3" },
+  { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01" },
   { name: "FO3 Jun Ray D. Abarquez", rank: "FO3" },
-  { name: "FO3 Clyde Q. Rejas", rank: "FO3" },
   { name: "FO3 Juan M. Derayunan II", rank: "FO3" },
-  { name: "FO3 Julious G. Cloma", rank: "FO3" },
-  { name: "FO3 Luigi C. Cajes", rank: "FO3" },
   { name: "FO2 Michael S. Guyan", rank: "FO2" },
-  { name: "FO2 Rhea Mae B. Lambago", rank: "FO2" },
-  { name: "FO1 John Ansel P. Labinay", rank: "FO1" },
-  { name: "FO1 Jessel Joy C. Paca", rank: "FO1" },
   { name: "FO1 Adoniram C. Nacilla", rank: "FO1" },
-  { name: "FO1 Johnremar B. Cinchez", rank: "FO1" },
-  { name: "FO1 Moctar M. Manarinta", rank: "FO1" },
   { name: "FO1 Sairah Ville L. Sante", rank: "FO1" },
-  { name: "FO1 Lester V. Villarta", rank: "FO1" },
-  { name: "Cherry Mae N. Lusno", rank: "Fire Aide" },
 ];
 
 const FIRE_PERSONNEL = FIRE_PERSONNEL_META.map((p) => p.name);
