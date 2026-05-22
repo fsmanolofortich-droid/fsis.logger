@@ -1221,9 +1221,51 @@ function inMonthRange(dateStr, monthStr) {
   return normalized.slice(0, 7) === monthStr;
 }
 
+/** Read month filter value for a logbook prefix (e.g. "inspection" → #inspection-filter-month). */
+function logbookGetFilterMonth(prefix) {
+  return (document.getElementById(`${prefix}-filter-month`)?.value || "").trim();
+}
+
 function initInspectionMonthFilter() {
-  const el = document.getElementById("inspection-filter-month");
-  if (el && !el.value) el.value = logbookCurrentMonthValue();
+  // Leave month empty on load = show all records (pick a month to narrow the list).
+}
+
+function inspectionFilterEmptyMessage() {
+  const month = (document.getElementById("inspection-filter-month")?.value || "").trim();
+  const q = (document.getElementById("inspection-filter-q")?.value || "").trim();
+  const parts = [];
+  if (month) {
+    const [y, m] = month.split("-");
+    const label = y && m
+      ? new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("en-PH", {
+          month: "long",
+          year: "numeric",
+        })
+      : month;
+    parts.push(`No inspections in ${label}`);
+  }
+  if (q) parts.push(`search “${q}”`);
+  if (!parts.length) return "No records match the current filters.";
+  return `${parts.join(" and ")}. Clear filters or choose another month.`;
+}
+
+function inspectionSetEmptyState(el, mode) {
+  if (!el) return;
+  const title = el.querySelector("strong");
+  const desc = el.querySelector("p");
+  if (mode === "none") {
+    if (title) title.textContent = "No Inspection Records Yet";
+    if (desc) desc.textContent = "Use the red + button on the map to log a new inspection.";
+  } else if (mode === "filter") {
+    if (title) title.textContent = "No records for this filter";
+    if (desc) desc.textContent = inspectionFilterEmptyMessage();
+  } else if (mode === "with-location") {
+    if (title) title.textContent = "No records with location";
+    if (desc) desc.textContent = "Try “No location yet” or adjust the month/search filters.";
+  } else if (mode === "no-location") {
+    if (title) title.textContent = "No records without location";
+    if (desc) desc.textContent = "All matching inspections already have a photo/location.";
+  }
 }
 
 function initTableFilters() {
@@ -1250,20 +1292,15 @@ function initTableFilters() {
     ["inspection-filter-q", "inspection-filter-month"],
     () => inspectionRenderTable()
   );
-  bind(["fsec-filter-q", "fsec-filter-from", "fsec-filter-to"], () =>
-    fsecRenderTable()
+  bind(["fsec-filter-q", "fsec-filter-month"], () => fsecRenderTable());
+  bind(["conveyance-filter-q", "conveyance-filter-month"], () =>
+    conveyanceRenderTable()
   );
-  bind(
-    ["conveyance-filter-q", "conveyance-filter-from", "conveyance-filter-to"],
-    () => conveyanceRenderTable()
+  bind(["fire_drill-filter-q", "fire_drill-filter-month"], () =>
+    fireDrillRenderTable()
   );
-  bind(
-    ["fire_drill-filter-q", "fire_drill-filter-from", "fire_drill-filter-to"],
-    () => fireDrillRenderTable()
-  );
-  bind(
-    ["occupancy-filter-q", "occupancy-filter-from", "occupancy-filter-to"],
-    () => occupancyRenderTable()
+  bind(["occupancy-filter-q", "occupancy-filter-month"], () =>
+    occupancyRenderTable()
   );
 }
 
@@ -1436,36 +1473,42 @@ function inspectionRenderTable() {
   if (tbodyNoPhoto) tbodyNoPhoto.innerHTML = "";
   let withLocationCount = 0;
   let noLocationCount = 0;
-  const totalWithLocation = inspectionData.filter((r) => r.lat != null && r.lng != null).length;
-  const totalNoLocation = inspectionData.filter((r) => r.lat == null || r.lng == null).length;
-
-  const countBadge = document.getElementById("inspection-record-count");
-  if (countBadge) countBadge.textContent = String(totalWithLocation);
-  const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
-  if (noPhotoBadge) noPhotoBadge.textContent = String(totalNoLocation);
 
   const filtered = inspectionGetFilteredEntries();
+  const filteredWithLoc = filtered.filter(
+    ({ row }) => row.lat != null && row.lng != null
+  );
+  const filteredNoLoc = filtered.filter(
+    ({ row }) => row.lat == null || row.lng == null
+  );
 
-  // If there are inspection records but the current filters hide everything,
-  // show the empty state (otherwise it looks like "search/filter not working").
+  const countBadge = document.getElementById("inspection-record-count");
+  if (countBadge) countBadge.textContent = String(filteredWithLoc.length);
+  const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
+  if (noPhotoBadge) noPhotoBadge.textContent = String(filteredNoLoc.length);
+
+  // Filters hide every record (e.g. month with no rows) — not the same as an empty logbook.
   if (inspectionData.length > 0 && filtered.length === 0) {
+    inspectionSetEmptyState(empty, "filter");
+    inspectionSetEmptyState(emptyNoPhoto, "filter");
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
-
     if (emptyNoPhoto) emptyNoPhoto.style.display = "block";
     if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
-
     return;
   }
 
   if (inspectionData.length === 0) {
+    inspectionSetEmptyState(empty, "none");
+    inspectionSetEmptyState(emptyNoPhoto, "none");
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
-  } else {
-    empty.style.display = "none";
-    if (tableWrap) tableWrap.style.display = "";
+    if (emptyNoPhoto) emptyNoPhoto.style.display = "block";
+    if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
+    return;
+  }
 
-    filtered.forEach(({ row, idx }) => {
+  filtered.forEach(({ row, idx }) => {
       const hasLocation = row.lat != null && row.lng != null;
       // "#" is 1,2,3… within each tab (with location vs no location), not across both.
       let rowNum;
@@ -1534,10 +1577,22 @@ function inspectionRenderTable() {
         }
       }
     });
+
+  if (withLocationCount === 0) {
+    inspectionSetEmptyState(empty, filtered.length ? "with-location" : "filter");
+    empty.style.display = "block";
+    if (tableWrap) tableWrap.style.display = "none";
+  } else {
+    empty.style.display = "none";
+    if (tableWrap) tableWrap.style.display = "";
   }
 
   if (tbodyNoPhoto && emptyNoPhoto && panelNoPhoto) {
     if (noLocationCount === 0) {
+      inspectionSetEmptyState(
+        emptyNoPhoto,
+        filtered.length ? "no-location" : "filter"
+      );
       emptyNoPhoto.style.display = "block";
       if (tableWrapNoPhoto) tableWrapNoPhoto.style.display = "none";
     } else {
@@ -1548,15 +1603,13 @@ function inspectionRenderTable() {
 
   // ── Filter result info bars ──────────────────────────────────────────
   const monthVal = (document.getElementById("inspection-filter-month")?.value || "").trim();
-  const isFiltered = !!(
-    normalizeQuery(document.getElementById("inspection-filter-q")?.value) ||
-    (monthVal && monthVal !== logbookCurrentMonthValue())
-  );
+  const hasSearch = !!normalizeQuery(document.getElementById("inspection-filter-q")?.value);
+  const isFiltered = !!(hasSearch || monthVal);
+  const totalAll = inspectionData.length;
   const resultsBadge = document.getElementById("inspection-results-badge");
   if (resultsBadge) {
-    if (isFiltered && inspectionData.length > 0) {
-      resultsBadge.textContent =
-        `Showing ${withLocationCount} of ${totalWithLocation} records (with location)`;
+    if (isFiltered && totalAll > 0) {
+      resultsBadge.textContent = `Showing ${withLocationCount} with location (${filtered.length} of ${totalAll} total)`;
       resultsBadge.removeAttribute("hidden");
     } else {
       resultsBadge.setAttribute("hidden", "");
@@ -1565,9 +1618,8 @@ function inspectionRenderTable() {
 
   const noPhotoResultsBadge = document.getElementById("inspection-nophoto-results-badge");
   if (noPhotoResultsBadge) {
-    if (isFiltered && inspectionData.length > 0) {
-      noPhotoResultsBadge.textContent =
-        `Showing ${noLocationCount} of ${totalNoLocation} records (no location)`;
+    if (isFiltered && totalAll > 0) {
+      noPhotoResultsBadge.textContent = `Showing ${noLocationCount} without location (${filtered.length} of ${totalAll} total)`;
       noPhotoResultsBadge.removeAttribute("hidden");
     } else {
       noPhotoResultsBadge.setAttribute("hidden", "");
@@ -2886,8 +2938,16 @@ function inspectionClearFilters() {
   const q = document.getElementById("inspection-filter-q");
   const month = document.getElementById("inspection-filter-month");
   if (q) q.value = "";
-  if (month) month.value = logbookCurrentMonthValue();
+  if (month) month.value = "";
   inspectionRenderTable();
+}
+
+function logbookClearFilters(prefix, renderFn) {
+  const q = document.getElementById(`${prefix}-filter-q`);
+  const month = document.getElementById(`${prefix}-filter-month`);
+  if (q) q.value = "";
+  if (month) month.value = "";
+  if (typeof renderFn === "function") renderFn();
 }
 
 function openInspectionDetailPanel(entry) {
@@ -4441,6 +4501,12 @@ function initMapSearch() {
   });
 }
 
+function inspectionEndPrintMode() {
+  document.body.classList.remove("inspection-printing");
+  const bundle = document.getElementById("inspection-print-bundle");
+  if (bundle) bundle.setAttribute("aria-hidden", "true");
+}
+
 function inspectionPrintPanel() {
   const count = inspectionBuildPrintTable();
   if (!count) {
@@ -4448,19 +4514,32 @@ function inspectionPrintPanel() {
     return;
   }
 
-  const bundle = document.getElementById("inspection-print-bundle");
-  if (bundle) bundle.removeAttribute("hidden");
-
   inspectionSetPrintDate();
+
+  const bundle = document.getElementById("inspection-print-bundle");
+  if (bundle) bundle.removeAttribute("aria-hidden");
+
+  const onAfterPrint = () => {
+    inspectionEndPrintMode();
+    window.removeEventListener("afterprint", onAfterPrint);
+  };
+  window.addEventListener("afterprint", onAfterPrint);
+
+  document.body.classList.add("inspection-printing");
+
   const oldTitle = document.title;
   document.title = "";
-  setTimeout(() => {
-    window.print();
-    setTimeout(() => {
-      document.title = oldTitle;
-      if (bundle) bundle.setAttribute("hidden", "");
-    }, 500);
-  }, 0);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.print();
+      setTimeout(() => {
+        document.title = oldTitle;
+        inspectionEndPrintMode();
+        window.removeEventListener("afterprint", onAfterPrint);
+      }, 2000);
+    });
+  });
 }
 
 async function inspectionLoadFromSupabase() {
@@ -4589,30 +4668,8 @@ function fsecRenderTable() {
   const tableWrap = document.getElementById("table-fsec")?.closest(".table-wrap");
   const countBadge = document.getElementById("fsec-record-count");
   if (!tbody || !empty) return;
-  if (countBadge) countBadge.textContent = String(fsecData.length || 0);
-
-  const q = normalizeQuery(document.getElementById("fsec-filter-q")?.value);
-  const from = (document.getElementById("fsec-filter-from")?.value || "").trim();
-  const to = (document.getElementById("fsec-filter-to")?.value || "").trim();
-
-  const filtered = fsecData
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.fsec_date, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [
-          row.fsec_owner,
-          row.fsec_number,
-          row.proposed_project,
-          fsecFormatAddressDisplay(row),
-          row.contact_number,
-        ].join(" | ")
-      );
-      return hay.includes(q);
-    });
+  const filtered = fsecGetFilteredEntries();
+  if (countBadge) countBadge.textContent = String(filtered.length);
 
   tbody.innerHTML = "";
   if (fsecData.length === 0) {
@@ -4921,13 +4978,7 @@ function fsecPrintPanel() {
 }
 
 function fsecClearFilters() {
-  const q = document.getElementById("fsec-filter-q");
-  const from = document.getElementById("fsec-filter-from");
-  const to = document.getElementById("fsec-filter-to");
-  if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
-  fsecRenderTable();
+  logbookClearFilters("fsec", fsecRenderTable);
 }
 
 function conveyanceSetPrintDate() {
@@ -4954,13 +5005,7 @@ function conveyancePrintPanel() {
 }
 
 function conveyanceClearFilters() {
-  const q = document.getElementById("conveyance-filter-q");
-  const from = document.getElementById("conveyance-filter-from");
-  const to = document.getElementById("conveyance-filter-to");
-  if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
-  conveyanceRenderTable();
+  logbookClearFilters("conveyance", conveyanceRenderTable);
 }
 
 function occupancySetPrintDate() {
@@ -4990,13 +5035,7 @@ function occupancyPrintPanel() {
 }
 
 function occupancyClearFilters() {
-  const q = document.getElementById("occupancy-filter-q");
-  const from = document.getElementById("occupancy-filter-from");
-  const to = document.getElementById("occupancy-filter-to");
-  if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
-  occupancyRenderTable();
+  logbookClearFilters("occupancy", occupancyRenderTable);
 }
 
 async function fsecLoadFromSupabase() {
@@ -5054,24 +5093,8 @@ function conveyanceRenderTable() {
   const tableWrap = document.getElementById("table-conveyance")?.closest(".table-wrap");
   const countBadge = document.getElementById("conveyance-record-count");
   if (!tbody || !empty) return;
-  if (countBadge) countBadge.textContent = String(conveyanceData.length || 0);
-
-  const q = normalizeQuery(document.getElementById("conveyance-filter-q")?.value);
-  const from = (document.getElementById("conveyance-filter-from")?.value || "").trim();
-  const to = (document.getElementById("conveyance-filter-to")?.value || "").trim();
-
-  const filtered = conveyanceData
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.log_date, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | ")
-      );
-      return hay.includes(q);
-    });
+  const filtered = conveyanceGetFilteredEntries();
+  if (countBadge) countBadge.textContent = String(filtered.length);
 
   tbody.innerHTML = "";
   if (conveyanceData.length === 0) {
@@ -5533,13 +5556,7 @@ function fireDrillPrintPanel() {
 }
 
 function fireDrillClearFilters() {
-  const q = document.getElementById("fire_drill-filter-q");
-  const from = document.getElementById("fire_drill-filter-from");
-  const to = document.getElementById("fire_drill-filter-to");
-  if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
-  fireDrillRenderTable();
+  logbookClearFilters("fire_drill", fireDrillRenderTable);
 }
 
 function fireDrillRenderTable() {
@@ -5548,32 +5565,8 @@ function fireDrillRenderTable() {
   const tableWrap = document.getElementById("table-fire_drill")?.closest(".table-wrap");
   const countBadge = document.getElementById("fire_drill-record-count");
   if (!tbody || !empty) return;
-  if (countBadge) countBadge.textContent = String(fireDrillData.length || 0);
-
-  const q = normalizeQuery(document.getElementById("fire_drill-filter-q")?.value);
-  const from = (document.getElementById("fire_drill-filter-from")?.value || "").trim();
-  const to = (document.getElementById("fire_drill-filter-to")?.value || "").trim();
-
-  const filtered = fireDrillData
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.certificate_date, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [
-          row.control_number,
-          row.building_name,
-          row.address,
-          row.or_number,
-          row.amount_paid,
-        ]
-          .filter(Boolean)
-          .join(" | ")
-      );
-      return hay.includes(q);
-    });
+  const filtered = fireDrillGetFilteredEntries();
+  if (countBadge) countBadge.textContent = String(filtered.length);
 
   tbody.innerHTML = "";
   if (fireDrillData.length === 0) {
@@ -5950,12 +5943,16 @@ function occupancyRenderTable() {
 
   let withLocationCount = 0;
   let noLocationCount = 0;
-  const totalWithLocation = occupancyData.filter((r) => r.lat != null && r.lng != null).length;
-  const totalNoLocation = occupancyData.filter((r) => r.lat == null || r.lng == null).length;
-  if (countBadge) countBadge.textContent = String(totalWithLocation);
-  if (noLocationCountBadge) noLocationCountBadge.textContent = String(totalNoLocation);
 
   const filtered = occupancyGetFilteredEntries();
+  const filteredWithLoc = filtered.filter(
+    ({ row }) => row.lat != null && row.lng != null
+  );
+  const filteredNoLoc = filtered.filter(
+    ({ row }) => row.lat == null || row.lng == null
+  );
+  if (countBadge) countBadge.textContent = String(filteredWithLoc.length);
+  if (noLocationCountBadge) noLocationCountBadge.textContent = String(filteredNoLoc.length);
 
   tbody.innerHTML = "";
   if (occupancyData.length > 0 && filtered.length === 0) {
@@ -6643,7 +6640,7 @@ async function occupancyInitData() {
 
 function inspectionGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
-  const month = (document.getElementById("inspection-filter-month")?.value || "").trim();
+  const month = logbookGetFilterMonth("inspection");
   return inspectionData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => inspectionRowMatchesFilters(row, q, month));
@@ -6668,17 +6665,14 @@ function inspectionRowMatchesFilters(row, q, month) {
 
 function occupancyGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
-  const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
-  const to = (document.getElementById("occupancy-filter-to")?.value || "").trim();
+  const month = logbookGetFilterMonth("occupancy");
   return occupancyData
     .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => occupancyRowMatchesFilters(row, q, from, to));
+    .filter(({ row }) => occupancyRowMatchesFilters(row, q, month));
 }
 
-function occupancyRowMatchesFilters(row, q, from, to) {
-  if (from || to) {
-    if (!inDateRange(row.log_date, from, to)) return false;
-  }
+function occupancyRowMatchesFilters(row, q, month) {
+  if (month && !inMonthRange(row.log_date, month)) return false;
   if (!q) return true;
   const hay = normalizeQuery(
     [
@@ -6698,64 +6692,61 @@ function occupancyRowMatchesFilters(row, q, from, to) {
 
 function conveyanceGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("conveyance-filter-q")?.value);
-  const from = (document.getElementById("conveyance-filter-from")?.value || "").trim();
-  const to = (document.getElementById("conveyance-filter-to")?.value || "").trim();
+  const month = logbookGetFilterMonth("conveyance");
   return conveyanceData
     .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.log_date, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | ")
-      );
-      return hay.includes(q);
-    });
+    .filter(({ row }) => conveyanceRowMatchesFilters(row, q, month));
+}
+
+function conveyanceRowMatchesFilters(row, q, month) {
+  if (month && !inMonthRange(row.log_date, month)) return false;
+  if (!q) return true;
+  const hay = normalizeQuery(
+    [row.io_number, row.owner_name, row.inspectors, row.remarks_signature].join(" | ")
+  );
+  return hay.includes(q);
 }
 
 function fireDrillGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("fire_drill-filter-q")?.value);
-  const from = (document.getElementById("fire_drill-filter-from")?.value || "").trim();
-  const to = (document.getElementById("fire_drill-filter-to")?.value || "").trim();
+  const month = logbookGetFilterMonth("fire_drill");
   return fireDrillData
     .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.certificate_date, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [row.control_number, row.building_name, row.address, row.or_number, row.amount_paid]
-          .filter(Boolean)
-          .join(" | ")
-      );
-      return hay.includes(q);
-    });
+    .filter(({ row }) => fireDrillRowMatchesFilters(row, q, month));
+}
+
+function fireDrillRowMatchesFilters(row, q, month) {
+  if (month && !inMonthRange(row.certificate_date, month)) return false;
+  if (!q) return true;
+  const hay = normalizeQuery(
+    [row.control_number, row.building_name, row.address, row.or_number, row.amount_paid]
+      .filter(Boolean)
+      .join(" | ")
+  );
+  return hay.includes(q);
 }
 
 function fsecGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("fsec-filter-q")?.value);
-  const from = (document.getElementById("fsec-filter-from")?.value || "").trim();
-  const to = (document.getElementById("fsec-filter-to")?.value || "").trim();
+  const month = logbookGetFilterMonth("fsec");
   return fsecData
     .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (from || to) {
-        if (!inDateRange(row.fsec_date, from, to)) return false;
-      }
-      if (!q) return true;
-      const hay = normalizeQuery(
-        [
-          row.fsec_owner,
-          row.fsec_number,
-          row.proposed_project,
-          fsecFormatAddressDisplay(row),
-          row.contact_number,
-        ].join(" | ")
-      );
-      return hay.includes(q);
-    });
+    .filter(({ row }) => fsecRowMatchesFilters(row, q, month));
+}
+
+function fsecRowMatchesFilters(row, q, month) {
+  if (month && !inMonthRange(row.fsec_date, month)) return false;
+  if (!q) return true;
+  const hay = normalizeQuery(
+    [
+      row.fsec_owner,
+      row.fsec_number,
+      row.proposed_project,
+      fsecFormatAddressDisplay(row),
+      row.contact_number,
+    ].join(" | ")
+  );
+  return hay.includes(q);
 }
 
 // --- CSV Export Utility ---

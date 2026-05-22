@@ -204,12 +204,9 @@
                   placeholder="Search IO, owner, inspectors, remarks/signature">
               </div>
               <div class="control">
-                <label for="conveyance-filter-from">From</label>
-                <input id="conveyance-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="conveyance-filter-to">To</label>
-                <input id="conveyance-filter-to" type="date" class="form-control form-control-sm">
+                <label for="conveyance-filter-month">Month</label>
+                <input id="conveyance-filter-month" type="month" class="form-control form-control-sm"
+                  aria-label="Filter by month (leave blank for all months)">
               </div>
               <div class="spacer"></div>
               <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
@@ -381,12 +378,9 @@
                   placeholder="Search control no., building, address, OR no.">
               </div>
               <div class="control">
-                <label for="fire_drill-filter-from">From</label>
-                <input id="fire_drill-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="fire_drill-filter-to">To</label>
-                <input id="fire_drill-filter-to" type="date" class="form-control form-control-sm">
+                <label for="fire_drill-filter-month">Month</label>
+                <input id="fire_drill-filter-month" type="month" class="form-control form-control-sm"
+                  aria-label="Filter by month (leave blank for all months)">
               </div>
               <div class="spacer"></div>
               <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
@@ -578,12 +572,9 @@
                 placeholder="Search IO, owner, property, address, FSIC, inspector">
             </div>
             <div class="control">
-              <label for="occupancy-filter-from">From</label>
-              <input id="occupancy-filter-from" type="date" class="form-control form-control-sm">
-            </div>
-            <div class="control">
-              <label for="occupancy-filter-to">To</label>
-              <input id="occupancy-filter-to" type="date" class="form-control form-control-sm">
+              <label for="occupancy-filter-month">Month</label>
+              <input id="occupancy-filter-month" type="month" class="form-control form-control-sm"
+                aria-label="Filter by month (leave blank for all months)">
             </div>
             <div class="spacer"></div>
             <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
@@ -741,14 +732,14 @@
             <div class="control">
               <label for="inspection-filter-month">Month</label>
               <input id="inspection-filter-month" type="month" class="form-control form-control-sm"
-                aria-label="Filter by month">
+                aria-label="Filter by month (leave blank for all months)">
             </div>
             <div class="spacer"></div>
             <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
               onclick="inspectionClearFilters()">Clear</button>
           </div>
           <!-- Combined print view: all filtered rows (with + without location), same as CSV -->
-          <div id="inspection-print-bundle" class="inspection-print-bundle" hidden>
+          <div id="inspection-print-bundle" class="inspection-print-bundle" aria-hidden="true">
             <div class="print-header">
               <h2>Bureau of Fire Protection</h2>
               <p class="print-subtitle">Manolo Fortich Fire Station</p>
@@ -952,12 +943,9 @@
                   placeholder="Search owner, project, address, contact">
               </div>
               <div class="control">
-                <label for="fsec-filter-from">From</label>
-                <input id="fsec-filter-from" type="date" class="form-control form-control-sm">
-              </div>
-              <div class="control">
-                <label for="fsec-filter-to">To</label>
-                <input id="fsec-filter-to" type="date" class="form-control form-control-sm">
+                <label for="fsec-filter-month">Month</label>
+                <input id="fsec-filter-month" type="month" class="form-control form-control-sm"
+                  aria-label="Filter by month (leave blank for all months)">
               </div>
               <div class="spacer"></div>
               <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
