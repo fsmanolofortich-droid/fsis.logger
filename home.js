@@ -113,7 +113,7 @@ const BARANGAYS = [
 ];
 
 const FIRE_PERSONNEL_META = [
-  { name: "SF01 Cedric B. Gamolo", rank: "SF01" },
+
   { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01" },
   { name: "FO3 Jun Ray D. Abarquez", rank: "FO3" },
   { name: "FO3 Juan M. Derayunan II", rank: "FO3" },
