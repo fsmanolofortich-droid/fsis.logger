@@ -739,16 +739,44 @@
                 placeholder="Search IO, owner, business, address, FSIC, inspector">
             </div>
             <div class="control">
-              <label for="inspection-filter-from">From</label>
-              <input id="inspection-filter-from" type="date" class="form-control form-control-sm">
-            </div>
-            <div class="control">
-              <label for="inspection-filter-to">To</label>
-              <input id="inspection-filter-to" type="date" class="form-control form-control-sm">
+              <label for="inspection-filter-month">Month</label>
+              <input id="inspection-filter-month" type="month" class="form-control form-control-sm"
+                aria-label="Filter by month">
             </div>
             <div class="spacer"></div>
             <button type="button" class="btn btn-sm btn-outline-secondary align-self-end"
               onclick="inspectionClearFilters()">Clear</button>
+          </div>
+          <!-- Combined print view: all filtered rows (with + without location), same as CSV -->
+          <div id="inspection-print-bundle" class="inspection-print-bundle" hidden>
+            <div class="print-header">
+              <h2>Bureau of Fire Protection</h2>
+              <p class="print-subtitle">Manolo Fortich Fire Station</p>
+              <p class="print-subtitle"><strong>Inspection Logbook</strong> &mdash; All records (with and without location)</p>
+              <p class="print-meta">Location: Manolo Fortich, Bukidnon &nbsp;|&nbsp; Date printed: <span
+                  id="inspection-print-date-all">&mdash;</span></p>
+            </div>
+            <div class="print-footer">Official logbook record. Bureau of Fire Protection &mdash; Manolo Fortich. This
+              document is generated from the BFP Inspection Management System.</div>
+            <div class="table-wrap">
+              <table id="table-inspection-print" class="table table-bordered table-sm align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>IO Number</th>
+                    <th>Name of Owner</th>
+                    <th>Owner phone</th>
+                    <th>Business / Establishment</th>
+                    <th>Address</th>
+                    <th class="th-date">Date Inspected</th>
+                    <th>FSIC Number</th>
+                    <th>Inspected By</th>
+                    <th>Has location</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-inspection-print"></tbody>
+              </table>
+            </div>
           </div>
           <!-- Inspection Logbook Panel -->
           <div class="logbook-panel visible" id="panel-inspection">

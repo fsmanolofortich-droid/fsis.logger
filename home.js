@@ -1205,6 +1205,27 @@ function inDateRange(dateStr, fromStr, toStr) {
   return true;
 }
 
+/** Current calendar month as YYYY-MM (for &lt;input type="month"&gt;). */
+function logbookCurrentMonthValue() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+/** True when dateStr falls in monthStr (YYYY-MM). Empty monthStr = no month filter. */
+function inMonthRange(dateStr, monthStr) {
+  if (!monthStr) return true;
+  const normalized = logbookNormalizeDateForStorage(dateStr);
+  if (!normalized) return false;
+  return normalized.slice(0, 7) === monthStr;
+}
+
+function initInspectionMonthFilter() {
+  const el = document.getElementById("inspection-filter-month");
+  if (el && !el.value) el.value = logbookCurrentMonthValue();
+}
+
 function initTableFilters() {
   const debounce = (fn, wait = 150) => {
     let t = null;
@@ -1224,8 +1245,9 @@ function initTableFilters() {
     }
   };
 
+  initInspectionMonthFilter();
   bind(
-    ["inspection-filter-q", "inspection-filter-from", "inspection-filter-to"],
+    ["inspection-filter-q", "inspection-filter-month"],
     () => inspectionRenderTable()
   );
   bind(["fsec-filter-q", "fsec-filter-from", "fsec-filter-to"], () =>
@@ -1525,10 +1547,10 @@ function inspectionRenderTable() {
   }
 
   // ── Filter result info bars ──────────────────────────────────────────
+  const monthVal = (document.getElementById("inspection-filter-month")?.value || "").trim();
   const isFiltered = !!(
     normalizeQuery(document.getElementById("inspection-filter-q")?.value) ||
-    (document.getElementById("inspection-filter-from")?.value || "").trim() ||
-    (document.getElementById("inspection-filter-to")?.value || "").trim()
+    (monthVal && monthVal !== logbookCurrentMonthValue())
   );
   const resultsBadge = document.getElementById("inspection-results-badge");
   if (resultsBadge) {
@@ -2818,22 +2840,53 @@ async function inspectionSaveEntry(e) {
 }
 
 function inspectionSetPrintDate() {
-  const el = document.getElementById("inspection-print-date");
-  if (!el) return;
-  el.textContent = new Date().toLocaleDateString("en-PH", {
+  const formatted = new Date().toLocaleDateString("en-PH", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  ["inspection-print-date", "inspection-print-date-nophoto", "inspection-print-date-all"].forEach(
+    (id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = formatted;
+    }
+  );
+}
+
+/** Build one combined table for print (all filtered rows, with + without photo/location). */
+function inspectionBuildPrintTable() {
+  const tbody = document.getElementById("tbody-inspection-print");
+  if (!tbody) return 0;
+
+  const filtered = inspectionGetFilteredEntries();
+  tbody.innerHTML = "";
+
+  filtered.forEach(({ row }, i) => {
+    const hasLocation = row.lat != null && row.lng != null;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td data-label="#">${i + 1}</td>
+      <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
+      <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
+      <td data-label="Owner phone">${logbookEsc(row.insp_owner_phone)}</td>
+      <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
+      <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
+      <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
+      <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
+      <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
+      <td data-label="Has location">${hasLocation ? "Yes" : "No"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  return filtered.length;
 }
 
 function inspectionClearFilters() {
   const q = document.getElementById("inspection-filter-q");
-  const from = document.getElementById("inspection-filter-from");
-  const to = document.getElementById("inspection-filter-to");
+  const month = document.getElementById("inspection-filter-month");
   if (q) q.value = "";
-  if (from) from.value = "";
-  if (to) to.value = "";
+  if (month) month.value = logbookCurrentMonthValue();
   inspectionRenderTable();
 }
 
@@ -4389,6 +4442,15 @@ function initMapSearch() {
 }
 
 function inspectionPrintPanel() {
+  const count = inspectionBuildPrintTable();
+  if (!count) {
+    logbookShowToast("inspection-toast", "No records match the current filters to print.");
+    return;
+  }
+
+  const bundle = document.getElementById("inspection-print-bundle");
+  if (bundle) bundle.removeAttribute("hidden");
+
   inspectionSetPrintDate();
   const oldTitle = document.title;
   document.title = "";
@@ -4396,6 +4458,7 @@ function inspectionPrintPanel() {
     window.print();
     setTimeout(() => {
       document.title = oldTitle;
+      if (bundle) bundle.setAttribute("hidden", "");
     }, 500);
   }, 0);
 }
@@ -6580,17 +6643,14 @@ async function occupancyInitData() {
 
 function inspectionGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
-  const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
-  const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
+  const month = (document.getElementById("inspection-filter-month")?.value || "").trim();
   return inspectionData
     .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => inspectionRowMatchesFilters(row, q, from, to));
+    .filter(({ row }) => inspectionRowMatchesFilters(row, q, month));
 }
 
-function inspectionRowMatchesFilters(row, q, from, to) {
-  if (from || to) {
-    if (!inDateRange(row.date_inspected, from, to)) return false;
-  }
+function inspectionRowMatchesFilters(row, q, month) {
+  if (month && !inMonthRange(row.date_inspected, month)) return false;
   if (!q) return true;
   const hay = normalizeQuery(
     [

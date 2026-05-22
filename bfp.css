@@ -2603,9 +2603,27 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
     border: none !important;
   }
 
+  /* Screen-only inspection panels; combined bundle prints instead. */
+  #panel-inspection,
   #panel-inspection-nophoto {
     display: none !important;
   }
+
+  #inspection-print-bundle {
+    display: block !important;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+
+  #table-inspection-print th:nth-child(4),
+  #table-inspection-print td:nth-child(4) {
+    display: none !important;
+  }
+}
+
+.inspection-print-bundle {
+  display: none;
 }
 
 .print-header,
