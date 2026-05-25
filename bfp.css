@@ -2603,9 +2603,63 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
     border: none !important;
   }
 
-  #panel-inspection-nophoto {
+  /* Combined inspection print (Print button adds body.inspection-printing). */
+  body.inspection-printing #panel-inspection,
+  body.inspection-printing #panel-inspection-nophoto {
     display: none !important;
   }
+
+  body.inspection-printing #inspection-print-bundle {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+
+  body.inspection-printing #inspection-print-bundle .table-wrap,
+  body.inspection-printing #table-inspection-print {
+    display: block !important;
+    visibility: visible !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  body.inspection-printing #table-inspection-print {
+    display: table !important;
+    border-collapse: collapse !important;
+  }
+
+  body.inspection-printing #table-inspection-print thead {
+    display: table-header-group !important;
+  }
+
+  body.inspection-printing #table-inspection-print tbody {
+    display: table-row-group !important;
+  }
+
+  body.inspection-printing #table-inspection-print tr {
+    display: table-row !important;
+  }
+
+  body.inspection-printing #table-inspection-print th,
+  body.inspection-printing #table-inspection-print td {
+    display: table-cell !important;
+    visibility: visible !important;
+  }
+
+  body.inspection-printing #table-inspection-print th:nth-child(4),
+  body.inspection-printing #table-inspection-print td:nth-child(4) {
+    display: none !important;
+  }
+}
+
+/* Hidden on screen; shown only when printing via inspectionPrintPanel(). */
+.inspection-print-bundle {
+  display: none !important;
 }
 
 .print-header,
