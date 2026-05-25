@@ -473,21 +473,84 @@
     const toName = inspectors;
     const toPosition = rankCodeToTitle(firstCode);
 
-    const businessName = (entry.business_name || "").toString().trim();
-    const ownerName = (entry.owner_name || "").toString().trim();
+    let business_name = (entry.business_name || "").toString().trim();
+    let owner_name = (entry.owner_name || entry.insp_owner || "").toString().trim();
+    let addrLine = entry.addr_line || "";
+    let addrBarangay = entry.addr_barangay || "";
+    let addrMunicipal = entry.addr_municipal || "";
+    let addrProvince = entry.addr_province || "";
+    let addrRegion = entry.addr_region || "";
+    const fullAddr = (
+      entry.insp_address ||
+      entry.fsec_address ||
+      entry.address ||
+      ""
+    )
+      .toString()
+      .trim();
+    if (
+      (!addrLine ||
+        !addrBarangay ||
+        !addrMunicipal ||
+        !addrProvince ||
+        !addrRegion) &&
+      fullAddr
+    ) {
+      const parts = fullAddr
+        .split(/,\s*/)
+        .map((p) => String(p || "").trim())
+        .filter(Boolean);
+      if (parts.length > 1 && parts[0].toLowerCase().indexOf("region") !== -1) {
+        parts.reverse();
+      }
+      if (!addrBarangay) {
+        const brgy = parts.find((p) => /^(barangay|brgy)/i.test(p));
+        if (brgy) addrBarangay = brgy.replace(/^(barangay|brgy)\.?\s+/i, "");
+      }
+      if (parts.length >= 3) {
+        addrLine = addrLine || parts[0];
+        addrMunicipal = addrMunicipal || parts[parts.length - 3];
+        addrProvince = addrProvince || parts[parts.length - 2];
+        addrRegion = addrRegion || parts[parts.length - 1];
+      }
+    }
+    const finalParts = [];
+    if (addrLine) finalParts.push(addrLine);
+    if (addrBarangay) {
+      const cleanBrgy = addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "");
+      finalParts.push("Barangay " + cleanBrgy);
+    }
+    if (addrMunicipal) finalParts.push(addrMunicipal);
+    if (addrProvince) finalParts.push(addrProvince);
+    if (addrRegion) finalParts.push(addrRegion);
+    const seen = new Set();
+    const uniqueParts = [];
+    finalParts.forEach((p) => {
+      const lower = p.toLowerCase().trim();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        uniqueParts.push(p);
+      }
+    });
+    const address =
+      (entry.io_address_display || "").toString().trim() ||
+      (uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr);
     const bizOwner =
-      businessName && ownerName
-        ? `${businessName}/${ownerName}`
-        : businessName || ownerName;
-    const lat = entry.lat ?? entry.latitude ?? null;
-    const lng = entry.lng ?? entry.longitude ?? null;
-    const coords =
-      lat != null && lng != null && isFinite(Number(lat)) && isFinite(Number(lng))
-        ? `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`
-        : "";
+      business_name && owner_name
+        ? `${business_name}/${owner_name}`
+        : business_name || owner_name;
+    function formatIoCoords(row) {
+      const lat = row.lat ?? row.latitude;
+      const lng = row.lng ?? row.longitude;
+      const latN = Number(lat);
+      const lngN = Number(lng);
+      if (!isFinite(latN) || !isFinite(lngN)) return "";
+      return `${latN.toFixed(6)}, ${lngN.toFixed(6)}`;
+    }
+    const coords = formatIoCoords(entry);
     const proceedLines = [
-      bizOwner ? `Residential premises of: ${bizOwner}` : "",
-      "Manolo Fortich, Bukidnon, Region X",
+      bizOwner,
+      address,
       coords ? `Coordinates: ${coords}` : "",
     ].filter(Boolean);
 

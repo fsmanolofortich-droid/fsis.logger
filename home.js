@@ -185,7 +185,7 @@ let occupancyMarkersLayer = null;
 let inspectionDataLoaded = false;
 let inspectionActiveTab = "with-location";
 let occupancyActiveTab = "with-location";
-let inspectionFocusMapAfterSave = false;
+let saveWithoutLogbookNavigation = false;
 
 let mapMarkerFilter = "all"; // all | businesses | occupancies | Mercantile | Storage | etc
 let mapMarkerFilterSelectEl = null;
@@ -481,11 +481,32 @@ function configureIoNumberField(prefix, mode) {
 }
 
 function inspectionPromptAddEntry() {
+  saveWithoutLogbookNavigation = false;
   promptIoSourceForAdd("inspection");
 }
 
 function occupancyPromptAddEntry() {
+  saveWithoutLogbookNavigation = false;
   promptIoSourceForAdd("occupancy");
+}
+
+function prepareIoSessionEntry(row) {
+  if (!row) return row;
+  const lat = normalizeGeoNumber(row.lat ?? row.latitude);
+  const lng = normalizeGeoNumber(row.lng ?? row.longitude);
+  return {
+    ...row,
+    lat: lat ?? row.lat ?? null,
+    lng: lng ?? row.lng ?? null,
+    io_address_display: inspectionFormatAddressDisplay(row),
+  };
+}
+
+function notifyMapEntrySaved(toastId, message) {
+  showView("map");
+  window.location.hash = "map";
+  logbookShowToast(toastId, message);
+  showSaveIndicator(message);
 }
 
 function promptIoSourceForAdd(logbookType) {
@@ -531,6 +552,7 @@ function ioSourceChoose(mode) {
 
 function mapAddChoose(type) {
   closeMapAddChooser();
+  saveWithoutLogbookNavigation = true;
   if (type === "occupancy") {
     promptIoSourceForAdd("occupancy");
     return;
@@ -1196,10 +1218,41 @@ function normalizeQuery(s) {
   return String(s || "").toLowerCase().trim();
 }
 
+function monthValueToDateBounds(monthStr) {
+  const m = String(monthStr || "").trim();
+  if (!/^\d{4}-\d{2}$/.test(m)) return { from: "", to: "" };
+  const [y, mo] = m.split("-").map(Number);
+  const lastDay = new Date(y, mo, 0).getDate();
+  const mm = String(mo).padStart(2, "0");
+  return {
+    from: `${y}-${mm}-01`,
+    to: `${y}-${mm}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+function normalizeFilterDateBound(value, endOfDay) {
+  const v = String(value || "").trim();
+  if (!v) return "";
+  if (/^\d{4}-\d{2}$/.test(v)) {
+    const bounds = monthValueToDateBounds(v);
+    return endOfDay ? bounds.to : bounds.from;
+  }
+  return v;
+}
+
+function getLogbookFilterDateBounds(fromInput, toInput, monthInput) {
+  const month = (monthInput?.value || "").trim();
+  if (month) return monthValueToDateBounds(month);
+  const from = normalizeFilterDateBound(fromInput?.value, false);
+  const to = normalizeFilterDateBound(toInput?.value, true);
+  return { from, to };
+}
+
 function inDateRange(dateStr, fromStr, toStr) {
+  if (!fromStr && !toStr) return true;
   if (!dateStr) return false;
   let t;
-  if (typeof dateStr === 'string' && !dateStr.includes('T')) {
+  if (typeof dateStr === "string" && !dateStr.includes("T")) {
     t = new Date(dateStr + "T00:00:00").getTime();
   } else {
     t = new Date(dateStr).getTime();
@@ -1207,14 +1260,28 @@ function inDateRange(dateStr, fromStr, toStr) {
   if (!isFinite(t)) return false;
 
   if (fromStr) {
-    const f = new Date(fromStr + "T00:00:00").getTime();
+    const f = new Date(normalizeFilterDateBound(fromStr, false) + "T00:00:00").getTime();
     if (isFinite(f) && t < f) return false;
   }
   if (toStr) {
-    const to = new Date(toStr + "T23:59:59").getTime();
+    const to = new Date(normalizeFilterDateBound(toStr, true) + "T23:59:59").getTime();
     if (isFinite(to) && t > to) return false;
   }
   return true;
+}
+
+function maybeSwitchLogbookTabForFiltered(filtered, activeTab, setTabFn) {
+  if (!filtered.length) return;
+  const withLoc = filtered.some(
+    ({ row }) => row.lat != null && row.lng != null
+  );
+  const noLoc = filtered.some(
+    ({ row }) => row.lat == null || row.lng == null
+  );
+  if (activeTab === "with-location" && withLoc) return;
+  if (activeTab === "no-location" && noLoc) return;
+  if (withLoc) setTabFn("with-location");
+  else if (noLoc) setTabFn("no-location");
 }
 
 function initTableFilters() {
@@ -1237,7 +1304,12 @@ function initTableFilters() {
   };
 
   bind(
-    ["inspection-filter-q", "inspection-filter-from", "inspection-filter-to"],
+    [
+      "inspection-filter-q",
+      "inspection-filter-month",
+      "inspection-filter-from",
+      "inspection-filter-to",
+    ],
     () => inspectionRenderTable()
   );
   bind(["fsec-filter-q", "fsec-filter-from", "fsec-filter-to"], () =>
@@ -1252,7 +1324,12 @@ function initTableFilters() {
     () => fireDrillRenderTable()
   );
   bind(
-    ["occupancy-filter-q", "occupancy-filter-from", "occupancy-filter-to"],
+    [
+      "occupancy-filter-q",
+      "occupancy-filter-month",
+      "occupancy-filter-from",
+      "occupancy-filter-to",
+    ],
     () => occupancyRenderTable()
   );
 }
@@ -1351,7 +1428,14 @@ function extractAddressParts(row) {
   let addrMunicipal = row.addr_municipal || "";
   let addrProvince = row.addr_province || "";
   let addrRegion = row.addr_region || "";
-  const fullAddr = (row.insp_address || row.fsec_address || row.address || "").toString().trim();
+  const fullAddr = (
+    row.insp_address ||
+    row.fsec_address ||
+    row.address ||
+    ""
+  )
+    .toString()
+    .trim();
   
   if ((!addrLine || !addrBarangay || !addrMunicipal || !addrProvince || !addrRegion) && fullAddr) {
     const parts = fullAddr.split(/,\s*/).map((p) => String(p || "").trim()).filter(Boolean);
@@ -1435,6 +1519,19 @@ function inspectionRenderTable() {
   if (noPhotoBadge) noPhotoBadge.textContent = String(totalNoLocation);
 
   const filtered = inspectionGetFilteredEntries();
+  const isFiltered = !!(
+    normalizeQuery(document.getElementById("inspection-filter-q")?.value) ||
+    (document.getElementById("inspection-filter-month")?.value || "").trim() ||
+    (document.getElementById("inspection-filter-from")?.value || "").trim() ||
+    (document.getElementById("inspection-filter-to")?.value || "").trim()
+  );
+  if (isFiltered) {
+    maybeSwitchLogbookTabForFiltered(
+      filtered,
+      inspectionActiveTab,
+      setInspectionTab
+    );
+  }
 
   // If there are inspection records but the current filters hide everything,
   // show the empty state (otherwise it looks like "search/filter not working").
@@ -1537,11 +1634,6 @@ function inspectionRenderTable() {
   }
 
   // ── Filter result info bars ──────────────────────────────────────────
-  const isFiltered = !!(
-    normalizeQuery(document.getElementById("inspection-filter-q")?.value) ||
-    (document.getElementById("inspection-filter-from")?.value || "").trim() ||
-    (document.getElementById("inspection-filter-to")?.value || "").trim()
-  );
   const resultsBadge = document.getElementById("inspection-results-badge");
   if (resultsBadge) {
     if (isFiltered && inspectionData.length > 0) {
@@ -1841,7 +1933,10 @@ function inspectionOpenIoHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
   try {
-    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
+    sessionStorage.setItem(
+      "fsis.io.current",
+      JSON.stringify(prepareIoSessionEntry(row))
+    );
   } catch {
     // If sessionStorage is unavailable, we still open the template;
     // it will show a friendly notice instead of data.
@@ -2197,7 +2292,10 @@ async function inspectionDownloadPdf(idx) {
 
   // Fallback: client-side HTML-to-PDF in a new tab (works even in file:// mode).
   try {
-    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
+    sessionStorage.setItem(
+      "fsis.io.current",
+      JSON.stringify(prepareIoSessionEntry(row))
+    );
     sessionStorage.setItem("fsis.io.downloadFilename", filename);
   } catch {
     // If sessionStorage is unavailable, open without auto-download
@@ -2243,7 +2341,6 @@ function inspectionDeleteEntry(idx) {
 function inspectionOpenModal(ioMode) {
   inspectionEditingIdx = null;
   inspectionEditingId = null;
-  inspectionFocusMapAfterSave = false;
 
   // Reset any previously extracted EXIF coordinates and photo data
   currentExifLat = null;
@@ -2612,18 +2709,20 @@ async function inspectionSaveEntry(e) {
   showSaveIndicator("Inspection record saved");
 
   if (!isOnline) {
+    const isEdit = inspectionEditingIdx !== null;
+    const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
+    saveWithoutLogbookNavigation = false;
+    if (notifyOnMapOnly) {
+      notifyMapEntrySaved(
+        "inspection-toast",
+        "Saved on this device (offline). Marker added to map."
+      );
+      return;
+    }
     logbookShowToast(
       "inspection-toast",
       "Saved on this device only (offline mode)."
     );
-    const isEdit = inspectionEditingIdx !== null;
-    if (entry.lat != null && entry.lng != null && !isEdit) {
-      // Stay in logbook instead of jumping to map as per user request
-      showView("inspection");
-      window.location.hash = "inspection";
-      setInspectionTab("with-location");
-      inspectionRenderTable();
-    }
     return;
   }
 
@@ -2766,15 +2865,29 @@ async function inspectionSaveEntry(e) {
       inspectionRenderTable();
       renderInspectionMarkersBatched();
       inspectionCloseModal();
-      logbookShowToast("inspection-toast", photoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database.");
+      const savedMsg = photoUploadedUrl
+        ? "Saved + photo linked ✓"
+        : "Saved to database.";
+      const isEdit = inspectionEditingId != null;
+      const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
+      saveWithoutLogbookNavigation = false;
+
+      if (notifyOnMapOnly) {
+        const hasLocation =
+          Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
+        const mapMsg = hasLocation
+          ? savedMsg + " New marker on map."
+          : savedMsg + " (No location in photo — check logbook later.)";
+        notifyMapEntrySaved("inspection-toast", mapMsg);
+        return;
+      }
+
+      logbookShowToast("inspection-toast", savedMsg);
 
       const hasLocation =
         Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
 
-      const isEdit = inspectionEditingId != null;
       if (hasLocation && !isEdit) {
-        // No longer jumping to map as per user request.
-        // Stay in the logbook and highlight the new row.
         showView("inspection");
         window.location.hash = "inspection";
         setInspectionTab("with-location");
@@ -2791,9 +2904,7 @@ async function inspectionSaveEntry(e) {
             }
           }
         }, 200);
-      } else {
-        // No location found: Force them to the logbook "No location" tab so they know it saved!
-        // We highlight it without fully filtering so they see it in context.
+      } else if (!isEdit) {
         logbookShowToast("inspection-toast", "Saved! (No location found in photo)");
         showView("inspection");
         window.location.hash = "inspection";
@@ -2801,7 +2912,6 @@ async function inspectionSaveEntry(e) {
         inspectionRenderTable();
 
         setTimeout(() => {
-          // Find the newly saved row based on io_number or highest id
           const idx = inspectionData.findIndex((r) => r.io_number === entry.io_number);
           if (idx >= 0) {
             const rowEl = document.getElementById(`inspection-row-${idx}`);
@@ -2841,9 +2951,11 @@ function inspectionSetPrintDate() {
 
 function inspectionClearFilters() {
   const q = document.getElementById("inspection-filter-q");
+  const month = document.getElementById("inspection-filter-month");
   const from = document.getElementById("inspection-filter-from");
   const to = document.getElementById("inspection-filter-to");
   if (q) q.value = "";
+  if (month) month.value = "";
   if (from) from.value = "";
   if (to) to.value = "";
   inspectionRenderTable();
@@ -2947,7 +3059,10 @@ function openInspectionDetailPanel(entry) {
     openIoBtn.textContent = "Open IO (HTML)";
     openIoBtn.onclick = () => {
       try {
-        sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
+        sessionStorage.setItem(
+          "fsis.io.current",
+          JSON.stringify(prepareIoSessionEntry(entry))
+        );
       } catch { }
       window.open("./inspection_io_fsis.html", "_blank");
     };
@@ -3060,7 +3175,10 @@ function openOccupancyDetailPanel(entry) {
     openIoBtn.textContent = "Open IO (HTML)";
     openIoBtn.onclick = () => {
       try {
-        sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
+        sessionStorage.setItem(
+          "fsis.io.current",
+          JSON.stringify(prepareIoSessionEntry(entry))
+        );
       } catch { }
       window.open("./occupancy_io_fsis.html", "_blank");
     };
@@ -4940,9 +5058,11 @@ function occupancyPrintPanel() {
 
 function occupancyClearFilters() {
   const q = document.getElementById("occupancy-filter-q");
+  const month = document.getElementById("occupancy-filter-month");
   const from = document.getElementById("occupancy-filter-from");
   const to = document.getElementById("occupancy-filter-to");
   if (q) q.value = "";
+  if (month) month.value = "";
   if (from) from.value = "";
   if (to) to.value = "";
   occupancyRenderTable();
@@ -5905,6 +6025,19 @@ function occupancyRenderTable() {
   if (noLocationCountBadge) noLocationCountBadge.textContent = String(totalNoLocation);
 
   const filtered = occupancyGetFilteredEntries();
+  const isFiltered = !!(
+    normalizeQuery(document.getElementById("occupancy-filter-q")?.value) ||
+    (document.getElementById("occupancy-filter-month")?.value || "").trim() ||
+    (document.getElementById("occupancy-filter-from")?.value || "").trim() ||
+    (document.getElementById("occupancy-filter-to")?.value || "").trim()
+  );
+  if (isFiltered) {
+    maybeSwitchLogbookTabForFiltered(
+      filtered,
+      occupancyActiveTab,
+      setOccupancyTab
+    );
+  }
 
   tbody.innerHTML = "";
   if (occupancyData.length > 0 && filtered.length === 0) {
@@ -6019,7 +6152,10 @@ function occupancyOpenIoHtml(idx) {
   const row = occupancyData[idx];
   if (!row) return;
   try {
-    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
+    sessionStorage.setItem(
+      "fsis.io.current",
+      JSON.stringify(prepareIoSessionEntry(row))
+    );
   } catch {
     // If sessionStorage is unavailable, we still open the template;
     // it will show a friendly notice instead of data.
@@ -6394,6 +6530,16 @@ async function occupancySaveEntry(e) {
   addOccupancyMarkerFromEntry(entry);
 
   if (!isOnline) {
+    const isEdit = occupancyEditingIdx !== null;
+    const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
+    saveWithoutLogbookNavigation = false;
+    if (notifyOnMapOnly) {
+      notifyMapEntrySaved(
+        "occupancy-toast",
+        "Saved on this device (offline). Marker added to map."
+      );
+      return;
+    }
     logbookShowToast("occupancy-toast", "Saved on this device only (offline mode).");
     return;
   }
@@ -6506,25 +6652,44 @@ async function occupancySaveEntry(e) {
       await occupancyLoadFromSupabase();
       occupancyRenderTable();
       renderOccupancyMarkersBatched();
-      logbookShowToast("occupancy-toast", occPhotoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database.");
+      const savedMsg = occPhotoUploadedUrl
+        ? "Saved + photo linked ✓"
+        : "Saved to database.";
+      const isEdit = occupancyEditingId != null;
+      const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
+      saveWithoutLogbookNavigation = false;
+
+      if (notifyOnMapOnly) {
+        const hasLocation =
+          Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
+        const mapMsg = hasLocation
+          ? savedMsg + " New marker on map."
+          : savedMsg + " (No location in photo — check logbook later.)";
+        notifyMapEntrySaved("occupancy-toast", mapMsg);
+        return;
+      }
+
+      logbookShowToast("occupancy-toast", savedMsg);
 
       const hasLocation =
         Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
-      showView("occupancy");
-      window.location.hash = "occupancy";
-      setOccupancyTab(hasLocation ? "with-location" : "no-location");
-      occupancyRenderTable();
-      setTimeout(() => {
-        const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
-        if (idx >= 0) {
-          const rowEl = document.getElementById(`occupancy-row-${idx}`);
-          if (rowEl) {
-            rowEl.classList.add("row-highlight");
-            rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
-            setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
+      if (!isEdit) {
+        showView("occupancy");
+        window.location.hash = "occupancy";
+        setOccupancyTab(hasLocation ? "with-location" : "no-location");
+        occupancyRenderTable();
+        setTimeout(() => {
+          const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
+          if (idx >= 0) {
+            const rowEl = document.getElementById(`occupancy-row-${idx}`);
+            if (rowEl) {
+              rowEl.classList.add("row-highlight");
+              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
+            }
           }
-        }
-      }, 200);
+        }, 200);
+      }
     } catch (err) {
       const msg = err?.message || String(err);
       logbookShowToast("occupancy-toast", "Save failed: " + msg);
@@ -6592,8 +6757,11 @@ async function occupancyInitData() {
 
 function inspectionGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("inspection-filter-q")?.value);
-  const from = (document.getElementById("inspection-filter-from")?.value || "").trim();
-  const to = (document.getElementById("inspection-filter-to")?.value || "").trim();
+  const { from, to } = getLogbookFilterDateBounds(
+    document.getElementById("inspection-filter-from"),
+    document.getElementById("inspection-filter-to"),
+    document.getElementById("inspection-filter-month")
+  );
   return inspectionData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => inspectionRowMatchesFilters(row, q, from, to));
@@ -6620,8 +6788,11 @@ function inspectionRowMatchesFilters(row, q, from, to) {
 
 function occupancyGetFilteredEntries() {
   const q = normalizeQuery(document.getElementById("occupancy-filter-q")?.value);
-  const from = (document.getElementById("occupancy-filter-from")?.value || "").trim();
-  const to = (document.getElementById("occupancy-filter-to")?.value || "").trim();
+  const { from, to } = getLogbookFilterDateBounds(
+    document.getElementById("occupancy-filter-from"),
+    document.getElementById("occupancy-filter-to"),
+    document.getElementById("occupancy-filter-month")
+  );
   return occupancyData
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => occupancyRowMatchesFilters(row, q, from, to));
@@ -6638,6 +6809,7 @@ function occupancyRowMatchesFilters(row, q, from, to) {
       row.owner_name,
       row.owner_phone,
       row.business_name,
+      inspectionFormatAddressDisplay(row),
       row.fsic_number,
       row.inspectors,
       row.remarks_signature,

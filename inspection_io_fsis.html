@@ -582,7 +582,9 @@
         }
       });
 
-      const address = uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr;
+      const address =
+        (entry.io_address_display || "").toString().trim() ||
+        (uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr);
       const remarks = (entry.io_remarks ?? entry.remarks ?? "").toString();
 
       const setText = (id, value) => {
@@ -590,6 +592,15 @@
         if (!el) return;
         el.textContent = value || "";
       };
+
+      function formatIoCoords(row) {
+        const lat = row.lat ?? row.latitude;
+        const lng = row.lng ?? row.longitude;
+        const latN = Number(lat);
+        const lngN = Number(lng);
+        if (!isFinite(latN) || !isFinite(lngN)) return "";
+        return `${latN.toFixed(6)}, ${lngN.toFixed(6)}`;
+      }
 
       // Map entry fields into the <> areas.
       setText("io_date", headerDate);
@@ -602,8 +613,11 @@
         business_name && owner_name
           ? `${business_name}/${owner_name}`
           : business_name || owner_name;
-      const proceedText = [bizOwner, address].filter(Boolean).join("\n");
-      setText("io_address", proceedText);
+      const coords = formatIoCoords(entry);
+      const proceedLines = [bizOwner, address, coords ? `Coordinates: ${coords}` : ""].filter(
+        Boolean
+      );
+      setText("io_address", proceedLines.join("\n"));
       setText("io_duration_start", formatDateISOToLong(durationStart));
       setText("io_duration_end", formatDateISOToLong(durationEnd));
       if (remarks) setText("io_remarks", remarks);
