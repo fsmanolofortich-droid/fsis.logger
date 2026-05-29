@@ -3,6 +3,7 @@
 // ============================================================
 
 const SESSION_KEY = "fsis.session";
+const ADMIN_AUTH_KEY = "fsis.admin.auth";
 
 // ── Google Apps Script backend ────────────────────────────────────────────────
 // Paste your deployed Web App URL below after deploying Code.gs
@@ -61,10 +62,27 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function setAdminAuth(username, password) {
+  try {
+    sessionStorage.setItem(ADMIN_AUTH_KEY, JSON.stringify({ username, password }));
+  } catch (_) { }
+}
+
+function clearAdminAuth() {
+  try {
+    sessionStorage.removeItem(ADMIN_AUTH_KEY);
+  } catch (_) { }
+}
+
 function setSession(session) {
-  const raw = JSON.stringify(session);
-  if (session.rememberMe) localStorage.setItem(SESSION_KEY, raw);
+  const { rememberMe, ...profile } = session;
+  const raw = JSON.stringify({ ...profile, rememberMe });
+  if (rememberMe) localStorage.setItem(SESSION_KEY, raw);
   else sessionStorage.setItem(SESSION_KEY, raw);
+}
+
+function isAdminRole(role) {
+  return String(role || "").toLowerCase() === "admin";
 }
 
 function getSession() {
@@ -81,6 +99,15 @@ function getSession() {
 
 function redirectToHome() {
   window.location.replace("./home.html#map");
+}
+
+function redirectToAdmin() {
+  window.location.replace("./admin.html");
+}
+
+function redirectAfterLogin(role) {
+  if (isAdminRole(role)) redirectToAdmin();
+  else redirectToHome();
 }
 
 function normalize(s) {
@@ -152,7 +179,7 @@ function init() {
   const existing = getSession();
   if (existing?.username) {
     showToast(`Welcome back, ${existing.displayName || existing.username}!`, "success", 2000);
-    setTimeout(redirectToHome, 600);
+    setTimeout(() => redirectAfterLogin(existing.role), 600);
     return;
   }
 
@@ -162,11 +189,6 @@ function init() {
   const rememberMe      = document.getElementById("rememberMe");
   const togglePw        = document.getElementById("togglePw");
   const togglePwIcon    = document.getElementById("togglePwIcon");
-  const adminYear       = document.getElementById("adminYear");
-  const adminGate       = document.getElementById("adminSecretGate");
-  const adminSecretInput = document.getElementById("adminSecretInput");
-  const openAdminBtn    = document.getElementById("openAdminBtn");
-
   if (!(form instanceof HTMLFormElement)) return;
 
   // ── Password show / hide ──────────────────────────────
@@ -243,6 +265,12 @@ function init() {
       if (loadingToast) loadingToast();
       showToast(`Welcome, ${user.display_name || user.username}!`, "success", 3000);
 
+      if (isAdminRole(user.role)) {
+        setAdminAuth(u, p);
+      } else {
+        clearAdminAuth();
+      }
+
       setSession({
         userId: user.id,
         username: user.username,
@@ -252,18 +280,20 @@ function init() {
         rememberMe: remember,
       });
 
+      const goNext = () => redirectAfterLogin(user.role);
+
       // Play the success audio and wait for it to finish before redirecting.
       try {
         const audio = new Audio('./fahhhhhhhhhhhhhh.mp3');
-        audio.onended = redirectToHome; // Redirect when audio naturally finishes
-        
+        audio.onended = goNext;
+
         audio.play().catch(e => {
           console.warn("Audio play failed:", e);
-          setTimeout(redirectToHome, 900); // Fallback if audio fails (browser block)
+          setTimeout(goNext, 900);
         });
       } catch (e) {
         console.warn("Audio initialization failed:", e);
-        setTimeout(redirectToHome, 900);
+        setTimeout(goNext, 900);
       }
 
 
@@ -279,41 +309,6 @@ function init() {
     }
   });
 
-  // ── Hidden admin gate: click year 5 times ─────────────
-  let adminYearClicks = 0;
-  if (adminYear && adminGate && adminSecretInput && openAdminBtn) {
-    adminYear.addEventListener("click", () => {
-      adminYearClicks += 1;
-      if (adminYearClicks >= 5) {
-        adminGate.style.display = "block";
-        adminSecretInput.focus();
-        showToast("Admin panel unlocked.", "info", 3000);
-      }
-    });
-
-    openAdminBtn.addEventListener("click", () => {
-      const secret = normalize(adminSecretInput.value);
-      if (!secret) {
-        showToast("Enter the admin secret first.", "error");
-        adminSecretInput.classList.add("is-invalid");
-        return;
-      }
-      adminSecretInput.classList.remove("is-invalid");
-      try {
-        sessionStorage.setItem("fsis.admin.secret", secret);
-      } catch (_) { }
-      showToast("Opening admin dashboard…", "info", 2000);
-      setTimeout(() => { window.location.href = "./admin.html"; }, 500);
-    });
-
-    adminSecretInput.addEventListener("input", () => {
-      adminSecretInput.classList.remove("is-invalid");
-    });
-
-    adminSecretInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") openAdminBtn.click();
-    });
-  }
 }
 
 document.addEventListener("DOMContentLoaded", init);

@@ -233,17 +233,6 @@
     }
     .shake { animation: shake 0.45s ease; }
 
-    /* ── Admin gate ───────────────────────────────────── */
-    #adminSecretGate {
-      margin-top: 1.25rem;
-      padding: 1rem;
-      background: #fafaf8;
-      border: 1px solid #eee;
-      border-radius: 8px;
-    }
-    #adminSecretGate .form-label { color: var(--navy); }
-    #adminSecretGate .form-control { font-size: 0.85rem; }
-
     /* ── Footer ───────────────────────────────────────── */
     footer {
       text-align: center;
@@ -339,9 +328,9 @@
 
         <!-- Username -->
         <div class="mb-3">
-          <label class="form-label" for="username">Username</label>
+          <label class="form-label" for="username">Username or email</label>
           <input id="username" name="username" type="text" class="form-control"
-            placeholder="Enter your username"
+            placeholder="Username or email address"
             autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
 
@@ -376,21 +365,6 @@
         <i class="bi bi-info-circle me-1"></i>
         Accounts are managed by your system administrator.
       </p>
-
-      <!-- Admin gate (hidden, revealed by 5 clicks on year) -->
-      <div id="adminSecretGate" style="display:none;">
-        <div class="mb-2">
-          <label for="adminSecretInput" class="form-label">
-            <i class="bi bi-key-fill me-1"></i>Admin secret
-          </label>
-          <input id="adminSecretInput" type="password" class="form-control"
-            placeholder="Enter admin secret"
-            autocomplete="off" autocapitalize="off" spellcheck="false">
-        </div>
-        <button type="button" id="openAdminBtn" class="btn btn-sm btn-outline-secondary w-100">
-          <i class="bi bi-speedometer2 me-1"></i> Open Admin Dashboard
-        </button>
-      </div>
 
     </div>
   </div>
