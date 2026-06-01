@@ -10,8 +10,8 @@
 //    (Open the folder in Drive and copy the ID from the URL)
 var DRIVE_FOLDER_ID = "1dZPGdfM8hKxN8LzrP_XrkxD2-hs9LYZA";
 
-// 2. Replace with a strong secret used by the admin panel
-var ADMIN_SECRET = "HelloKalibutan";
+// 2. Admin access uses the "users" tab: set role to "admin" on an account row.
+//    Sign in on the login page with that username/password to open the admin panel.
 // ────────────────────────────────────────────────────────────
 
 /**
@@ -28,6 +28,8 @@ function doPost(e) {
     else if (action === "login")   result = handleLogin(body);
     else if (action === "list_users")   result = handleListUsers(body);
     else if (action === "create_user")  result = handleCreateUser(body);
+    else if (action === "update_user")  result = handleUpdateUser(body);
+    else if (action === "suspend_user") result = handleSuspendUser(body);
     else if (action === "read")    result = handleRead(body);
     else if (action === "insert")  result = handleInsert(body);
     else if (action === "update")  result = handleUpdate(body);
@@ -112,6 +114,28 @@ function findRowById(sheet, id) {
   return -1;
 }
 
+// ── USER ACCOUNT HELPERS ────────────────────────────────────
+
+function parseSuspendedFlag(value) {
+  if (value === true || value === 1) return true;
+  var s = String(value || "").trim().toLowerCase();
+  return s === "true" || s === "yes" || s === "1" || s === "suspended";
+}
+
+function isUserSuspended(user) {
+  return parseSuspendedFlag(user && user.suspended);
+}
+
+function findUserByLogin(sheet, loginId) {
+  var users = sheetToObjects(sheet);
+  var key = String(loginId || "").trim().toLowerCase();
+  return users.find(function (u) {
+    var uName = String(u.username || "").trim().toLowerCase();
+    var uEmail = String(u.email || "").trim().toLowerCase();
+    return uName === key || (uEmail && uEmail === key);
+  }) || null;
+}
+
 // ── ACTION HANDLERS ─────────────────────────────────────────
 
 /**
@@ -120,18 +144,20 @@ function findRowById(sheet, id) {
  * Returns: { data: { id, username, display_name, role } } or { error }
  */
 function handleLogin(body) {
-  var username = (body.username || "").trim().toLowerCase();
+  var loginId = (body.username || body.email || "").trim().toLowerCase();
   var password = body.password || "";
-  if (!username || !password) return { error: "Username and password required." };
+  if (!loginId || !password) return { error: "Username and password required." };
 
   var sheet = getSheet("users");
-  var users = sheetToObjects(sheet);
-  var user = users.find(function(u) {
-    return String(u.username || "").trim().toLowerCase() === username
-        && String(u.password || "") === String(password);
-  });
-
-  if (!user) return { error: "Invalid username or password." };
+  ensureColumnExists(sheet, "email");
+  ensureColumnExists(sheet, "suspended");
+  var user = findUserByLogin(sheet, loginId);
+  if (!user || String(user.password || "") !== String(password)) {
+    return { error: "Invalid username or password." };
+  }
+  if (isUserSuspended(user)) {
+    return { error: "This account has been suspended. Contact your administrator." };
+  }
 
   return {
     data: [{
@@ -143,53 +169,223 @@ function handleLogin(body) {
   };
 }
 
+/** Verify username/password and require role === admin. Returns error object or null. */
+function requireAdminUser(body) {
+  var username = (body.username || "").trim().toLowerCase();
+  var password = body.password || "";
+  if (!username || !password) return { error: "Admin sign-in required." };
+
+  var sheet = getSheet("users");
+  ensureColumnExists(sheet, "suspended");
+  var user = findUserByLogin(sheet, username);
+  if (!user || String(user.password || "") !== String(password)) {
+    return { error: "Invalid admin credentials." };
+  }
+  if (isUserSuspended(user)) {
+    return { error: "This admin account is suspended." };
+  }
+  if (String(user.role || "user").toLowerCase() !== "admin") {
+    return { error: "Admin access required." };
+  }
+  return null;
+}
+
 /**
  * LIST USERS — returns all users (admin only)
- * Body: { adminSecret }
+ * Body: { username, password }
  */
 function handleListUsers(body) {
-  if ((body.adminSecret || "") !== ADMIN_SECRET) return { error: "Invalid admin secret." };
+  var authErr = requireAdminUser(body);
+  if (authErr) return authErr;
   var sheet = getSheet("users");
+  ensureColumnExists(sheet, "email");
+  ensureColumnExists(sheet, "suspended");
   var users = sheetToObjects(sheet).map(function(u) {
-    return { id: u.id, username: u.username, display_name: u.display_name, role: u.role, created_at: u.created_at };
+    return {
+      id: u.id,
+      username: u.username,
+      email: u.email || "",
+      display_name: u.display_name,
+      role: u.role,
+      suspended: isUserSuspended(u),
+      created_at: u.created_at
+    };
   });
   return { data: users };
 }
 
 /**
  * CREATE USER — appends a new user row (admin only)
- * Body: { adminSecret, username, displayName, password, role }
+ * Body: { username, password, newUsername, displayName, newPassword, role }
+ *   username/password = signed-in admin credentials
+ *   newUsername, newPassword, displayName, role = account to create
  */
 function handleCreateUser(body) {
-  if ((body.adminSecret || "") !== ADMIN_SECRET) return { error: "Invalid admin secret." };
+  var authErr = requireAdminUser(body);
+  if (authErr) return authErr;
 
-  var username = (body.username || "").trim();
+  var newUsername = (body.newUsername || "").trim();
+  var newEmail = (body.email || "").trim();
   var displayName = (body.displayName || "").trim();
-  var password = body.password || "";
+  var newPassword = body.newPassword || "";
   var role = body.role || "user";
 
-  if (!username) return { error: "Username is required." };
-  if (!password || password.length < 4) return { error: "Password must be at least 4 characters." };
+  if (!newUsername) return { error: "Username is required." };
+  if (!newPassword || newPassword.length < 4) return { error: "Password must be at least 4 characters." };
 
   var sheet = getSheet("users");
+  ensureColumnExists(sheet, "email");
+  ensureColumnExists(sheet, "suspended");
   var existingUsers = sheetToObjects(sheet);
   var duplicate = existingUsers.find(function(u) {
-    return String(u.username || "").toLowerCase() === username.toLowerCase();
+    return String(u.username || "").toLowerCase() === newUsername.toLowerCase();
   });
   if (duplicate) return { error: "Username already exists." };
+  if (newEmail) {
+    var dupEmail = existingUsers.find(function (u) {
+      return String(u.email || "").trim().toLowerCase() === newEmail.toLowerCase();
+    });
+    if (dupEmail) return { error: "Email already in use." };
+  }
 
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var newRow = headers.map(function(h) {
     if (h === "id") return generateUUID();
-    if (h === "username") return username;
+    if (h === "username") return newUsername;
+    if (h === "email") return newEmail;
     if (h === "display_name") return displayName;
-    if (h === "password") return password;
+    if (h === "password") return newPassword;
     if (h === "role") return role;
+    if (h === "suspended") return false;
     if (h === "created_at") return new Date().toISOString();
     return "";
   });
   sheet.appendRow(newRow);
-  return { data: { username: username } };
+  return { data: { username: newUsername, email: newEmail } };
+}
+
+/**
+ * SUSPEND USER — suspend or restore an account (admin only)
+ * Body: { username, password, userId, suspended: true|false }
+ */
+function handleSuspendUser(body) {
+  var authErr = requireAdminUser(body);
+  if (authErr) return authErr;
+
+  var userId = body.userId || body.id;
+  if (!userId) return { error: "User id required." };
+
+  if (body.suspended === undefined || body.suspended === null) {
+    return { error: "suspended flag required (true or false)." };
+  }
+  var suspendFlag = body.suspended === true
+    || String(body.suspended).toLowerCase() === "true";
+
+  var sheet = getSheet("users");
+  ensureColumnExists(sheet, "suspended");
+  var rowNum = findRowById(sheet, userId);
+  if (rowNum < 0) return { error: "User not found." };
+
+  var allUsers = sheetToObjects(sheet);
+  var target = allUsers.find(function (u) { return String(u.id) === String(userId); });
+  if (!target) return { error: "User not found." };
+
+  var adminLogin = String(body.username || "").trim().toLowerCase();
+  var adminUser = findUserByLogin(sheet, adminLogin);
+  if (adminUser && String(adminUser.id) === String(userId) && suspendFlag) {
+    return { error: "You cannot suspend your own account." };
+  }
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var suspCol = headers.indexOf("suspended") + 1;
+  if (suspCol < 1) return { error: "suspended column missing." };
+
+  sheet.getRange(rowNum, suspCol).setValue(suspendFlag ? "TRUE" : "FALSE");
+
+  return {
+    data: {
+      id: userId,
+      username: target.username,
+      suspended: suspendFlag
+    }
+  };
+}
+
+/**
+ * UPDATE USER — edit account (admin only)
+ * Body: { username, password, userId, username?, email?, displayName?, password?, role? }
+ *   username/password at top level = admin credentials
+ *   userId = row to edit; other fields = updates (password optional)
+ */
+function handleUpdateUser(body) {
+  var authErr = requireAdminUser(body);
+  if (authErr) return authErr;
+
+  var userId = body.userId || body.id;
+  if (!userId) return { error: "User id required." };
+
+  var sheet = getSheet("users");
+  ensureColumnExists(sheet, "email");
+  var rowNum = findRowById(sheet, userId);
+  if (rowNum < 0) return { error: "User not found." };
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var allUsers = sheetToObjects(sheet);
+  var current = allUsers.find(function (u) { return String(u.id) === String(userId); });
+  if (!current) return { error: "User not found." };
+
+  var targetUsername = body.targetUsername != null
+    ? String(body.targetUsername).trim()
+    : String(current.username || "").trim();
+  var targetEmail = body.email != null
+    ? String(body.email).trim()
+    : String(current.email || "").trim();
+  var targetDisplay = body.displayName != null
+    ? String(body.displayName).trim()
+    : String(current.display_name || "").trim();
+  var targetRole = body.role != null
+    ? String(body.role).trim()
+    : String(current.role || "user");
+  var newPassword = body.newPassword != null ? String(body.newPassword) : "";
+
+  if (!targetUsername) return { error: "Username is required." };
+  if (newPassword && newPassword.length < 4) {
+    return { error: "Password must be at least 4 characters." };
+  }
+
+  var dupUser = allUsers.find(function (u) {
+    return String(u.id) !== String(userId)
+      && String(u.username || "").trim().toLowerCase() === targetUsername.toLowerCase();
+  });
+  if (dupUser) return { error: "Username already exists." };
+
+  if (targetEmail) {
+    var dupEmail = allUsers.find(function (u) {
+      return String(u.id) !== String(userId)
+        && String(u.email || "").trim().toLowerCase() === targetEmail.toLowerCase();
+    });
+    if (dupEmail) return { error: "Email already in use." };
+  }
+
+  for (var c = 0; c < headers.length; c++) {
+    var h = String(headers[c] || "").trim();
+    var col = c + 1;
+    if (h === "username") sheet.getRange(rowNum, col).setValue(targetUsername);
+    else if (h === "email") sheet.getRange(rowNum, col).setValue(targetEmail);
+    else if (h === "display_name") sheet.getRange(rowNum, col).setValue(targetDisplay);
+    else if (h === "role") sheet.getRange(rowNum, col).setValue(targetRole);
+    else if (h === "password" && newPassword) sheet.getRange(rowNum, col).setValue(newPassword);
+  }
+
+  return {
+    data: {
+      id: userId,
+      username: targetUsername,
+      email: targetEmail,
+      display_name: targetDisplay,
+      role: targetRole
+    }
+  };
 }
 
 /**
@@ -667,6 +863,101 @@ function handleUpload(body) {
   } catch (err) {
     return { error: "Drive upload failed: " + err.message };
   }
+}
+
+/** Find sheet row (1-indexed) by username column. */
+function findRowByUsername(sheet, username) {
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return -1;
+  var headers = data[0];
+  var userCol = headers.indexOf("username");
+  if (userCol === -1) return -1;
+  var target = String(username || "").trim().toLowerCase();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][userCol]).trim().toLowerCase() === target) return i + 1;
+  }
+  return -1;
+}
+
+/** Ensure the users tab exists with standard headers. */
+function ensureUsersSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("users");
+  var headers = ["id", "username", "email", "display_name", "password", "role", "suspended", "created_at"];
+  if (!sheet) {
+    sheet = ss.insertSheet("users");
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return sheet;
+  }
+  if (sheet.getLastRow() < 1) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+/**
+ * Create or update an admin (or any) user row on the users tab.
+ * @param {string} username
+ * @param {string} password
+ * @param {string} displayName
+ * @param {string} role  e.g. "admin" or "user"
+ */
+function ensureAdminUser(username, password, displayName, role) {
+  var sheet = ensureUsersSheet();
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var uname = String(username || "").trim();
+  if (!uname) throw new Error("username is required.");
+
+  var rowNum = findRowByUsername(sheet, uname);
+  var idCol = headers.indexOf("id") + 1;
+  var createdCol = headers.indexOf("created_at") + 1;
+  var existingId = rowNum > 0 && idCol > 0 ? sheet.getRange(rowNum, idCol).getValue() : "";
+  var existingCreated = rowNum > 0 && createdCol > 0 ? sheet.getRange(rowNum, createdCol).getValue() : "";
+
+  var values = headers.map(function (h) {
+    if (h === "id") return existingId || generateUUID();
+    if (h === "username") return uname;
+    if (h === "display_name") return displayName || uname;
+    if (h === "password") return password || "";
+    if (h === "role") return role || "user";
+    if (h === "suspended") return false;
+    if (h === "created_at") return existingCreated || new Date().toISOString();
+    return "";
+  });
+
+  if (rowNum > 0) {
+    sheet.getRange(rowNum, 1, rowNum, values.length).setValues([values]);
+    Logger.log("Updated user: " + uname + " (role: " + (role || "user") + ")");
+  } else {
+    sheet.appendRow(values);
+    Logger.log("Created user: " + uname + " (role: " + (role || "user") + ")");
+  }
+  return { ok: true, username: uname, role: role || "user" };
+}
+
+/**
+ * RUN ONCE: Extensions → Apps Script → select setupDefaultAdminUser → Run ▶
+ * Adds/updates the default BFP admin account on the users tab.
+ */
+function setupDefaultAdminUser() {
+  var sheet = ensureUsersSheet();
+  ensureColumnExists(sheet, "email");
+  var result = ensureAdminUser(
+    "mfcariaga@bfp",
+    "admin123",
+    "MFC Ariaga",
+    "admin"
+  );
+  var rowNum = findRowByUsername(sheet, "mfcariaga@bfp");
+  if (rowNum > 0) {
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var emailCol = headers.indexOf("email") + 1;
+    if (emailCol > 0) {
+      sheet.getRange(rowNum, emailCol).setValue("mfcariaga@bfp");
+    }
+  }
+  Logger.log("✅ Default admin ready. Sign in with username: mfcariaga@bfp");
+  return result;
 }
 
 /**

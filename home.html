@@ -46,6 +46,10 @@
         <a class="nav-link" href="#fire_drill" data-view-link="fire_drill"><i class="bi bi-fire" aria-hidden="true"></i>Fire Drill Logbook</a>
         <a class="nav-link" href="#occupancy" data-view-link="occupancy"><i class="bi bi-house-door" aria-hidden="true"></i>Occupancy Logbook</a>
       </nav>
+      <p class="nav-offcanvas-section-label mt-3" id="navAdminSection" hidden>Administration</p>
+      <nav class="nav flex-column" id="navAdminBlock" aria-label="Administration" hidden>
+        <a class="nav-link" href="./admin.html" id="navAdminLink"><i class="bi bi-shield-lock" aria-hidden="true"></i>Account management</a>
+      </nav>
     </div>
     <div class="offcanvas-footer">
       <div class="user-pill" aria-label="Signed in user">
@@ -159,7 +163,15 @@
             </div>
           </div>
         </aside>
-        <div id="map" role="region" aria-label="Municipality map"></div>
+        <div class="map-shell">
+          <div id="map" role="region" aria-label="Municipality map"></div>
+          <div id="map-loading-overlay" class="map-loading-overlay" hidden aria-live="polite">
+            <div class="map-loading-box">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p class="map-loading-text">Loading map data…</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -227,6 +239,10 @@
                 </thead>
                 <tbody id="tbody-conveyance"></tbody>
               </table>
+            </div>
+            <div id="loading-conveyance" class="logbook-loading-state" hidden aria-live="polite">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p>Loading conveyance records…</p>
             </div>
             <div id="empty-conveyance" class="empty-state" style="display:none;">
               <div class="empty-icon" aria-hidden="true">&#x1F697;</div>
@@ -402,6 +418,10 @@
                 <tbody id="tbody-fire_drill"></tbody>
               </table>
             </div>
+            <div id="loading-fire_drill" class="logbook-loading-state" hidden aria-live="polite">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p>Loading fire drill records…</p>
+            </div>
             <div id="empty-fire_drill" class="empty-state" style="display:none;">
               <div class="empty-icon" aria-hidden="true">&#x1F525;</div>
               <strong>No Fire Drill Records Yet</strong>
@@ -574,7 +594,6 @@
             <div class="control">
               <label for="occupancy-filter-month">Month</label>
               <input id="occupancy-filter-month" type="month" class="form-control form-control-sm"
-                title="Filter by calendar month"
                 aria-label="Filter by month (leave blank for all months)">
             </div>
             <div class="spacer"></div>
@@ -636,6 +655,10 @@
                 <tbody id="tbody-occupancy"></tbody>
               </table>
             </div>
+            <div id="loading-occupancy" class="logbook-loading-state" hidden aria-live="polite">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p>Loading occupancy records…</p>
+            </div>
             <div id="empty-occupancy" class="empty-state" style="display:none;">
               <div class="empty-icon" aria-hidden="true">&#x1F3E0;</div>
               <strong>No Occupancy Records Yet</strong>
@@ -696,6 +719,10 @@
                 <tbody id="tbody-occupancy-nolocation"></tbody>
               </table>
             </div>
+            <div id="loading-occupancy-nolocation" class="logbook-loading-state" hidden aria-live="polite">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p>Loading occupancy records…</p>
+            </div>
             <div id="empty-occupancy-nolocation" class="empty-state">
               <div class="empty-icon" aria-hidden="true">&#x1F4CD;</div>
               <strong>No pending occupancy locations</strong>
@@ -733,7 +760,6 @@
             <div class="control">
               <label for="inspection-filter-month">Month</label>
               <input id="inspection-filter-month" type="month" class="form-control form-control-sm"
-                title="Filter by calendar month"
                 aria-label="Filter by month (leave blank for all months)">
             </div>
             <div class="spacer"></div>
@@ -826,6 +852,10 @@
                 <tbody id="tbody-inspection"></tbody>
               </table>
             </div>
+            <div id="loading-inspection" class="logbook-loading-state" hidden aria-live="polite">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p>Loading inspection records…</p>
+            </div>
             <div id="empty-inspection" class="empty-state" style="display:none;">
               <div class="empty-icon" aria-hidden="true">&#x1F5C4;&#xFE0F;</div>
               <strong>No Inspection Records Yet</strong>
@@ -888,6 +918,10 @@
                 </thead>
                 <tbody id="tbody-inspection-nophoto"></tbody>
               </table>
+            </div>
+            <div id="loading-inspection-nophoto" class="logbook-loading-state" hidden aria-live="polite">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p>Loading inspection records…</p>
             </div>
             <div id="empty-inspection-nophoto" class="empty-state">
               <div class="empty-icon" aria-hidden="true">&#x1F5BC;&#xFE0F;</div>
@@ -969,6 +1003,10 @@
                 </thead>
                 <tbody id="tbody-fsec"></tbody>
               </table>
+            </div>
+            <div id="loading-fsec" class="logbook-loading-state" hidden aria-live="polite">
+              <span class="logbook-spinner" aria-hidden="true"></span>
+              <p>Loading FSEC records…</p>
             </div>
             <div id="empty-fsec" class="empty-state" style="display:none;">
               <div class="empty-icon" aria-hidden="true">&#x1F3D7;&#xFE0F;</div>
