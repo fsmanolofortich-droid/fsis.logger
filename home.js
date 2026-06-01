@@ -1589,11 +1589,11 @@ function inspectionRenderTable() {
         <td data-label="#">${rowNum}</td>
         <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
         <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
-        <td data-label="Owner phone">${logbookEsc(row.insp_owner_phone)}</td>
         <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
         <td data-label="Address">${logbookEsc(inspectionFormatAddressShort(row))}</td>
         <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
         <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
+        <td class="td-date" data-label="Expiry date">${logbookFormatDate(row.fsic_valid_until)}</td>
         <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
       `;
 
@@ -3000,11 +3000,11 @@ function inspectionBuildPrintTable() {
       <td data-label="#">${i + 1}</td>
       <td class="td-io" data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Owner">${logbookEsc(row.insp_owner)}</td>
-      <td data-label="Owner phone">${logbookEsc(row.insp_owner_phone)}</td>
       <td data-label="Business / Establishment"><strong>${logbookEsc(row.business_name)}</strong></td>
       <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
       <td class="td-date" data-label="Date Inspected">${logbookFormatDate(row.date_inspected)}</td>
       <td class="td-fsic" data-label="FSIC Number">${logbookEsc(row.fsic_number)}</td>
+      <td class="td-date" data-label="Expiry date">${logbookFormatDate(row.fsic_valid_until)}</td>
       <td data-label="Inspected By">${logbookEsc(row.inspected_by)}</td>
       <td data-label="Has location">${hasLocation ? "Yes" : "No"}</td>
     `;
@@ -6113,12 +6113,12 @@ function occupancyRenderTable() {
       <td data-label="#">${rowNum}</td>
       <td data-label="IO Number">${logbookEsc(row.io_number)}</td>
       <td data-label="Name of Owner">${logbookEsc(row.owner_name)}</td>
-      <td data-label="Owner Phone">${logbookEsc(row.owner_phone)}</td>
       <td data-label="Residential / Property"><strong>${logbookEsc(row.business_name)}</strong></td>
       <td data-label="Address">${logbookEsc(inspectionFormatAddressDisplay(row))}</td>
       <td class="td-date" data-label="Date">${logbookFormatDate(row.log_date)}</td>
       <td data-label="Type">${logbookEsc(row.type_of_occupancy)}</td>
       <td data-label="FSIC Number"><strong>${logbookEsc(row.fsic_number)}</strong></td>
+      <td class="td-date" data-label="Expiry date">${logbookFormatDate(row.fsic_valid_until)}</td>
       <td data-label="Inspected By"><div class="cell-pre">${logbookEsc(row.inspectors)}</div></td>
     `;
 
@@ -6984,11 +6984,11 @@ function inspectionExportCSV() {
     "#",
     "IO Number",
     "Name of Owner",
-    "Owner phone",
     "Business / Establishment",
     "Address",
     "Date Inspected",
     "FSIC Number",
+    "Expiry date",
     "Inspected By",
     "Has location",
     "Latitude",
@@ -7000,11 +7000,11 @@ function inspectionExportCSV() {
       i + 1,
       row.io_number,
       row.insp_owner,
-      row.insp_owner_phone,
       row.business_name,
       inspectionFormatAddressDisplay(row),
       logbookFormatDate(row.date_inspected),
       row.fsic_number,
+      logbookFormatDate(row.fsic_valid_until),
       row.inspected_by,
       hasLocation ? "Yes" : "No",
       hasLocation ? row.lat : "",
@@ -7024,12 +7024,12 @@ function occupancyExportCSV() {
     "#",
     "IO Number",
     "Name of Owner",
-    "Owner Phone",
     "Residential / Property",
     "Address",
     "Date",
     "Type of Occupancy",
     "FSIC Number",
+    "Expiry date",
     "Inspected By",
     "Has location",
     "Latitude",
@@ -7041,12 +7041,12 @@ function occupancyExportCSV() {
       i + 1,
       row.io_number,
       row.owner_name,
-      row.owner_phone,
       row.business_name,
       inspectionFormatAddressDisplay(row),
       logbookFormatDate(row.log_date),
       row.type_of_occupancy,
       row.fsic_number,
+      logbookFormatDate(row.fsic_valid_until),
       row.inspectors,
       hasLocation ? "Yes" : "No",
       hasLocation ? row.lat : "",
