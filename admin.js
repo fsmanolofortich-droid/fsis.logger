@@ -72,6 +72,14 @@ function normalizeUserRole(role) {
   return r || "user";
 }
 
+function normalizeUserStatus(status) {
+  const s = String(status ?? "")
+    .trim()
+    .toLowerCase();
+  if (s === "suspended" || s === "inactive" || s === "disabled") return "suspended";
+  return "active";
+}
+
 function showToast(msg, isError) {
   const el = document.getElementById("toast");
   if (!el) return;
@@ -111,21 +119,70 @@ function requireAdminSession() {
   return session;
 }
 
+function openOverlay(id) {
+  document.getElementById(id)?.classList.add("open");
+}
+
+function closeOverlay(id) {
+  document.getElementById(id)?.classList.remove("open");
+}
+
+function closeAllModals() {
+  closeOverlay("create-user-overlay");
+  closeOverlay("edit-user-overlay");
+  closeOverlay("delete-user-overlay");
+}
+
 function openCreateUserModal() {
-  const overlay = document.getElementById("create-user-overlay");
-  if (!overlay) return;
-  overlay.classList.add("open");
+  openOverlay("create-user-overlay");
   document.getElementById("new-username")?.focus();
 }
 
 function closeCreateUserModal() {
-  const overlay = document.getElementById("create-user-overlay");
-  if (!overlay) return;
-  overlay.classList.remove("open");
+  closeOverlay("create-user-overlay");
 }
 
 function adminCloseCreateOnOverlay(e) {
   if (e.target?.id === "create-user-overlay") closeCreateUserModal();
+}
+
+function openEditUserModal(user) {
+  if (!user) return;
+  document.getElementById("edit-user-id").value = user.id || "";
+  const label = document.getElementById("edit-user-username-label");
+  if (label) label.innerHTML = "Username: <strong>" + escapeHtml(user.username || "") + "</strong>";
+  document.getElementById("edit-display-name").value = user.display_name || "";
+  document.getElementById("edit-role").value = normalizeUserRole(user.role);
+  document.getElementById("edit-password").value = "";
+  openOverlay("edit-user-overlay");
+  document.getElementById("edit-display-name")?.focus();
+}
+
+function closeEditUserModal() {
+  closeOverlay("edit-user-overlay");
+}
+
+function adminCloseEditOnOverlay(e) {
+  if (e.target?.id === "edit-user-overlay") closeEditUserModal();
+}
+
+function openDeleteUserModal(user) {
+  if (!user) return;
+  document.getElementById("delete-user-id").value = user.id || "";
+  const msg = document.getElementById("delete-user-message");
+  if (msg) {
+    msg.innerHTML =
+      "Delete account <strong>" + escapeHtml(user.username || "") + "</strong>?";
+  }
+  openOverlay("delete-user-overlay");
+}
+
+function closeDeleteUserModal() {
+  closeOverlay("delete-user-overlay");
+}
+
+function adminCloseDeleteOnOverlay(e) {
+  if (e.target?.id === "delete-user-overlay") closeDeleteUserModal();
 }
 
 function exportTableToCSV(tableId, filename) {
@@ -137,11 +194,12 @@ function exportTableToCSV(tableId, filename) {
     const row = [];
     const cols = rows[i].querySelectorAll("td, th");
     for (let j = 0; j < cols.length; j++) {
+      if (cols[j].classList.contains("col-actions")) continue;
       let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").replace(/(\s\s)/gm, " ");
       data = data.replace(/"/g, '""');
       row.push('"' + data + '"');
     }
-    csv.push(row.join(","));
+    if (row.length) csv.push(row.join(","));
   }
   const blob = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
@@ -193,10 +251,125 @@ function initNavChrome(session) {
 }
 
 let adminUsername = "";
+let adminUserId = "";
+let usersCache = [];
 
 function setUsersCount(n) {
   const el = document.getElementById("users-count");
   if (el) el.textContent = n === 1 ? "1 user" : n + " users";
+}
+
+function findCachedUser(id) {
+  return usersCache.find((u) => String(u.id) === String(id));
+}
+
+function renderStatusBadge(status) {
+  const s = normalizeUserStatus(status);
+  if (s === "suspended") {
+    return '<span class="admin-status admin-status--suspended">Suspended</span>';
+  }
+  return '<span class="admin-status admin-status--active">Active</span>';
+}
+
+function renderUserRow(row) {
+  const tr = document.createElement("tr");
+  const status = normalizeUserStatus(row.status);
+  if (status === "suspended") tr.classList.add("is-suspended");
+
+  const created = row.created_at
+    ? new Date(row.created_at).toLocaleDateString("en-PH", { dateStyle: "short" })
+    : "—";
+  const role = normalizeUserRole(row.role);
+  const roleClass = role === "admin" ? "admin-role--admin" : "admin-role--user";
+  const isSelf = String(row.username || "").trim().toLowerCase() === adminUsername.toLowerCase();
+  const suspendLabel = status === "suspended" ? "Activate" : "Suspend";
+  const suspendIcon = status === "suspended" ? "bi-person-check" : "bi-slash-circle";
+
+  tr.innerHTML =
+    '<td class="username-cell">' +
+    escapeHtml(row.username || "") +
+    "</td>" +
+    "<td>" +
+    escapeHtml(row.display_name || "—") +
+    "</td>" +
+    '<td><span class="admin-role ' +
+    roleClass +
+    '">' +
+    escapeHtml(role) +
+    "</span></td>" +
+    "<td>" +
+    renderStatusBadge(status) +
+    "</td>" +
+    "<td>" +
+    escapeHtml(created) +
+    "</td>" +
+    '<td class="col-actions"><div class="admin-table-actions">' +
+    '<button type="button" class="admin-btn admin-btn--ghost admin-btn--sm" data-action="edit" data-id="' +
+    escapeHtml(row.id) +
+    '" title="Edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</button>' +
+    (isSelf
+      ? ""
+      : '<button type="button" class="admin-btn admin-btn--muted admin-btn--sm" data-action="toggle-status" data-id="' +
+        escapeHtml(row.id) +
+        '" title="' +
+        suspendLabel +
+        '"><i class="bi ' +
+        suspendIcon +
+        '" aria-hidden="true"></i> ' +
+        suspendLabel +
+        "</button>") +
+    (isSelf
+      ? ""
+      : '<button type="button" class="admin-btn admin-btn--warn admin-btn--sm" data-action="delete" data-id="' +
+        escapeHtml(row.id) +
+        '" title="Delete"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>') +
+    "</div></td>";
+
+  return tr;
+}
+
+function wireTableActions() {
+  const tbody = document.getElementById("users-tbody");
+  if (!tbody) return;
+
+  tbody.addEventListener("click", (e) => {
+    const btn = e.target.closest?.("[data-action]");
+    if (!btn) return;
+    const id = btn.getAttribute("data-id");
+    const user = findCachedUser(id);
+    if (!user) return;
+
+    const action = btn.getAttribute("data-action");
+    if (action === "edit") {
+      openEditUserModal(user);
+      return;
+    }
+    if (action === "delete") {
+      openDeleteUserModal(user);
+      return;
+    }
+    if (action === "toggle-status") {
+      const next = normalizeUserStatus(user.status) === "suspended" ? "active" : "suspended";
+      const verb = next === "suspended" ? "suspend" : "reactivate";
+      if (!confirm("Are you sure you want to " + verb + " " + (user.username || "this user") + "?")) {
+        return;
+      }
+      btn.disabled = true;
+      gasRequest("set_user_status", { adminUsername, id: user.id, status: next })
+        .then(() => {
+          showToast(
+            next === "suspended"
+              ? "Account suspended: " + user.username
+              : "Account activated: " + user.username
+          );
+          loadUsers();
+        })
+        .catch((err) => showToast(err?.message || "Failed to update status.", true))
+        .finally(() => {
+          btn.disabled = false;
+        });
+    }
+  });
 }
 
 function loadUsers() {
@@ -205,48 +378,26 @@ function loadUsers() {
   if (!tbody) return;
 
   tbody.innerHTML =
-    '<tr id="users-loading-row"><td colspan="4" class="admin-table-loading">Loading users…</td></tr>';
+    '<tr id="users-loading-row"><td colspan="6" class="admin-table-loading">Loading users…</td></tr>';
   if (empty) empty.hidden = true;
 
   gasRequest("list_users", { adminUsername })
     .then((r) => {
-      const rows = r.data || [];
-      setUsersCount(rows.length);
-      if (rows.length === 0) {
+      usersCache = (r.data || []).filter((u) => String(u.username || "").trim() !== "");
+      setUsersCount(usersCache.length);
+      if (usersCache.length === 0) {
         tbody.innerHTML = "";
         if (empty) empty.hidden = false;
         return;
       }
       if (empty) empty.hidden = true;
       tbody.innerHTML = "";
-      rows.forEach((row) => {
-        const tr = document.createElement("tr");
-        const created = row.created_at
-          ? new Date(row.created_at).toLocaleDateString("en-PH", { dateStyle: "short" })
-          : "—";
-        const role = normalizeUserRole(row.role);
-        const roleClass = role === "admin" ? "admin-role--admin" : "admin-role--user";
-        tr.innerHTML =
-          '<td class="username-cell">' +
-          escapeHtml(row.username || "") +
-          "</td>" +
-          "<td>" +
-          escapeHtml(row.display_name || "—") +
-          "</td>" +
-          '<td><span class="admin-role ' +
-          roleClass +
-          '">' +
-          escapeHtml(role) +
-          "</span></td>" +
-          "<td>" +
-          escapeHtml(created) +
-          "</td>";
-        tbody.appendChild(tr);
-      });
+      usersCache.forEach((row) => tbody.appendChild(renderUserRow(row)));
     })
     .catch((err) => {
+      usersCache = [];
       tbody.innerHTML =
-        '<tr><td colspan="4" class="admin-table-error">Error: ' +
+        '<tr><td colspan="6" class="admin-table-error">Error: ' +
         escapeHtml(err?.message || err) +
         "</td></tr>";
       setUsersCount(0);
@@ -259,17 +410,23 @@ function init() {
   if (!session) return;
 
   adminUsername = String(session.username || "").trim();
+  adminUserId = String(session.userId || "").trim();
   initNavChrome(session);
+  wireTableActions();
 
   document.getElementById("btnOpenCreateUser")?.addEventListener("click", openCreateUserModal);
   document.getElementById("btnCloseCreateUser")?.addEventListener("click", closeCreateUserModal);
   document.getElementById("btnCancelCreateUser")?.addEventListener("click", closeCreateUserModal);
+  document.getElementById("btnCloseEditUser")?.addEventListener("click", closeEditUserModal);
+  document.getElementById("btnCancelEditUser")?.addEventListener("click", closeEditUserModal);
+  document.getElementById("btnCloseDeleteUser")?.addEventListener("click", closeDeleteUserModal);
+  document.getElementById("btnCancelDeleteUser")?.addEventListener("click", closeDeleteUserModal);
   document.getElementById("btnExportCsv")?.addEventListener("click", () =>
     exportTableToCSV("table-users", "app_users.csv")
   );
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeCreateUserModal();
+    if (e.key === "Escape") closeAllModals();
   });
 
   document.getElementById("create-user-form")?.addEventListener("submit", (e) => {
@@ -306,11 +463,62 @@ function init() {
         closeCreateUserModal();
         loadUsers();
       })
-      .catch((err) => {
-        showToast(err?.message || "Failed to create account", true);
-      })
+      .catch((err) => showToast(err?.message || "Failed to create account", true))
       .finally(() => {
         if (submitBtn) submitBtn.disabled = false;
+      });
+  });
+
+  document.getElementById("edit-user-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = document.getElementById("edit-user-id")?.value || "";
+    const displayName = document.getElementById("edit-display-name")?.value?.trim() || "";
+    const role = document.getElementById("edit-role")?.value || "user";
+    const password = document.getElementById("edit-password")?.value || "";
+    const submitBtn = document.getElementById("btnSubmitEditUser");
+
+    if (!id) return;
+    if (password && password.length < 4) {
+      showToast("Password must be at least 4 characters.", true);
+      return;
+    }
+
+    const payload = {
+      adminUsername,
+      id,
+      displayName,
+      role,
+    };
+    if (password) payload.password = password;
+
+    if (submitBtn) submitBtn.disabled = true;
+    gasRequest("update_user", payload)
+      .then(() => {
+        showToast("Account updated.");
+        closeEditUserModal();
+        loadUsers();
+      })
+      .catch((err) => showToast(err?.message || "Failed to update account", true))
+      .finally(() => {
+        if (submitBtn) submitBtn.disabled = false;
+      });
+  });
+
+  document.getElementById("btnConfirmDeleteUser")?.addEventListener("click", () => {
+    const id = document.getElementById("delete-user-id")?.value || "";
+    const btn = document.getElementById("btnConfirmDeleteUser");
+    if (!id) return;
+
+    if (btn) btn.disabled = true;
+    gasRequest("delete_user", { adminUsername, id })
+      .then(() => {
+        showToast("Account deleted.");
+        closeDeleteUserModal();
+        loadUsers();
+      })
+      .catch((err) => showToast(err?.message || "Failed to delete account", true))
+      .finally(() => {
+        if (btn) btn.disabled = false;
       });
   });
 
@@ -319,5 +527,6 @@ function init() {
 
 document.addEventListener("DOMContentLoaded", init);
 
-// Expose for inline onclick on overlay
 window.adminCloseCreateOnOverlay = adminCloseCreateOnOverlay;
+window.adminCloseEditOnOverlay = adminCloseEditOnOverlay;
+window.adminCloseDeleteOnOverlay = adminCloseDeleteOnOverlay;

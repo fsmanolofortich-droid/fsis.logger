@@ -26,6 +26,9 @@ function doPost(e) {
     else if (action === "login")   result = handleLogin(body);
     else if (action === "list_users")   result = handleListUsers(body);
     else if (action === "create_user")  result = handleCreateUser(body);
+    else if (action === "update_user")  result = handleUpdateUser(body);
+    else if (action === "delete_user")  result = handleDeleteUser(body);
+    else if (action === "set_user_status") result = handleSetUserStatus(body);
     else if (action === "read")    result = handleRead(body);
     else if (action === "insert")  result = handleInsert(body);
     else if (action === "update")  result = handleUpdate(body);
@@ -62,6 +65,16 @@ function getSheet(name) {
   return sheet;
 }
 
+/** True when a sheet row has no meaningful cell values (trailing blank rows). */
+function isSheetRowEmpty(rowValues) {
+  if (!rowValues || !rowValues.length) return true;
+  for (var i = 0; i < rowValues.length; i++) {
+    var val = rowValues[i];
+    if (val !== null && val !== undefined && String(val).trim() !== "") return false;
+  }
+  return true;
+}
+
 /** Read all rows from a sheet tab and return as array of objects */
 function sheetToObjects(sheet) {
   var lastRow = sheet.getLastRow();
@@ -73,6 +86,7 @@ function sheetToObjects(sheet) {
   var rows = [];
   var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || Session.getScriptTimeZone() || "GMT";
   for (var i = 0; i < data.length; i++) {
+    if (isSheetRowEmpty(data[i])) continue;
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
       var val = data[i][j];
@@ -104,6 +118,34 @@ function userRole(u) {
   r = String(r || "user").trim().toLowerCase();
   if (r === "administrator") r = "admin";
   return r;
+}
+
+/** Account status: active or suspended. */
+function userStatus(u) {
+  var s = u.status;
+  if (s === null || s === undefined || s === "") s = u.Status;
+  s = String(s || "active").trim().toLowerCase();
+  if (s === "suspended" || s === "inactive" || s === "disabled") return "suspended";
+  return "active";
+}
+
+function ensureUserStatusColumn(sheet) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i] || "").trim().toLowerCase() === "status") return;
+  }
+  sheet.getRange(1, lastCol + 1).setValue("status");
+}
+
+function findUserById(users, id) {
+  return users.find(function(u) {
+    return String(u.id) === String(id);
+  });
+}
+
+function adminUsernameLower(body) {
+  return String(body.adminUsername || "").trim().toLowerCase();
 }
 
 /** Find the row number (1-indexed) of a record by its id column value */
@@ -139,6 +181,7 @@ function handleLogin(body) {
   });
 
   if (!user) return { error: "Invalid username or password." };
+  if (userStatus(user) === "suspended") return { error: "This account has been suspended." };
 
   return {
     data: [{
@@ -171,9 +214,20 @@ function handleListUsers(body) {
   var authErr = requireAdmin(body);
   if (authErr) return authErr;
   var sheet = getSheet("users");
-  var users = sheetToObjects(sheet).map(function(u) {
-    return { id: u.id, username: u.username, display_name: u.display_name, role: userRole(u), created_at: u.created_at };
-  });
+  var users = sheetToObjects(sheet)
+    .filter(function(u) {
+      return String(u.username || "").trim() !== "";
+    })
+    .map(function(u) {
+      return {
+        id: u.id,
+        username: u.username,
+        display_name: u.display_name,
+        role: userRole(u),
+        status: userStatus(u),
+        created_at: u.created_at
+      };
+    });
   return { data: users };
 }
 
@@ -210,8 +264,121 @@ function handleCreateUser(body) {
     if (h === "created_at") return new Date().toISOString();
     return "";
   });
+  ensureUserStatusColumn(sheet);
   sheet.appendRow(newRow);
+  var statusCol = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].indexOf("status");
+  if (statusCol !== -1) {
+    sheet.getRange(sheet.getLastRow(), statusCol + 1).setValue("active");
+  }
   return { data: { username: username } };
+}
+
+/**
+ * UPDATE USER — edit display name, role, optional password (admin only)
+ * Body: { adminUsername, id, displayName, role, password? }
+ */
+function handleUpdateUser(body) {
+  var authErr = requireAdmin(body);
+  if (authErr) return authErr;
+
+  var id = body.id;
+  if (!id) return { error: "User id required." };
+
+  var sheet = getSheet("users");
+  var rowNum = findRowById(sheet, id);
+  if (rowNum === -1) return { error: "User not found." };
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var displayName = body.displayName;
+  var role = body.role;
+  var password = body.password;
+
+  if (password && String(password).length < 4) {
+    return { error: "Password must be at least 4 characters." };
+  }
+
+  for (var j = 0; j < headers.length; j++) {
+    var h = String(headers[j] || "").trim();
+    if (h === "display_name" && displayName !== undefined && displayName !== null) {
+      sheet.getRange(rowNum, j + 1).setValue(String(displayName).trim());
+    }
+    if (h === "role" && role !== undefined && role !== null) {
+      sheet.getRange(rowNum, j + 1).setValue(String(role).trim());
+    }
+    if (h === "password" && password) {
+      sheet.getRange(rowNum, j + 1).setValue(String(password));
+    }
+  }
+
+  return { data: { id: id } };
+}
+
+/**
+ * DELETE USER — remove user row (admin only)
+ * Body: { adminUsername, id }
+ */
+function handleDeleteUser(body) {
+  var authErr = requireAdmin(body);
+  if (authErr) return authErr;
+
+  var id = body.id;
+  if (!id) return { error: "User id required." };
+
+  var sheet = getSheet("users");
+  var users = sheetToObjects(sheet);
+  var target = findUserById(users, id);
+  if (!target) return { error: "User not found." };
+
+  if (String(target.username || "").trim().toLowerCase() === adminUsernameLower(body)) {
+    return { error: "You cannot delete your own account." };
+  }
+
+  var rowNum = findRowById(sheet, id);
+  if (rowNum === -1) return { error: "User not found." };
+  sheet.deleteRow(rowNum);
+  return { data: { id: id } };
+}
+
+/**
+ * SET USER STATUS — suspend or reactivate (admin only)
+ * Body: { adminUsername, id, status: "active" | "suspended" }
+ */
+function handleSetUserStatus(body) {
+  var authErr = requireAdmin(body);
+  if (authErr) return authErr;
+
+  var id = body.id;
+  var status = String(body.status || "").trim().toLowerCase();
+  if (!id) return { error: "User id required." };
+  if (status !== "active" && status !== "suspended") {
+    return { error: "Status must be active or suspended." };
+  }
+
+  var sheet = getSheet("users");
+  var users = sheetToObjects(sheet);
+  var target = findUserById(users, id);
+  if (!target) return { error: "User not found." };
+
+  if (status === "suspended" &&
+      String(target.username || "").trim().toLowerCase() === adminUsernameLower(body)) {
+    return { error: "You cannot suspend your own account." };
+  }
+
+  var rowNum = findRowById(sheet, id);
+  if (rowNum === -1) return { error: "User not found." };
+
+  ensureUserStatusColumn(sheet);
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var statusCol = -1;
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i] || "").trim().toLowerCase() === "status") {
+      statusCol = i;
+      break;
+    }
+  }
+  if (statusCol === -1) return { error: "Could not set status column." };
+  sheet.getRange(rowNum, statusCol + 1).setValue(status);
+  return { data: { id: id, status: status } };
 }
 
 /**

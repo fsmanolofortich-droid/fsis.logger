@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./bfp.css?v=20260601c">
+  <link rel="stylesheet" href="./bfp.css?v=20260602a">
 </head>
 
 <body class="admin-page">
@@ -99,12 +99,14 @@
                 <th>Username</th>
                 <th>Display name</th>
                 <th>Role</th>
+                <th>Status</th>
                 <th>Created</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="users-tbody">
               <tr id="users-loading-row">
-                <td colspan="4" class="admin-table-loading">Loading users…</td>
+                <td colspan="6" class="admin-table-loading">Loading users…</td>
               </tr>
             </tbody>
           </table>
@@ -164,11 +166,82 @@
     </div>
   </div>
 
+  <!-- Edit account modal -->
+  <div class="modal-overlay" id="edit-user-overlay" role="dialog" aria-modal="true"
+    aria-labelledby="edit-user-title" onclick="adminCloseEditOnOverlay(event)">
+    <div class="admin-edit-dialog" onclick="event.stopPropagation()">
+      <div class="admin-card__accent" aria-hidden="true"></div>
+      <div class="admin-edit-dialog__head">
+        <h3 class="admin-card__title" id="edit-user-title">
+          <span class="admin-card__icon" aria-hidden="true"><i class="bi bi-pencil-square"></i></span>
+          Edit account
+        </h3>
+        <button type="button" class="admin-edit-close" id="btnCloseEditUser" aria-label="Close">&times;</button>
+      </div>
+      <div class="admin-card__body">
+        <p class="admin-modal-meta" id="edit-user-username-label">—</p>
+        <form id="edit-user-form">
+          <input type="hidden" id="edit-user-id">
+          <div class="admin-form-grid">
+            <div class="admin-field admin-field--full">
+              <label for="edit-display-name">Display name</label>
+              <input type="text" id="edit-display-name" autocomplete="name">
+            </div>
+            <div class="admin-field">
+              <label for="edit-role">Role</label>
+              <select id="edit-role">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div class="admin-field">
+              <label for="edit-password">New password <span class="admin-optional">(optional)</span></label>
+              <input type="password" id="edit-password" minlength="4" placeholder="Leave blank to keep"
+                autocomplete="new-password">
+            </div>
+          </div>
+          <div class="admin-form-actions">
+            <button type="button" class="admin-btn admin-btn--ghost" id="btnCancelEditUser">Cancel</button>
+            <button type="submit" class="admin-btn admin-btn--primary" id="btnSubmitEditUser">
+              <i class="bi bi-check-lg" aria-hidden="true"></i> Save changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <div class="modal-overlay" id="delete-user-overlay" role="dialog" aria-modal="true"
+    aria-labelledby="delete-user-title" onclick="adminCloseDeleteOnOverlay(event)">
+    <div class="admin-edit-dialog admin-edit-dialog--narrow" onclick="event.stopPropagation()">
+      <div class="admin-card__accent" aria-hidden="true"></div>
+      <div class="admin-edit-dialog__head">
+        <h3 class="admin-card__title" id="delete-user-title">
+          <span class="admin-card__icon admin-card__icon--fire" aria-hidden="true"><i class="bi bi-trash3"></i></span>
+          Delete account
+        </h3>
+        <button type="button" class="admin-edit-close" id="btnCloseDeleteUser" aria-label="Close">&times;</button>
+      </div>
+      <div class="admin-card__body">
+        <p class="admin-delete-msg" id="delete-user-message">Are you sure you want to delete this account?</p>
+        <p class="admin-delete-warn">This cannot be undone. The user will no longer be able to sign in.</p>
+        <input type="hidden" id="delete-user-id">
+        <div class="admin-form-actions">
+          <button type="button" class="admin-btn admin-btn--ghost" id="btnCancelDeleteUser">Cancel</button>
+          <button type="button" class="admin-btn admin-btn--warn" id="btnConfirmDeleteUser">
+            <i class="bi bi-trash3" aria-hidden="true"></i> Delete account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="admin-toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-  <script src="./admin.js?v=20260601c"></script>
+  <script src="./admin.js?v=20260602a"></script>
 </body>
 
 </html>

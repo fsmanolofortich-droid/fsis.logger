@@ -3373,8 +3373,53 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
 }
 
 #edit-user-overlay.open,
-#create-user-overlay.open {
+#create-user-overlay.open,
+#delete-user-overlay.open {
   display: flex;
+}
+
+#delete-user-overlay .admin-form-actions,
+#edit-user-overlay .admin-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-edit-dialog--narrow {
+  max-width: 440px;
+}
+
+.admin-modal-meta {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  color: var(--text-light);
+}
+
+.admin-modal-meta strong {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.admin-optional {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-light);
+  font-size: 0.72rem;
+}
+
+.admin-delete-msg {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: var(--navy);
+  font-weight: 500;
+}
+
+.admin-delete-warn {
+  margin: 0 0 18px;
+  font-size: 0.85rem;
+  color: var(--fire-dark);
 }
 
 #edit-user-overlay .admin-form-actions,

@@ -223,6 +223,9 @@ function finishLogbookLoad(key) {
   s.loading = false;
   s.ready = true;
   updateMapLoadingOverlay();
+  if (getCurrentView() === "map") {
+    requestAnimationFrame(() => refreshMapView());
+  }
 }
 
 function applyTableLoadingUi(loadingId, emptyEl, tableWrap, loading) {
@@ -296,8 +299,32 @@ function resizeMapLayout() {
   }
 }
 
+function refreshMapView() {
+  if (getCurrentView() !== "map") return;
+
+  resizeMapLayout();
+
+  if (!window.L) {
+    setTimeout(refreshMapView, 50);
+    return;
+  }
+
+  if (!mapInstance) {
+    initLeafletMap();
+  } else {
+    mapInstance.invalidateSize();
+  }
+
+  if (inspectionDataLoaded) renderInspectionMarkersBatched();
+  if (occupancyDataLoaded) renderOccupancyMarkersBatched();
+}
+
 function initLeafletMap() {
-  if (mapInstance || !window.L) return;
+  if (mapInstance) return;
+  if (!window.L) {
+    setTimeout(initLeafletMap, 50);
+    return;
+  }
   const el = document.getElementById("map");
   if (!el) return;
 
@@ -332,13 +359,15 @@ function initLeafletMap() {
     }
   );
 
-  // Satellite is the default; fall back to road map if tiles fail to load.
+  // Satellite default; OSM fallback when tiles fail (common on strict networks).
   satelliteLayer.addTo(mapInstance);
+  let mapUsedOsmFallback = false;
   satelliteLayer.on("tileerror", () => {
-    if (!mapInstance.hasLayer(osmLayer)) {
-      if (mapInstance.hasLayer(satelliteLayer)) mapInstance.removeLayer(satelliteLayer);
-      osmLayer.addTo(mapInstance);
-    }
+    if (mapUsedOsmFallback || !mapInstance) return;
+    mapUsedOsmFallback = true;
+    if (mapInstance.hasLayer(satelliteLayer)) mapInstance.removeLayer(satelliteLayer);
+    if (!mapInstance.hasLayer(osmLayer)) osmLayer.addTo(mapInstance);
+    setTimeout(() => mapInstance?.invalidateSize(), 0);
   });
 
   // Layer switcher so you can toggle between views
@@ -425,12 +454,14 @@ function initLeafletMap() {
   }
 
   // Make sure the map fully renders after layout
-  setTimeout(() => {
-    mapInstance.invalidateSize();
-  }, 0);
+  setTimeout(() => mapInstance?.invalidateSize(), 0);
+  setTimeout(() => mapInstance?.invalidateSize(), 200);
 
   initMapSearch();
   applyMapMarkerFilter(mapMarkerFilter);
+
+  if (inspectionDataLoaded) renderInspectionMarkersBatched();
+  if (occupancyDataLoaded) renderOccupancyMarkersBatched();
 }
 
 function resetMapView() {
@@ -682,14 +713,8 @@ function showView(name) {
   }
 
   if (name === "map") {
-    if (!mapInstance) {
-      resizeMapLayout();
-      initLeafletMap();
-    } else {
-      resizeMapLayout();
-      setTimeout(() => mapInstance?.invalidateSize(), 0);
-      setTimeout(() => mapInstance?.invalidateSize(), 250);
-    }
+    requestAnimationFrame(() => refreshMapView());
+    setTimeout(() => refreshMapView(), 250);
   } else {
     // When leaving the map view, clear any map-specific heights
     const mapSection = document.querySelector('[data-view="map"]');
@@ -1099,6 +1124,11 @@ async function init() {
     fireDrillInitData();
   } else if (initialView === "occupancy" && !occupancyDataLoaded) {
     occupancyInitData();
+  }
+
+  if (getCurrentView() === "map") {
+    requestAnimationFrame(() => refreshMapView());
+    setTimeout(() => refreshMapView(), 300);
   }
 }
 
