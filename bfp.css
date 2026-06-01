@@ -3270,6 +3270,73 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
   white-space: nowrap;
 }
 
+.admin-row-actions {
+  position: relative;
+}
+
+.admin-row-actions .admin-actions-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--navy);
+  background: #fff;
+  border: 1px solid rgba(13, 27, 42, 0.14);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-row-actions .admin-actions-toggle:hover,
+.admin-row-actions .admin-actions-toggle.show {
+  background: var(--cream-dark);
+  border-color: rgba(212, 168, 67, 0.45);
+}
+
+.admin-row-actions .admin-actions-toggle::after {
+  margin-left: 2px;
+}
+
+.admin-actions-menu {
+  border: 1px solid rgba(212, 168, 67, 0.28);
+  border-radius: 10px;
+  padding: 6px 0;
+  min-width: 190px;
+  box-shadow: 0 12px 32px rgba(13, 27, 42, 0.14);
+}
+
+.admin-actions-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 9px 14px;
+  color: var(--navy);
+}
+
+.admin-actions-menu .dropdown-item:hover,
+.admin-actions-menu .dropdown-item:focus {
+  background: rgba(250, 247, 242, 0.95);
+  color: var(--navy);
+}
+
+.admin-actions-menu .dropdown-item.text-danger {
+  color: var(--fire-dark);
+}
+
+.admin-actions-menu .dropdown-item.text-danger:hover,
+.admin-actions-menu .dropdown-item.text-danger:focus {
+  background: rgba(193, 39, 45, 0.08);
+  color: var(--fire-dark);
+}
+
+.admin-actions-menu .dropdown-divider {
+  margin: 6px 0;
+  border-color: var(--cream-dark);
+}
+
 .admin-actions-inline {
   display: flex;
   gap: 8px;
@@ -3374,12 +3441,14 @@ a.map-detail-directions-link.map-detail-action-btn:hover {
 
 #edit-user-overlay.open,
 #create-user-overlay.open,
-#delete-user-overlay.open {
+#delete-user-overlay.open,
+#status-user-overlay.open {
   display: flex;
 }
 
 #delete-user-overlay .admin-form-actions,
-#edit-user-overlay .admin-form-actions {
+#edit-user-overlay .admin-form-actions,
+#status-user-overlay .admin-form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

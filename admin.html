@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./bfp.css?v=20260602a">
+  <link rel="stylesheet" href="./bfp.css?v=20260602d">
 </head>
 
 <body class="admin-page">
@@ -211,6 +211,33 @@
     </div>
   </div>
 
+  <!-- Suspend / activate confirmation modal -->
+  <div class="modal-overlay" id="status-user-overlay" role="dialog" aria-modal="true"
+    aria-labelledby="status-user-title" onclick="adminCloseStatusOnOverlay(event)">
+    <div class="admin-edit-dialog admin-edit-dialog--narrow" onclick="event.stopPropagation()">
+      <div class="admin-card__accent" aria-hidden="true"></div>
+      <div class="admin-edit-dialog__head">
+        <h3 class="admin-card__title" id="status-user-title">
+          <span class="admin-card__icon" aria-hidden="true"><i class="bi bi-slash-circle" id="status-user-icon"></i></span>
+          <span id="status-user-heading">Change account status</span>
+        </h3>
+        <button type="button" class="admin-edit-close" id="btnCloseStatusUser" aria-label="Close">&times;</button>
+      </div>
+      <div class="admin-card__body">
+        <p class="admin-delete-msg" id="status-user-message">—</p>
+        <p class="admin-delete-warn" id="status-user-hint">Suspended users cannot sign in until reactivated.</p>
+        <input type="hidden" id="status-user-id">
+        <input type="hidden" id="status-user-next">
+        <div class="admin-form-actions">
+          <button type="button" class="admin-btn admin-btn--ghost" id="btnCancelStatusUser">Cancel</button>
+          <button type="button" class="admin-btn admin-btn--primary" id="btnConfirmStatusUser">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Delete confirmation modal -->
   <div class="modal-overlay" id="delete-user-overlay" role="dialog" aria-modal="true"
     aria-labelledby="delete-user-title" onclick="adminCloseDeleteOnOverlay(event)">
@@ -241,7 +268,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-  <script src="./admin.js?v=20260602a"></script>
+  <script src="./admin.js?v=20260602f"></script>
 </body>
 
 </html>

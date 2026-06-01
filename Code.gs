@@ -16,28 +16,63 @@ var DRIVE_FOLDER_ID = "1dZPGdfM8hKxN8LzrP_XrkxD2-hs9LYZA";
  * Entry point for all HTTP POST requests from the frontend.
  * All requests send JSON in the POST body with an "action" field.
  */
+/** API version — bump when adding actions; exposed on ping/doGet. */
+var API_VERSION = 3;
+
+/** Normalize action names (trim, aliases). */
+function normalizeAction(raw) {
+  var a = String(raw || "").trim();
+  var aliases = {
+    deleteUser: "delete_user",
+    user_delete: "delete_user",
+    setUserStatus: "set_user_status",
+    user_set_status: "set_user_status",
+    listUsers: "list_users",
+    createUser: "create_user",
+    updateUser: "update_user"
+  };
+  return aliases[a] || a;
+}
+
 function doPost(e) {
   var result;
   try {
     var body = JSON.parse(e.postData.contents);
-    var action = body.action;
+    var action = normalizeAction(body.action);
 
-    if (action === "ping")         result = { ok: true };
-    else if (action === "login")   result = handleLogin(body);
-    else if (action === "list_users")   result = handleListUsers(body);
-    else if (action === "create_user")  result = handleCreateUser(body);
-    else if (action === "update_user")  result = handleUpdateUser(body);
-    else if (action === "delete_user")  result = handleDeleteUser(body);
-    else if (action === "set_user_status") result = handleSetUserStatus(body);
-    else if (action === "read")    result = handleRead(body);
-    else if (action === "insert")  result = handleInsert(body);
-    else if (action === "update")  result = handleUpdate(body);
-    else if (action === "delete")  result = handleDelete(body);
-    else if (action === "upload")  result = handleUpload(body);
-    else if (action === "patch_photo_url") result = handlePatchPhotoUrl(body);
-    else if (action === "patch_lat_lng") result = handlePatchLatLng(body);
-    else if (action === "patch_expires_on") result = handlePatchExpiresOn(body);
-    else result = { error: "Unknown action: " + action };
+    if (action === "ping") {
+      result = { ok: true, apiVersion: API_VERSION };
+    } else if (action === "login") {
+      result = handleLogin(body);
+    } else if (action === "list_users") {
+      result = handleListUsers(body);
+    } else if (action === "create_user") {
+      result = handleCreateUser(body);
+    } else if (action === "update_user") {
+      result = handleUpdateUser(body);
+    } else if (action === "delete_user") {
+      result = handleDeleteUser(body);
+    } else if (action === "set_user_status") {
+      result = handleSetUserStatus(body);
+    } else if (action === "read") {
+      result = handleRead(body);
+    } else if (action === "insert") {
+      result = handleInsert(body);
+    } else if (action === "update") {
+      result = handleUpdate(body);
+    } else if (action === "delete") {
+      result = handleDelete(body);
+    } else if (action === "upload") {
+      result = handleUpload(body);
+    } else if (action === "patch_photo_url") {
+      result = handlePatchPhotoUrl(body);
+    } else if (action === "patch_lat_lng") {
+      result = handlePatchLatLng(body);
+    } else if (action === "patch_expires_on") {
+      result = handlePatchExpiresOn(body);
+    } else {
+      result = { error: "Unknown action: " + action };
+    }
 
   } catch (err) {
     result = { error: err.message || String(err) };
@@ -51,7 +86,12 @@ function doPost(e) {
 /** Health-check for GET requests */
 function doGet(e) {
   return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, service: "FSIS Logger API" }))
+    .createTextOutput(JSON.stringify({
+      ok: true,
+      service: "FSIS Logger API",
+      apiVersion: API_VERSION,
+      userAdminActions: ["list_users", "create_user", "update_user", "delete_user", "set_user_status"]
+    }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -292,9 +332,25 @@ function handleUpdateUser(body) {
   var displayName = body.displayName;
   var role = body.role;
   var password = body.password;
+  var status = body.status != null ? String(body.status).trim().toLowerCase() : null;
 
   if (password && String(password).length < 4) {
     return { error: "Password must be at least 4 characters." };
+  }
+  if (status && status !== "active" && status !== "suspended") {
+    return { error: "Status must be active or suspended." };
+  }
+
+  var users = sheetToObjects(sheet);
+  var target = findUserById(users, id);
+  if (status === "suspended" && target &&
+      String(target.username || "").trim().toLowerCase() === adminUsernameLower(body)) {
+    return { error: "You cannot suspend your own account." };
+  }
+
+  if (status) {
+    ensureUserStatusColumn(sheet);
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   }
 
   for (var j = 0; j < headers.length; j++) {
@@ -308,9 +364,12 @@ function handleUpdateUser(body) {
     if (h === "password" && password) {
       sheet.getRange(rowNum, j + 1).setValue(String(password));
     }
+    if (h === "status" && status) {
+      sheet.getRange(rowNum, j + 1).setValue(status);
+    }
   }
 
-  return { data: { id: id } };
+  return { data: { id: id, status: status || userStatus(target) } };
 }
 
 /**
@@ -453,6 +512,18 @@ function handleUpdate(body) {
   var updates = body.row || {};
   if (!table || !id) return { error: "table and id required." };
 
+  if (String(table).trim().toLowerCase() === "users") {
+    var authErr = requireAdmin(body);
+    if (authErr) return authErr;
+    if (updates.status != null) {
+      return handleSetUserStatus({
+        adminUsername: body.adminUsername,
+        id: id,
+        status: updates.status
+      });
+    }
+  }
+
   var sheet = getSheet(table);
   if (table === "fire_drill_logbook") {
     ensureColumnExists(sheet, "owner_name");
@@ -543,6 +614,13 @@ function handleDelete(body) {
   var table = body.table || "";
   var id = body.id || "";
   if (!table || !id) return { error: "table and id required." };
+
+  if (String(table).trim().toLowerCase() === "users") {
+    return handleDeleteUser({
+      adminUsername: body.adminUsername,
+      id: id
+    });
+  }
 
   var sheet = getSheet(table);
   var rowNum = findRowById(sheet, id);

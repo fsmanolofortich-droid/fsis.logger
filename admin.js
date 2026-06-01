@@ -49,6 +49,13 @@ async function gasRequest(action, payload) {
   return json;
 }
 
+function isUnknownActionError(err) {
+  return /Unknown action/i.test(String(err?.message || err || ""));
+}
+
+const DEPLOY_HINT =
+  "Redeploy Apps Script: open your Google Sheet → Extensions → Apps Script → paste Code.gs → Deploy → Manage deployments → Edit → New version → Deploy.";
+
 function getSession() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY) ?? localStorage.getItem(SESSION_KEY);
@@ -131,6 +138,7 @@ function closeAllModals() {
   closeOverlay("create-user-overlay");
   closeOverlay("edit-user-overlay");
   closeOverlay("delete-user-overlay");
+  closeOverlay("status-user-overlay");
 }
 
 function openCreateUserModal() {
@@ -183,6 +191,229 @@ function closeDeleteUserModal() {
 
 function adminCloseDeleteOnOverlay(e) {
   if (e.target?.id === "delete-user-overlay") closeDeleteUserModal();
+}
+
+function openStatusUserModal(user, nextStatus) {
+  if (!user || !nextStatus) return;
+  const isSuspend = nextStatus === "suspended";
+  document.getElementById("status-user-id").value = user.id || "";
+  document.getElementById("status-user-next").value = nextStatus;
+
+  const heading = document.getElementById("status-user-heading");
+  const icon = document.getElementById("status-user-icon");
+  const msg = document.getElementById("status-user-message");
+  const hint = document.getElementById("status-user-hint");
+  const confirmBtn = document.getElementById("btnConfirmStatusUser");
+
+  if (heading) heading.textContent = isSuspend ? "Suspend account" : "Activate account";
+  if (icon) icon.className = isSuspend ? "bi bi-slash-circle" : "bi bi-person-check";
+  if (msg) {
+    msg.innerHTML = isSuspend
+      ? "Suspend <strong>" + escapeHtml(user.username || "") + "</strong>?"
+      : "Reactivate <strong>" + escapeHtml(user.username || "") + "</strong>?";
+  }
+  if (hint) {
+    hint.textContent = isSuspend
+      ? "Suspended users cannot sign in until reactivated."
+      : "The user will be able to sign in again.";
+  }
+  if (confirmBtn) {
+    confirmBtn.innerHTML = isSuspend
+      ? '<i class="bi bi-slash-circle" aria-hidden="true"></i> Suspend account'
+      : '<i class="bi bi-person-check" aria-hidden="true"></i> Activate account';
+    confirmBtn.classList.toggle("admin-btn--warn", isSuspend);
+    confirmBtn.classList.toggle("admin-btn--primary", !isSuspend);
+  }
+
+  openOverlay("status-user-overlay");
+}
+
+function closeStatusUserModal() {
+  closeOverlay("status-user-overlay");
+}
+
+function adminCloseStatusOnOverlay(e) {
+  if (e.target?.id === "status-user-overlay") closeStatusUserModal();
+}
+
+/** Call backend to delete a user by id (with fallbacks for older deployments). */
+async function deleteUserAccount(id) {
+  if (!id) throw new Error("User id required.");
+  try {
+    return await gasRequest("delete_user", { adminUsername, id });
+  } catch (err) {
+    if (!isUnknownActionError(err)) throw err;
+    try {
+      return await gasRequest("delete", { adminUsername, table: "users", id });
+    } catch (err2) {
+      if (isUnknownActionError(err2)) {
+        throw new Error("Delete is not available on this backend. " + DEPLOY_HINT);
+      }
+      throw err2;
+    }
+  }
+}
+
+/** Call backend to set active or suspended (with fallbacks for older deployments). */
+async function setUserAccountStatus(id, status) {
+  if (!id) throw new Error("User id required.");
+  const next = String(status || "").trim().toLowerCase();
+  if (next !== "active" && next !== "suspended") {
+    throw new Error("Status must be active or suspended.");
+  }
+  try {
+    return await gasRequest("set_user_status", { adminUsername, id, status: next });
+  } catch (err) {
+    if (!isUnknownActionError(err)) throw err;
+    try {
+      return await gasRequest("update_user", { adminUsername, id, status: next });
+    } catch (err2) {
+      if (!isUnknownActionError(err2)) throw err2;
+      try {
+        return await gasRequest("update", {
+          adminUsername,
+          table: "users",
+          id,
+          row: { status: next },
+        });
+      } catch (err3) {
+        if (isUnknownActionError(err3)) {
+          throw new Error("Suspend/activate is not available on this backend. " + DEPLOY_HINT);
+        }
+        throw err3;
+      }
+    }
+  }
+}
+
+/** Warn if the deployed web app is missing admin user actions. */
+async function checkBackendCapabilities() {
+  try {
+    const getRes = await fetch(GAS_URL);
+    const getJson = await getRes.json().catch(() => ({}));
+    if (getJson.apiVersion >= 3) return;
+
+    const ping = await gasRequest("ping", {});
+    if (ping.apiVersion >= 3) return;
+
+    await gasRequest("delete_user", { adminUsername, id: "__probe__" });
+  } catch (err) {
+    if (isUnknownActionError(err)) {
+      showToast(
+        "Backend is outdated (missing delete_user / set_user_status). Using fallback APIs; redeploy Code.gs for full support.",
+        true
+      );
+    }
+  }
+}
+
+/** Open delete confirmation for a user id. */
+function deleteUser(userId) {
+  const user = findCachedUser(userId);
+  if (!user) {
+    showToast("User not found.", true);
+    return;
+  }
+  openDeleteUserModal(user);
+}
+
+/** Open suspend confirmation for a user id. */
+function suspendUser(userId) {
+  const user = findCachedUser(userId);
+  if (!user) {
+    showToast("User not found.", true);
+    return;
+  }
+  openStatusUserModal(user, "suspended");
+}
+
+/** Open activate confirmation for a user id. */
+function activateUser(userId) {
+  const user = findCachedUser(userId);
+  if (!user) {
+    showToast("User not found.", true);
+    return;
+  }
+  openStatusUserModal(user, "active");
+}
+
+function handleUserAction(action, userId, nextStatus) {
+  if (!userId) return;
+
+  if (action === "edit") {
+    const user = findCachedUser(userId);
+    if (!user) {
+      showToast("User not found.", true);
+      return;
+    }
+    openEditUserModal(user);
+    return;
+  }
+  if (action === "delete") {
+    deleteUser(userId);
+    return;
+  }
+  if (action === "suspend") {
+    suspendUser(userId);
+    return;
+  }
+  if (action === "activate") {
+    activateUser(userId);
+    return;
+  }
+  if (action === "toggle-status") {
+    const user = findCachedUser(userId);
+    if (!user) {
+      showToast("User not found.", true);
+      return;
+    }
+    const next =
+      nextStatus ||
+      (normalizeUserStatus(user.status) === "suspended" ? "active" : "suspended");
+    openStatusUserModal(user, next);
+  }
+}
+
+function confirmDeleteUser() {
+  const id = document.getElementById("delete-user-id")?.value || "";
+  const btn = document.getElementById("btnConfirmDeleteUser");
+  const user = findCachedUser(id);
+  if (!id) return;
+
+  if (btn) btn.disabled = true;
+  deleteUserAccount(id)
+    .then(() => {
+      showToast("Account deleted" + (user?.username ? ": " + user.username : "."));
+      closeDeleteUserModal();
+      loadUsers();
+    })
+    .catch((err) => showToast(err?.message || "Failed to delete account.", true))
+    .finally(() => {
+      if (btn) btn.disabled = false;
+    });
+}
+
+function confirmStatusChange() {
+  const id = document.getElementById("status-user-id")?.value || "";
+  const next = document.getElementById("status-user-next")?.value || "";
+  const btn = document.getElementById("btnConfirmStatusUser");
+  const user = findCachedUser(id);
+  if (!id || !next) return;
+
+  if (btn) btn.disabled = true;
+  setUserAccountStatus(id, next)
+    .then(() => {
+      const name = user?.username || "User";
+      showToast(
+        next === "suspended" ? "Account suspended: " + name : "Account activated: " + name
+      );
+      closeStatusUserModal();
+      loadUsers();
+    })
+    .catch((err) => showToast(err?.message || "Failed to update status.", true))
+    .finally(() => {
+      if (btn) btn.disabled = false;
+    });
 }
 
 function exportTableToCSV(tableId, filename) {
@@ -271,6 +502,58 @@ function renderStatusBadge(status) {
   return '<span class="admin-status admin-status--active">Active</span>';
 }
 
+function attrSafe(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+function renderActionsDropdown(row) {
+  const id = attrSafe(row.id);
+  const status = normalizeUserStatus(row.status);
+  const isSelf =
+    String(row.username || "").trim().toLowerCase() === adminUsername.toLowerCase();
+  const statusAction = status === "suspended" ? "activate" : "suspend";
+  const statusLabel = status === "suspended" ? "Activate account" : "Suspend account";
+  const statusIcon = status === "suspended" ? "bi-person-check" : "bi-slash-circle";
+
+  let menuItems =
+    '<li><button type="button" class="dropdown-item" data-action="edit" data-id="' +
+    id +
+    '"><i class="bi bi-pencil me-2" aria-hidden="true"></i>Edit account</button></li>';
+
+  if (!isSelf) {
+    menuItems +=
+      '<li><hr class="dropdown-divider" role="separator"></li>' +
+      '<li><button type="button" class="dropdown-item" data-action="' +
+      statusAction +
+      '" data-id="' +
+      id +
+      '"><i class="bi ' +
+      statusIcon +
+      ' me-2" aria-hidden="true"></i>' +
+      statusLabel +
+      "</button></li>" +
+      '<li><button type="button" class="dropdown-item text-danger" data-action="delete" data-id="' +
+      id +
+      '"><i class="bi bi-trash3 me-2" aria-hidden="true"></i>Delete account</button></li>';
+  }
+
+  return (
+    '<div class="dropdown admin-row-actions">' +
+    '<button type="button" class="admin-actions-toggle dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-display="static" aria-expanded="false" aria-label="Actions for ' +
+    escapeHtml(row.username || "user") +
+    '">' +
+    '<i class="bi bi-three-dots-vertical" aria-hidden="true"></i><span>Actions</span>' +
+    "</button>" +
+    '<ul class="dropdown-menu dropdown-menu-end admin-actions-menu">' +
+    menuItems +
+    "</ul>" +
+    "</div>"
+  );
+}
+
 function renderUserRow(row) {
   const tr = document.createElement("tr");
   const status = normalizeUserStatus(row.status);
@@ -281,9 +564,6 @@ function renderUserRow(row) {
     : "—";
   const role = normalizeUserRole(row.role);
   const roleClass = role === "admin" ? "admin-role--admin" : "admin-role--user";
-  const isSelf = String(row.username || "").trim().toLowerCase() === adminUsername.toLowerCase();
-  const suspendLabel = status === "suspended" ? "Activate" : "Suspend";
-  const suspendIcon = status === "suspended" ? "bi-person-check" : "bi-slash-circle";
 
   tr.innerHTML =
     '<td class="username-cell">' +
@@ -304,71 +584,25 @@ function renderUserRow(row) {
     escapeHtml(created) +
     "</td>" +
     '<td class="col-actions"><div class="admin-table-actions">' +
-    '<button type="button" class="admin-btn admin-btn--ghost admin-btn--sm" data-action="edit" data-id="' +
-    escapeHtml(row.id) +
-    '" title="Edit"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</button>' +
-    (isSelf
-      ? ""
-      : '<button type="button" class="admin-btn admin-btn--muted admin-btn--sm" data-action="toggle-status" data-id="' +
-        escapeHtml(row.id) +
-        '" title="' +
-        suspendLabel +
-        '"><i class="bi ' +
-        suspendIcon +
-        '" aria-hidden="true"></i> ' +
-        suspendLabel +
-        "</button>") +
-    (isSelf
-      ? ""
-      : '<button type="button" class="admin-btn admin-btn--warn admin-btn--sm" data-action="delete" data-id="' +
-        escapeHtml(row.id) +
-        '" title="Delete"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>') +
+    renderActionsDropdown(row) +
     "</div></td>";
 
   return tr;
 }
 
 function wireTableActions() {
-  const tbody = document.getElementById("users-tbody");
-  if (!tbody) return;
+  const table = document.getElementById("table-users");
+  if (!table || table.dataset.actionsWired === "1") return;
+  table.dataset.actionsWired = "1";
 
-  tbody.addEventListener("click", (e) => {
-    const btn = e.target.closest?.("[data-action]");
-    if (!btn) return;
-    const id = btn.getAttribute("data-id");
-    const user = findCachedUser(id);
-    if (!user) return;
+  table.addEventListener("click", (e) => {
+    const item = e.target.closest?.("[data-action][data-id]");
+    if (!item || !table.contains(item)) return;
 
-    const action = btn.getAttribute("data-action");
-    if (action === "edit") {
-      openEditUserModal(user);
-      return;
-    }
-    if (action === "delete") {
-      openDeleteUserModal(user);
-      return;
-    }
-    if (action === "toggle-status") {
-      const next = normalizeUserStatus(user.status) === "suspended" ? "active" : "suspended";
-      const verb = next === "suspended" ? "suspend" : "reactivate";
-      if (!confirm("Are you sure you want to " + verb + " " + (user.username || "this user") + "?")) {
-        return;
-      }
-      btn.disabled = true;
-      gasRequest("set_user_status", { adminUsername, id: user.id, status: next })
-        .then(() => {
-          showToast(
-            next === "suspended"
-              ? "Account suspended: " + user.username
-              : "Account activated: " + user.username
-          );
-          loadUsers();
-        })
-        .catch((err) => showToast(err?.message || "Failed to update status.", true))
-        .finally(() => {
-          btn.disabled = false;
-        });
-    }
+    e.preventDefault();
+    const action = item.getAttribute("data-action");
+    const id = item.getAttribute("data-id");
+    handleUserAction(action, id);
   });
 }
 
@@ -421,6 +655,10 @@ function init() {
   document.getElementById("btnCancelEditUser")?.addEventListener("click", closeEditUserModal);
   document.getElementById("btnCloseDeleteUser")?.addEventListener("click", closeDeleteUserModal);
   document.getElementById("btnCancelDeleteUser")?.addEventListener("click", closeDeleteUserModal);
+  document.getElementById("btnCloseStatusUser")?.addEventListener("click", closeStatusUserModal);
+  document.getElementById("btnCancelStatusUser")?.addEventListener("click", closeStatusUserModal);
+  document.getElementById("btnConfirmStatusUser")?.addEventListener("click", confirmStatusChange);
+  document.getElementById("btnConfirmDeleteUser")?.addEventListener("click", confirmDeleteUser);
   document.getElementById("btnExportCsv")?.addEventListener("click", () =>
     exportTableToCSV("table-users", "app_users.csv")
   );
@@ -504,24 +742,7 @@ function init() {
       });
   });
 
-  document.getElementById("btnConfirmDeleteUser")?.addEventListener("click", () => {
-    const id = document.getElementById("delete-user-id")?.value || "";
-    const btn = document.getElementById("btnConfirmDeleteUser");
-    if (!id) return;
-
-    if (btn) btn.disabled = true;
-    gasRequest("delete_user", { adminUsername, id })
-      .then(() => {
-        showToast("Account deleted.");
-        closeDeleteUserModal();
-        loadUsers();
-      })
-      .catch((err) => showToast(err?.message || "Failed to delete account", true))
-      .finally(() => {
-        if (btn) btn.disabled = false;
-      });
-  });
-
+  checkBackendCapabilities();
   loadUsers();
 }
 
@@ -530,3 +751,9 @@ document.addEventListener("DOMContentLoaded", init);
 window.adminCloseCreateOnOverlay = adminCloseCreateOnOverlay;
 window.adminCloseEditOnOverlay = adminCloseEditOnOverlay;
 window.adminCloseDeleteOnOverlay = adminCloseDeleteOnOverlay;
+window.adminCloseStatusOnOverlay = adminCloseStatusOnOverlay;
+window.confirmDeleteUser = confirmDeleteUser;
+window.confirmStatusChange = confirmStatusChange;
+window.deleteUser = deleteUser;
+window.suspendUser = suspendUser;
+window.activateUser = activateUser;
