@@ -482,11 +482,13 @@ function prepareIoSessionEntry(row) {
   if (!row) return row;
   const lat = normalizeGeoNumber(row.lat ?? row.latitude);
   const lng = normalizeGeoNumber(row.lng ?? row.longitude);
+  const io_address_lines = formatIoAddressLines(row);
   return {
     ...row,
     lat: lat ?? row.lat ?? null,
     lng: lng ?? row.lng ?? null,
-    io_address_display: inspectionFormatAddressDisplay(row),
+    io_address_lines,
+    io_address_display: io_address_lines.join("\n"),
   };
 }
 
@@ -1489,6 +1491,16 @@ function extractAddressParts(row) {
       const brgy = parts.find(p => /^(barangay|brgy)/i.test(p));
       if (brgy) addrBarangay = brgy.replace(/^(barangay|brgy)\.?\s+/i, "");
     }
+    // Heuristic fallback:
+    // Some stored addresses omit the "Barangay/Brgy" prefix and store only the raw
+    // barangay name. When we have at least 4 parts (street + barangay + municipal + region),
+    // infer barangay by position assuming the merged order.
+    if (!addrBarangay && parts.length >= 4) {
+      // After the optional "Region ..."-reverse, the expected order is:
+      // [Street/Line, Barangay, Municipal, Province, Region]
+      // => barangay is the element right before municipal in the 5-part format.
+      addrBarangay = parts[parts.length - 4];
+    }
     if (parts.length >= 3) {
       addrLine = addrLine || parts[0];
       addrMunicipal = addrMunicipal || parts[parts.length - 3];
@@ -1517,7 +1529,52 @@ function extractAddressParts(row) {
     }
   });
 
-  return { uniqueParts, fullAddr, addrLine, cleanBrgy: addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, "") };
+  return {
+    uniqueParts,
+    fullAddr,
+    addrLine,
+    cleanBrgy: addrBarangay.replace(/^(barangay|brgy)\.?\s+/i, ""),
+    addrMunicipal,
+    addrProvince,
+    addrRegion,
+  };
+}
+
+/** IO PROCEED block: street, barangay, municipal, region (no province). */
+function formatIoAddressLines(row) {
+  const {
+    fullAddr,
+    addrLine,
+    cleanBrgy,
+    addrMunicipal,
+    addrRegion,
+  } = extractAddressParts(row);
+
+  const lines = [];
+  if (addrLine) lines.push(addrLine);
+  if (cleanBrgy) lines.push("Barangay " + cleanBrgy);
+  if (addrMunicipal) lines.push(addrMunicipal);
+  if (addrRegion) {
+    const r = String(addrRegion).trim();
+    lines.push(/^region\s/i.test(r) ? r : `Region ${r}`);
+  }
+
+  const seen = new Set();
+  const unique = [];
+  lines.forEach((p) => {
+    const lower = p.toLowerCase().trim();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      unique.push(p);
+    }
+  });
+
+  if (unique.length) return unique;
+  if (!fullAddr) return [];
+  return fullAddr
+    .split(/,\s*/)
+    .map((p) => String(p || "").trim())
+    .filter((p) => p && !/^bukidnon$/i.test(p));
 }
 
 function inspectionFormatAddressDisplay(row) {
@@ -6300,6 +6357,11 @@ async function occupancyEditEntry(idx) {
   
   ensureSelectOption("occupancy_addr_barangay", row.addr_barangay || "");
   setVal("occupancy_addr_line", row.addr_line);
+  // These are readonly in the modal, so we must set them explicitly
+  // from the loaded record (otherwise they stay on default values).
+  setVal("occupancy_addr_region", row.addr_region || "X");
+  setVal("occupancy_addr_province", row.addr_province || "Bukidnon");
+  setVal("occupancy_addr_municipal", row.addr_municipal || "Manolo Fortich");
   ensureSelectOption("occupancy_type_of_occupancy", row.type_of_occupancy || "");
   setVal("occupancy_inspected_by", row.inspectors);
   setVal("occupancy_inspector_position", row.inspector_position);
@@ -6817,36 +6879,42 @@ async function occupancySaveEntry(e) {
 async function occupancyLoadFromSupabase() {
   const result = await gasRequest("read", { table: "occupancy_logbook" });
   const rows = result.data || [];
-  occupancyData = rows.map((r) => ({
-    id: r.id,
-    log_date: r.log_date,
-    io_number: r.io_number,
-    fsic_number: r.fsic_number || "",
-    owner_name: r.owner_name || "",
-    owner_phone: r.owner_phone || "",
-    business_name: r.business_name || "",
-    type_of_occupancy: r.type_of_occupancy || "",
-    address: r.address || "",
-    addr_barangay: "",
-    addr_line: "",
-    inspectors: r.inspectors || "",
-    inspector_position: r.inspector_position || "",
-    included_personnel_name: r.included_personnel_name || "",
-    included_personnel_position: r.included_personnel_position || "",
-    duration_start: r.duration_start || null,
-    duration_end: r.duration_end || null,
-    remarks_signature: r.remarks_signature || "",
-    lat: r.latitude ?? null,
-    lng: r.longitude ?? null,
-    photo_url: r.photo_url ?? null,
-    photo_taken_at: r.photo_taken_at ?? null,
-    created_at: r.created_at,
-    fsic_purpose: r.fsic_purpose ?? null,
-    fsic_valid_until: r.fsic_valid_until ?? null,
-    fsic_fee_amount: r.fsic_fee_amount ?? null,
-    fsic_fee_or_number: r.fsic_fee_or_number ?? null,
-    fsic_fee_date: r.fsic_fee_date ?? null,
-  }));
+  occupancyData = rows.map((r) => {
+    const addr = extractAddressParts({ address: r.address, insp_address: r.address });
+    return {
+      id: r.id,
+      log_date: r.log_date,
+      io_number: r.io_number,
+      fsic_number: r.fsic_number || "",
+      owner_name: r.owner_name || "",
+      owner_phone: r.owner_phone || "",
+      business_name: r.business_name || "",
+      type_of_occupancy: r.type_of_occupancy || "",
+      address: r.address || "",
+      addr_line: addr.addrLine,
+      addr_barangay: addr.cleanBrgy,
+      addr_municipal: addr.addrMunicipal || "",
+      addr_province: addr.addrProvince || "",
+      addr_region: addr.addrRegion || "",
+      inspectors: r.inspectors || "",
+      inspector_position: r.inspector_position || "",
+      included_personnel_name: r.included_personnel_name || "",
+      included_personnel_position: r.included_personnel_position || "",
+      duration_start: r.duration_start || null,
+      duration_end: r.duration_end || null,
+      remarks_signature: r.remarks_signature || "",
+      lat: r.latitude ?? null,
+      lng: r.longitude ?? null,
+      photo_url: r.photo_url ?? null,
+      photo_taken_at: r.photo_taken_at ?? null,
+      created_at: r.created_at,
+      fsic_purpose: r.fsic_purpose ?? null,
+      fsic_valid_until: r.fsic_valid_until ?? null,
+      fsic_fee_amount: r.fsic_fee_amount ?? null,
+      fsic_fee_or_number: r.fsic_fee_or_number ?? null,
+      fsic_fee_date: r.fsic_fee_date ?? null,
+    };
+  });
   occupancySaveToLocal();
 }
 

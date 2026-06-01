@@ -568,8 +568,10 @@
         finalParts.push("Barangay " + cleanBrgy);
       }
       if (addrMunicipal) finalParts.push(addrMunicipal);
-      if (addrProvince) finalParts.push(addrProvince);
-      if (addrRegion) finalParts.push(addrRegion);
+      if (addrRegion) {
+        const r = String(addrRegion).trim();
+        finalParts.push(/^region\s/i.test(r) ? r : `Region ${r}`);
+      }
 
       // De-duplicate parts (e.g. if Barangay is also the Province)
       const seen = new Set();
@@ -582,9 +584,17 @@
         }
       });
 
-      const address =
-        (entry.io_address_display || "").toString().trim() ||
-        (uniqueParts.length > 0 ? uniqueParts.join(", ") : fullAddr);
+      const addressLines =
+        Array.isArray(entry.io_address_lines) && entry.io_address_lines.length
+          ? entry.io_address_lines
+          : uniqueParts.length > 0
+            ? uniqueParts
+            : fullAddr
+              ? fullAddr
+                  .split(/,\s*/)
+                  .map((p) => String(p || "").trim())
+                  .filter((p) => p && !/^bukidnon$/i.test(p))
+              : [];
       const remarks = (entry.io_remarks ?? entry.remarks ?? "").toString();
 
       const setText = (id, value) => {
@@ -614,7 +624,7 @@
           ? `${business_name}/${owner_name}`
           : business_name || owner_name;
       const coords = formatIoCoords(entry);
-      const proceedLines = [bizOwner, address, coords ? `Coordinates: ${coords}` : ""].filter(
+      const proceedLines = [bizOwner, ...addressLines, coords ? `Coordinates: ${coords}` : ""].filter(
         Boolean
       );
       setText("io_address", proceedLines.join("\n"));
