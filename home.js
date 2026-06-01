@@ -6518,11 +6518,27 @@ async function occupancySaveEntry(e) {
 
   let barangay = (document.getElementById("occupancy_addr_barangay") || { value: "" }).value.trim();
   const line = (document.getElementById("occupancy_addr_line") || { value: "" }).value.trim();
+  const region =
+    (document.getElementById("occupancy_addr_region")?.value || "X").trim();
+  const province =
+    (document.getElementById("occupancy_addr_province")?.value || "Bukidnon").trim();
+  const municipal =
+    (document.getElementById("occupancy_addr_municipal")?.value || "Manolo Fortich").trim();
 
   // Handle special 'Select barangay' residual value if someone clicks but doesn't choose
   if (!barangay || /^select/i.test(barangay)) {
     barangay = "";
   }
+
+  const mergedAddress = [
+    line,
+    barangay ? `Barangay ${barangay}` : null,
+    municipal,
+    province,
+    `Region ${region}`,
+  ]
+    .filter((p) => String(p || "").trim())
+    .join(", ");
 
   const io_number = getIoNumberFromForm("occupancy");
   if (occupancyEditingIdx === null && !io_number) {
@@ -6546,8 +6562,12 @@ async function occupancySaveEntry(e) {
     owner_phone: (document.getElementById("occupancy_owner_phone") || { value: "" }).value.trim(),
     business_name: (document.getElementById("occupancy_property_name") || { value: "" }).value.trim(),
     type_of_occupancy: (document.getElementById("occupancy_type_of_occupancy") || { value: "" }).value.trim(),
+    address: mergedAddress,
     addr_barangay: barangay,
     addr_line: line,
+    addr_municipal: municipal,
+    addr_province: province,
+    addr_region: region,
     inspectors: (document.getElementById("occupancy_inspected_by") || { value: "" }).value.trim(),
     inspector_position: (document.getElementById("occupancy_inspector_position") || { value: "" }).value.trim(),
     included_personnel_name: (document.getElementById("occupancy_included_personnel_name") || { value: "" }).value.trim(),
@@ -6690,7 +6710,7 @@ async function occupancySaveEntry(e) {
         owner_phone: entry.owner_phone || null,
         business_name: entry.business_name || null,
         type_of_occupancy: entry.type_of_occupancy || null,
-        address: entry.addr_line || null, // Mapping addr_line to address for consistency
+        address: entry.address || entry.addr_line || null,
         inspectors: entry.inspectors,
         inspector_position: entry.inspector_position || null,
         included_personnel_name: entry.included_personnel_name || null,
@@ -6806,8 +6826,9 @@ async function occupancyLoadFromSupabase() {
     owner_phone: r.owner_phone || "",
     business_name: r.business_name || "",
     type_of_occupancy: r.type_of_occupancy || "",
-    addr_barangay: r.business_name ? "" : "", // Note: To be fully consistent, barangay mapped from address
-    addr_line: r.address || "",
+    address: r.address || "",
+    addr_barangay: "",
+    addr_line: "",
     inspectors: r.inspectors || "",
     inspector_position: r.inspector_position || "",
     included_personnel_name: r.included_personnel_name || "",
