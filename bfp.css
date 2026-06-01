@@ -398,6 +398,60 @@ body:has(#navSidebar.show) .burger-btn {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ── Data loading overlay (logbook fetch from server) ── */
+.data-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1350;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(13, 27, 42, 0.45);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.data-loading-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.data-loading-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 28px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: var(--shadow-lg);
+  min-width: min(280px, 100%);
+}
+
+.data-loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgba(193, 39, 45, 0.2);
+  border-top-color: var(--bfp-red, #c1272d);
+  border-radius: 50%;
+  animation: data-loading-spin 0.7s linear infinite;
+}
+
+.data-loading-message {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--bfp-navy, #0d1b2a);
+  text-align: center;
+}
+
+@keyframes data-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Multi-line cell ── */
 .cell-pre {
   white-space: pre-line;

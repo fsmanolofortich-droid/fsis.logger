@@ -15,7 +15,7 @@
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet">
   <!-- BFP Brand skin (loads after Bootstrap so overrides apply) -->
-  <link rel="stylesheet" href="./bfp.css?v=20260427a">
+  <link rel="stylesheet" href="./bfp.css?v=20260522a">
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -1319,6 +1319,13 @@
     <div class="toast bfp-toast position-fixed bottom-0 end-0 m-3" id="inspection-toast" role="alert"></div>
     <div class="save-indicator" id="saveIndicator" aria-hidden="true">Record saved</div>
 
+    <div class="data-loading-overlay" id="data-loading-overlay" aria-hidden="true" role="status" aria-live="polite">
+      <div class="data-loading-panel">
+        <div class="data-loading-spinner" aria-hidden="true"></div>
+        <p class="data-loading-message" id="data-loading-message">Loading records…</p>
+      </div>
+    </div>
+
     <!-- ================================================================
          GLOBAL OCCUPANCY MODAL (map + occupancy views)
          ================================================================ -->
@@ -1677,7 +1684,7 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exif-js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js" defer></script>
-  <script src="./home.js?v=20260522d" defer></script>
+  <script src="./home.js?v=20260522e" defer></script>
 </body>
 
 </html>

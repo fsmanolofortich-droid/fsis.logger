@@ -1202,6 +1202,29 @@ function logbookShowToast(id, msg) {
   setTimeout(() => t.classList.remove("show"), 3000);
 }
 
+let dataLoadingCount = 0;
+
+function showDataLoading(message) {
+  dataLoadingCount += 1;
+  const overlay = document.getElementById("data-loading-overlay");
+  const msgEl = document.getElementById("data-loading-message");
+  if (msgEl && message) msgEl.textContent = message;
+  if (overlay) {
+    overlay.classList.add("is-visible");
+    overlay.setAttribute("aria-hidden", "false");
+  }
+}
+
+function hideDataLoading() {
+  dataLoadingCount = Math.max(0, dataLoadingCount - 1);
+  if (dataLoadingCount > 0) return;
+  const overlay = document.getElementById("data-loading-overlay");
+  if (overlay) {
+    overlay.classList.remove("is-visible");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+}
+
 function normalizeQuery(s) {
   return String(s || "").toLowerCase().trim();
 }
@@ -4658,7 +4681,7 @@ async function inspectionLoadFromSupabase() {
   }));
 }
 
-function inspectionInitData() {
+async function inspectionInitData() {
   if (inspectionDataLoaded) return;
   inspectionDataLoaded = true;
 
@@ -4671,18 +4694,19 @@ function inspectionInitData() {
 
   if (!isGasEnabled()) return;
 
-  (async () => {
-    try {
-      await inspectionLoadFromSupabase();
-      inspectionSetPrintDate();
-      inspectionRenderTable();
-      renderInspectionMarkersBatched();
-      setInspectionTab(inspectionActiveTab);
-    } catch (err) {
-      console.warn("Inspection load from GAS failed:", err);
-      logbookShowToast("inspection-toast", "Could not load data from server.");
-    }
-  })();
+  showDataLoading("Loading inspection records…");
+  try {
+    await inspectionLoadFromSupabase();
+    inspectionSetPrintDate();
+    inspectionRenderTable();
+    renderInspectionMarkersBatched();
+    setInspectionTab(inspectionActiveTab);
+  } catch (err) {
+    console.warn("Inspection load from GAS failed:", err);
+    logbookShowToast("inspection-toast", "Could not load data from server.");
+  } finally {
+    hideDataLoading();
+  }
 }
 
 // -----------------------------
@@ -5149,6 +5173,7 @@ async function fsecInitData() {
   fsecSetPrintDate();
   fsecRenderTable();
   if (!isGasEnabled()) return;
+  showDataLoading("Loading FSEC records…");
   try {
     await fsecLoadFromSupabase();
     fsecSetPrintDate();
@@ -5156,6 +5181,8 @@ async function fsecInitData() {
   } catch (err) {
     console.warn("FSEC load from GAS failed:", err);
     logbookShowToast("fsec-toast", "Could not load data from server.");
+  } finally {
+    hideDataLoading();
   }
 }
 
@@ -5460,6 +5487,7 @@ async function conveyanceInitData() {
   localStorage.removeItem(CONVEYANCE_STORAGE_KEY);
   conveyanceRenderTable();
   if (!isGasEnabled()) return;
+  showDataLoading("Loading conveyance records…");
   try {
     await conveyanceLoadFromSupabase();
     conveyanceRenderTable();
@@ -5467,6 +5495,8 @@ async function conveyanceInitData() {
     console.warn("Conveyance load from GAS failed:", err);
     logbookShowToast("conveyance-toast", "Could not load data from server.");
     conveyanceRenderTable();
+  } finally {
+    hideDataLoading();
   }
 }
 
@@ -5995,6 +6025,7 @@ async function fireDrillInitData() {
   fireDrillSetPrintDate();
   fireDrillRenderTable();
   if (!isGasEnabled()) return;
+  showDataLoading("Loading fire drill records…");
   try {
     await fireDrillLoadFromSupabase();
     fireDrillSetPrintDate();
@@ -6003,6 +6034,8 @@ async function fireDrillInitData() {
     console.warn("Fire Drill load from GAS failed:", err);
     logbookShowToast("fire_drill-toast", "Unable to load data from the server.");
     fireDrillRenderTable();
+  } finally {
+    hideDataLoading();
   }
 }
 
@@ -6805,6 +6838,7 @@ async function occupancyInitData() {
   renderOccupancyMarkersBatched();
   setOccupancyTab(occupancyActiveTab);
   if (!isGasEnabled()) return;
+  showDataLoading("Loading occupancy records…");
   try {
     await occupancyLoadFromSupabase();
     occupancySetPrintDate();
@@ -6816,6 +6850,8 @@ async function occupancyInitData() {
     logbookShowToast("occupancy-toast", "Could not load data from server.");
     occupancyRenderTable();
     renderOccupancyMarkersBatched();
+  } finally {
+    hideDataLoading();
   }
 }
 
