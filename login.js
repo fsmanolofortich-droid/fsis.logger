@@ -6,7 +6,18 @@ const SESSION_KEY = "fsis.session";
 
 // ── Google Apps Script backend ────────────────────────────────────────────────
 // Paste your deployed Web App URL below after deploying Code.gs
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwJmqg6lRB_W95VNY9XfAyAovcbJrm8VpPXXg1pP1ujFD10k85xTpbwO5v8RVyy8Bpc/exec";
+const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwJmqg6lRB_W95VNY9XfAyAovcbJrm8VpPXXg1pP1ujFD10k85xTpbwO5v8RVyy8Bpc/exec";
+const GAS_URL_STORAGE_KEY = "fsis.gas_url";
+
+function resolveGasUrl() {
+  try {
+    const fromStorage = (localStorage.getItem(GAS_URL_STORAGE_KEY) || "").trim();
+    if (fromStorage) return fromStorage;
+  } catch (_) { }
+  return DEFAULT_GAS_URL;
+}
+
+let activeGasUrl = resolveGasUrl();
 
 // ── Toast notification system ─────────────────────────────────────────────────
 
@@ -44,17 +55,23 @@ function showToast(message, type = "info", duration = 4000) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function gasRequest(action, payload) {
-  const res = await fetch(GAS_URL, {
+  const res = await fetch(activeGasUrl, {
     method: "POST",
     body: JSON.stringify({ action, ...(payload || {}) }),
   });
-  const json = await res.json();
+  const raw = await res.text();
+  let json;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    throw new Error("Invalid response from server.");
+  }
   if (json.error) throw new Error(json.error);
   return json;
 }
 
 function isGasEnabled() {
-  return Boolean(GAS_URL);
+  return Boolean(activeGasUrl);
 }
 
 function nowIso() {
@@ -85,6 +102,12 @@ function redirectToHome() {
 
 function normalize(s) {
   return (s ?? "").trim();
+}
+
+function normalizeUserRole(role) {
+  const r = String(role ?? "").trim().toLowerCase();
+  if (r === "admin" || r === "administrator") return "admin";
+  return r || "user";
 }
 
 // ── Inline error banner ───────────────────────────────────────────────────────
@@ -163,9 +186,6 @@ function init() {
   const togglePw        = document.getElementById("togglePw");
   const togglePwIcon    = document.getElementById("togglePwIcon");
   const adminYear       = document.getElementById("adminYear");
-  const adminGate       = document.getElementById("adminSecretGate");
-  const adminSecretInput = document.getElementById("adminSecretInput");
-  const openAdminBtn    = document.getElementById("openAdminBtn");
 
   if (!(form instanceof HTMLFormElement)) return;
 
@@ -224,7 +244,19 @@ function init() {
     const loadingToast = showToast("Signing in, please wait…", "info", 0);
 
     try {
-      const result = await gasRequest("login", { username: u, password: p });
+      let result;
+      try {
+        result = await gasRequest("login", { username: u, password: p });
+      } catch (firstErr) {
+        const stored = (localStorage.getItem(GAS_URL_STORAGE_KEY) || "").trim();
+        if (stored && stored !== DEFAULT_GAS_URL) {
+          try { localStorage.removeItem(GAS_URL_STORAGE_KEY); } catch (_) { }
+          activeGasUrl = DEFAULT_GAS_URL;
+          result = await gasRequest("login", { username: u, password: p });
+        } else {
+          throw firstErr;
+        }
+      }
 
       const user = Array.isArray(result.data) ? result.data[0] : null;
       if (!user) {
@@ -247,7 +279,7 @@ function init() {
         userId: user.id,
         username: user.username,
         displayName: user.display_name || user.username,
-        role: user.role,
+        role: normalizeUserRole(user.role),
         issuedAt: nowIso(),
         rememberMe: remember,
       });
@@ -279,39 +311,14 @@ function init() {
     }
   });
 
-  // ── Hidden admin gate: click year 5 times ─────────────
+  // ── Hidden shortcut: click copyright year 5 times → admin (must sign in as admin)
   let adminYearClicks = 0;
-  if (adminYear && adminGate && adminSecretInput && openAdminBtn) {
+  if (adminYear) {
     adminYear.addEventListener("click", () => {
       adminYearClicks += 1;
       if (adminYearClicks >= 5) {
-        adminGate.style.display = "block";
-        adminSecretInput.focus();
-        showToast("Admin panel unlocked.", "info", 3000);
+        window.location.href = "./admin.html";
       }
-    });
-
-    openAdminBtn.addEventListener("click", () => {
-      const secret = normalize(adminSecretInput.value);
-      if (!secret) {
-        showToast("Enter the admin secret first.", "error");
-        adminSecretInput.classList.add("is-invalid");
-        return;
-      }
-      adminSecretInput.classList.remove("is-invalid");
-      try {
-        sessionStorage.setItem("fsis.admin.secret", secret);
-      } catch (_) { }
-      showToast("Opening admin dashboard…", "info", 2000);
-      setTimeout(() => { window.location.href = "./admin.html"; }, 500);
-    });
-
-    adminSecretInput.addEventListener("input", () => {
-      adminSecretInput.classList.remove("is-invalid");
-    });
-
-    adminSecretInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") openAdminBtn.click();
     });
   }
 }

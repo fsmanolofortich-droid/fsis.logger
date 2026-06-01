@@ -10,8 +10,6 @@
 //    (Open the folder in Drive and copy the ID from the URL)
 var DRIVE_FOLDER_ID = "1dZPGdfM8hKxN8LzrP_XrkxD2-hs9LYZA";
 
-// 2. Replace with a strong secret used by the admin panel
-var ADMIN_SECRET = "HelloKalibutan";
 // ────────────────────────────────────────────────────────────
 
 /**
@@ -99,6 +97,15 @@ function generateUUID() {
   return Utilities.getUuid();
 }
 
+/** Role from users row (supports "role" or "Role" column header). */
+function userRole(u) {
+  var r = u.role;
+  if (r === null || r === undefined || r === "") r = u.Role;
+  r = String(r || "user").trim().toLowerCase();
+  if (r === "administrator") r = "admin";
+  return r;
+}
+
 /** Find the row number (1-indexed) of a record by its id column value */
 function findRowById(sheet, id) {
   var data = sheet.getDataRange().getValues();
@@ -138,30 +145,45 @@ function handleLogin(body) {
       id: user.id,
       username: user.username,
       display_name: user.display_name || user.username,
-      role: user.role || "user"
+      role: userRole(user)
     }]
   };
 }
 
+/** Verify caller is an admin user (by username from login session). */
+function requireAdmin(body) {
+  var username = String(body.adminUsername || "").trim().toLowerCase();
+  if (!username) return { error: "Not authorized." };
+  var sheet = getSheet("users");
+  var users = sheetToObjects(sheet);
+  var user = users.find(function(u) {
+    return String(u.username || "").trim().toLowerCase() === username;
+  });
+  if (!user || userRole(user) !== "admin") return { error: "Not authorized." };
+  return null;
+}
+
 /**
  * LIST USERS — returns all users (admin only)
- * Body: { adminSecret }
+ * Body: { adminUsername }
  */
 function handleListUsers(body) {
-  if ((body.adminSecret || "") !== ADMIN_SECRET) return { error: "Invalid admin secret." };
+  var authErr = requireAdmin(body);
+  if (authErr) return authErr;
   var sheet = getSheet("users");
   var users = sheetToObjects(sheet).map(function(u) {
-    return { id: u.id, username: u.username, display_name: u.display_name, role: u.role, created_at: u.created_at };
+    return { id: u.id, username: u.username, display_name: u.display_name, role: userRole(u), created_at: u.created_at };
   });
   return { data: users };
 }
 
 /**
  * CREATE USER — appends a new user row (admin only)
- * Body: { adminSecret, username, displayName, password, role }
+ * Body: { adminUsername, username, displayName, password, role }
  */
 function handleCreateUser(body) {
-  if ((body.adminSecret || "") !== ADMIN_SECRET) return { error: "Invalid admin secret." };
+  var authErr = requireAdmin(body);
+  if (authErr) return authErr;
 
   var username = (body.username || "").trim();
   var displayName = (body.displayName || "").trim();

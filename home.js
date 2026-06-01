@@ -17,11 +17,30 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
+function normalizeUserRole(role) {
+  const r = String(role ?? "").trim().toLowerCase();
+  if (r === "admin" || r === "administrator") return "admin";
+  return r || "user";
+}
+
+function isAdminSession(session) {
+  return normalizeUserRole(session?.role) === "admin";
+}
+
 function requireSession() {
   const session = getSession();
   if (!session?.username) {
     window.location.replace("./index.html");
     return null;
+  }
+  const role = normalizeUserRole(session.role);
+  if (role !== session.role) {
+    session.role = role;
+    try {
+      const raw = JSON.stringify(session);
+      if (session.rememberMe) localStorage.setItem(SESSION_KEY, raw);
+      else sessionStorage.setItem(SESSION_KEY, raw);
+    } catch (_) { }
   }
   return session;
 }
@@ -108,12 +127,12 @@ function toggleFilters(logbookType) {
 const BARANGAYS = [
   "Agusan Canyon", "Alae", "Dahilayan", "Dalirig", "Damilag", "Diclum",
   "Guilang-guilang", "Kalugmanan", "Lindaban", "Lingion", "Lunocan", "Maluko",
-  "Mambatangan", "Mampayag", "Minsuro", "Mantibugao",
-  "San Miguel", "Sankanan", "Santiago", "Santo Niño", "Tankulan", "Ticala",
+  "Mambatangan", "Mampayag", "Minsuro", "Mantibugao", "Tankulan (Poblacion)",
+  "San Miguel", "Sankanan", "Santiago", "Santo Niño", "Ticala",
 ];
 
 const FIRE_PERSONNEL_META = [
-
+  { name: "SF01 Cedric B. Gamolo", rank: "SF01" },
   { name: "SF01 Mark Ferdinand B. Cariaga", rank: "SF01" },
   { name: "FO3 Jun Ray D. Abarquez", rank: "FO3" },
   { name: "FO3 Juan M. Derayunan II", rank: "FO3" },
@@ -173,7 +192,73 @@ let occupancyMarkersLayer = null;
 let inspectionDataLoaded = false;
 let inspectionActiveTab = "with-location";
 let occupancyActiveTab = "with-location";
-let saveWithoutLogbookNavigation = false;
+let inspectionFocusMapAfterSave = false;
+
+/** Per-logbook fetch state (loading vs ready). */
+const logbookLoad = {
+  inspection: { loading: false, ready: false },
+  occupancy: { loading: false, ready: false },
+  fsec: { loading: false, ready: false },
+  conveyance: { loading: false, ready: false },
+  fire_drill: { loading: false, ready: false },
+};
+let markerRenderPending = 0;
+
+function isLogbookLoading(key) {
+  const s = logbookLoad[key];
+  return Boolean(s && s.loading && !s.ready);
+}
+
+function beginLogbookLoad(key) {
+  const s = logbookLoad[key];
+  if (!s) return;
+  s.loading = true;
+  s.ready = false;
+  updateMapLoadingOverlay();
+}
+
+function finishLogbookLoad(key) {
+  const s = logbookLoad[key];
+  if (!s) return;
+  s.loading = false;
+  s.ready = true;
+  updateMapLoadingOverlay();
+}
+
+function applyTableLoadingUi(loadingId, emptyEl, tableWrap, loading) {
+  const loadingEl = loadingId ? document.getElementById(loadingId) : null;
+  if (loading) {
+    if (loadingEl) loadingEl.hidden = false;
+    if (emptyEl) emptyEl.style.display = "none";
+    if (tableWrap) tableWrap.style.display = "none";
+    return true;
+  }
+  if (loadingEl) loadingEl.hidden = true;
+  return false;
+}
+
+function updateMapLoadingOverlay() {
+  const el = document.getElementById("map-loading-overlay");
+  if (!el) return;
+  const dataLoading = isLogbookLoading("inspection") || isLogbookLoading("occupancy");
+  const markersLoading = markerRenderPending > 0;
+  const show = dataLoading || markersLoading;
+  el.hidden = !show;
+  const text = el.querySelector(".map-loading-text");
+  if (text) {
+    text.textContent = dataLoading ? "Loading map data…" : "Loading markers…";
+  }
+}
+
+function beginMarkerBatchRender() {
+  markerRenderPending += 1;
+  updateMapLoadingOverlay();
+}
+
+function endMarkerBatchRender() {
+  markerRenderPending = Math.max(0, markerRenderPending - 1);
+  updateMapLoadingOverlay();
+}
 
 let mapMarkerFilter = "all"; // all | businesses | occupancies | Mercantile | Storage | etc
 let mapMarkerFilterSelectEl = null;
@@ -247,8 +332,14 @@ function initLeafletMap() {
     }
   );
 
-  // Start with the satellite layer as the default visible layer
+  // Satellite is the default; fall back to road map if tiles fail to load.
   satelliteLayer.addTo(mapInstance);
+  satelliteLayer.on("tileerror", () => {
+    if (!mapInstance.hasLayer(osmLayer)) {
+      if (mapInstance.hasLayer(satelliteLayer)) mapInstance.removeLayer(satelliteLayer);
+      osmLayer.addTo(mapInstance);
+    }
+  });
 
   // Layer switcher so you can toggle between views
   const layersControl = L.control
@@ -469,12 +560,10 @@ function configureIoNumberField(prefix, mode) {
 }
 
 function inspectionPromptAddEntry() {
-  saveWithoutLogbookNavigation = false;
   promptIoSourceForAdd("inspection");
 }
 
 function occupancyPromptAddEntry() {
-  saveWithoutLogbookNavigation = false;
   promptIoSourceForAdd("occupancy");
 }
 
@@ -498,7 +587,6 @@ function notifyMapEntrySaved(toastId, message) {
   logbookShowToast(toastId, message);
   showSaveIndicator(message);
 }
-
 function promptIoSourceForAdd(logbookType) {
   pendingAddLogbookType = logbookType;
   openIoSourceChooser();
@@ -542,7 +630,6 @@ function ioSourceChoose(mode) {
 
 function mapAddChoose(type) {
   closeMapAddChooser();
-  saveWithoutLogbookNavigation = true;
   if (type === "occupancy") {
     promptIoSourceForAdd("occupancy");
     return;
@@ -599,8 +686,9 @@ function showView(name) {
       resizeMapLayout();
       initLeafletMap();
     } else {
-      // Ensure map resizes correctly when returning to the tab
       resizeMapLayout();
+      setTimeout(() => mapInstance?.invalidateSize(), 0);
+      setTimeout(() => mapInstance?.invalidateSize(), 250);
     }
   } else {
     // When leaving the map view, clear any map-specific heights
@@ -873,12 +961,18 @@ function showInAppBrowserBanner() {
   document.body.prepend(banner);
 }
 
-function init() {
+async function init() {
   const session = requireSession();
   if (!session) return;
 
   const name = session.displayName || session.username || "User";
   setText("userName", name);
+  if (isAdminSession(session)) {
+    const adminSection = document.getElementById("navAdminSection");
+    const adminBlock = document.getElementById("navAdminBlock");
+    if (adminSection) adminSection.hidden = false;
+    if (adminBlock) adminBlock.hidden = false;
+  }
   const lastEl = document.getElementById("lastLogin");
   if (lastEl) {
     lastEl.textContent = session.issuedAt ? "Signed in " + toFriendlyDate(session.issuedAt) : "";
@@ -954,12 +1048,12 @@ function init() {
     fdValidityType.addEventListener("change", fireDrillSyncValidityDate);
     fdValidityType.addEventListener("input", fireDrillSyncValidityDate);
   }
+  await refreshStorageBadge();
   initViewRouting();  // Map markers ui filter initialization removed as it uses the select dropdown now.
   initTableFilters();
   initPhotoPreviewModal();
   initInspectionPhotoExif();
   initOccupancyPhotoExif();
-  refreshStorageBadge();
 
   // Mobile safety net: ensure Save button always triggers save handler.
   // Some mobile browsers can drop inline handlers in certain contexts.
@@ -1008,7 +1102,7 @@ function init() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => { void init(); });
 
 // ── Burger button 10-click easter egg → Dashboard ──────────────────────────
 let _burgerClickCount = 0;
@@ -1059,10 +1153,17 @@ function resolveGasUrl() {
   return DEFAULT_GAS_URL;
 }
 
-const GAS_URL = resolveGasUrl();
+let activeGasUrl = resolveGasUrl();
+
+function resetGasUrlToDefault() {
+  try {
+    localStorage.removeItem(GAS_URL_STORAGE_KEY);
+  } catch (_) { }
+  activeGasUrl = DEFAULT_GAS_URL;
+}
 
 function isGasEnabled() {
-  return Boolean(GAS_URL);
+  return Boolean(activeGasUrl);
 }
 
 // Alias so existing callers (isSupabaseEnabled) still work
@@ -1075,7 +1176,7 @@ function isSupabaseEnabled() {
  * All actions go via HTTP POST with JSON body.
  */
 async function gasRequest(action, payload) {
-  const res = await fetch(GAS_URL, {
+  const res = await fetch(activeGasUrl, {
     method: "POST",
     body: JSON.stringify({ action, ...(payload || {}) }),
   });
@@ -1123,7 +1224,20 @@ async function refreshStorageBadge() {
     await gasRequest("ping");
     setStorageBadge("db");
   } catch (err) {
-    console.warn("GAS ping failed, using local mode:", err);
+    const stored = (localStorage.getItem(GAS_URL_STORAGE_KEY) || "").trim();
+    if (stored && stored !== DEFAULT_GAS_URL) {
+      console.warn("GAS ping failed with stored URL, retrying default:", err);
+      resetGasUrlToDefault();
+      try {
+        await gasRequest("ping");
+        setStorageBadge("db");
+        return;
+      } catch (retryErr) {
+        console.warn("GAS ping failed with default URL:", retryErr);
+      }
+    } else {
+      console.warn("GAS ping failed, using local mode:", err);
+    }
     setStorageBadge("local");
   }
 }
@@ -1231,28 +1345,28 @@ function normalizeQuery(s) {
   return String(s || "").toLowerCase().trim();
 }
 
-function maybeSwitchLogbookTabForFiltered(filtered, activeTab, setTabFn) {
-  if (!filtered.length) return;
-  const withLoc = filtered.some(
-    ({ row }) => row.lat != null && row.lng != null
-  );
-  const noLoc = filtered.some(
-    ({ row }) => row.lat == null || row.lng == null
-  );
-  if (activeTab === "with-location" && withLoc) return;
-  if (activeTab === "no-location" && noLoc) return;
-  if (withLoc) setTabFn("with-location");
-  else if (noLoc) setTabFn("no-location");
+function inDateRange(dateStr, fromStr, toStr) {
+  if (!dateStr) return false;
+  let t;
+  if (typeof dateStr === 'string' && !dateStr.includes('T')) {
+    t = new Date(dateStr + "T00:00:00").getTime();
+  } else {
+    t = new Date(dateStr).getTime();
+  }
+  if (!isFinite(t)) return false;
+
+  if (fromStr) {
+    const f = new Date(fromStr + "T00:00:00").getTime();
+    if (isFinite(f) && t < f) return false;
+  }
+  if (toStr) {
+    const to = new Date(toStr + "T23:59:59").getTime();
+    if (isFinite(to) && t > to) return false;
+  }
+  return true;
 }
 
-/**
- * Normalize a logbook date to YYYY-MM-DD for storage, filters, and comparisons.
- */
-function logbookNormalizeDateForStorage(d) {
-  return logbookFormatDateForInput(d) || "";
-}
-
-/** Current calendar month as YYYY-MM (for <input type="month">). */
+/** Current calendar month as YYYY-MM (for &lt;input type="month"&gt;). */
 function logbookCurrentMonthValue() {
   const d = new Date();
   const y = d.getFullYear();
@@ -1273,16 +1387,13 @@ function logbookGetFilterMonth(prefix) {
   return (document.getElementById(`${prefix}-filter-month`)?.value || "").trim();
 }
 
-function logbookIsFiltered(prefix) {
-  return !!(
-    normalizeQuery(document.getElementById(`${prefix}-filter-q`)?.value) ||
-    logbookGetFilterMonth(prefix)
-  );
+function initInspectionMonthFilter() {
+  // Leave month empty on load = show all records (pick a month to narrow the list).
 }
 
-function logbookFilterEmptyMessage(prefix, recordLabel) {
-  const month = logbookGetFilterMonth(prefix);
-  const q = (document.getElementById(`${prefix}-filter-q`)?.value || "").trim();
+function inspectionFilterEmptyMessage() {
+  const month = (document.getElementById("inspection-filter-month")?.value || "").trim();
+  const q = (document.getElementById("inspection-filter-q")?.value || "").trim();
   const parts = [];
   if (month) {
     const [y, m] = month.split("-");
@@ -1292,56 +1403,30 @@ function logbookFilterEmptyMessage(prefix, recordLabel) {
           year: "numeric",
         })
       : month;
-    parts.push(`No ${recordLabel} in ${label}`);
+    parts.push(`No inspections in ${label}`);
   }
   if (q) parts.push(`search “${q}”`);
   if (!parts.length) return "No records match the current filters.";
   return `${parts.join(" and ")}. Clear filters or choose another month.`;
 }
 
-function logbookSetEmptyState(el, mode, prefix, opts = {}) {
+function inspectionSetEmptyState(el, mode) {
   if (!el) return;
   const title = el.querySelector("strong");
   const desc = el.querySelector("p");
-  const recordLabel = opts.recordLabel || "records";
   if (mode === "none") {
-    if (title) title.textContent = opts.noneTitle || `No ${recordLabel} yet`;
-    if (desc) {
-      desc.textContent =
-        opts.noneDesc || 'Use "+ Add Entry" to create the first record.';
-    }
+    if (title) title.textContent = "No Inspection Records Yet";
+    if (desc) desc.textContent = "Use the red + button on the map to log a new inspection.";
   } else if (mode === "filter") {
     if (title) title.textContent = "No records for this filter";
-    if (desc) desc.textContent = logbookFilterEmptyMessage(prefix, recordLabel);
+    if (desc) desc.textContent = inspectionFilterEmptyMessage();
   } else if (mode === "with-location") {
     if (title) title.textContent = "No records with location";
-    if (desc) {
-      desc.textContent =
-        opts.withLocationDesc ||
-        "Try “No location yet” or adjust the month/search filters.";
-    }
+    if (desc) desc.textContent = "Try “No location yet” or adjust the month/search filters.";
   } else if (mode === "no-location") {
     if (title) title.textContent = "No records without location";
-    if (desc) {
-      desc.textContent =
-        opts.noLocationDesc ||
-        "All matching records already have a photo/location.";
-    }
+    if (desc) desc.textContent = "All matching inspections already have a photo/location.";
   }
-}
-
-function initInspectionMonthFilter() {
-  // Leave month empty on load = show all records (pick a month to narrow the list).
-}
-
-function inspectionSetEmptyState(el, mode) {
-  logbookSetEmptyState(el, mode, "inspection", {
-    recordLabel: "inspections",
-    noneTitle: "No Inspection Records Yet",
-    noneDesc: "Use the red + button on the map to log a new inspection.",
-    noLocationDesc:
-      "All matching inspections already have a photo/location.",
-  });
 }
 
 function initTableFilters() {
@@ -1364,8 +1449,9 @@ function initTableFilters() {
   };
 
   initInspectionMonthFilter();
-  bind(["inspection-filter-q", "inspection-filter-month"], () =>
-    inspectionRenderTable()
+  bind(
+    ["inspection-filter-q", "inspection-filter-month"],
+    () => inspectionRenderTable()
   );
   bind(["fsec-filter-q", "fsec-filter-month"], () => fsecRenderTable());
   bind(["conveyance-filter-q", "conveyance-filter-month"], () =>
@@ -1473,14 +1559,7 @@ function extractAddressParts(row) {
   let addrMunicipal = row.addr_municipal || "";
   let addrProvince = row.addr_province || "";
   let addrRegion = row.addr_region || "";
-  const fullAddr = (
-    row.insp_address ||
-    row.fsec_address ||
-    row.address ||
-    ""
-  )
-    .toString()
-    .trim();
+  const fullAddr = (row.insp_address || row.fsec_address || row.address || "").toString().trim();
   
   if ((!addrLine || !addrBarangay || !addrMunicipal || !addrProvince || !addrRegion) && fullAddr) {
     const parts = fullAddr.split(/,\s*/).map((p) => String(p || "").trim()).filter(Boolean);
@@ -1606,20 +1685,24 @@ function inspectionRenderTable() {
 
   if (!tbody || !empty) return;
 
+  if (isLogbookLoading("inspection")) {
+    applyTableLoadingUi("loading-inspection", empty, tableWrap, true);
+    applyTableLoadingUi("loading-inspection-nophoto", emptyNoPhoto, tableWrapNoPhoto, true);
+    const countBadge = document.getElementById("inspection-record-count");
+    const noPhotoBadge = document.getElementById("inspection-nophoto-record-count");
+    if (countBadge) countBadge.textContent = "…";
+    if (noPhotoBadge) noPhotoBadge.textContent = "…";
+    return;
+  }
+  applyTableLoadingUi("loading-inspection", empty, tableWrap, false);
+  applyTableLoadingUi("loading-inspection-nophoto", emptyNoPhoto, tableWrapNoPhoto, false);
+
   tbody.innerHTML = "";
   if (tbodyNoPhoto) tbodyNoPhoto.innerHTML = "";
   let withLocationCount = 0;
   let noLocationCount = 0;
 
   const filtered = inspectionGetFilteredEntries();
-  const isFiltered = logbookIsFiltered("inspection");
-  if (isFiltered) {
-    maybeSwitchLogbookTabForFiltered(
-      filtered,
-      inspectionActiveTab,
-      setInspectionTab
-    );
-  }
   const filteredWithLoc = filtered.filter(
     ({ row }) => row.lat != null && row.lng != null
   );
@@ -1747,6 +1830,9 @@ function inspectionRenderTable() {
   }
 
   // ── Filter result info bars ──────────────────────────────────────────
+  const monthVal = (document.getElementById("inspection-filter-month")?.value || "").trim();
+  const hasSearch = !!normalizeQuery(document.getElementById("inspection-filter-q")?.value);
+  const isFiltered = !!(hasSearch || monthVal);
   const totalAll = inspectionData.length;
   const resultsBadge = document.getElementById("inspection-results-badge");
   if (resultsBadge) {
@@ -2045,10 +2131,7 @@ function inspectionOpenIoHtml(idx) {
   const row = inspectionData[idx];
   if (!row) return;
   try {
-    sessionStorage.setItem(
-      "fsis.io.current",
-      JSON.stringify(prepareIoSessionEntry(row))
-    );
+    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
   } catch {
     // If sessionStorage is unavailable, we still open the template;
     // it will show a friendly notice instead of data.
@@ -2404,10 +2487,7 @@ async function inspectionDownloadPdf(idx) {
 
   // Fallback: client-side HTML-to-PDF in a new tab (works even in file:// mode).
   try {
-    sessionStorage.setItem(
-      "fsis.io.current",
-      JSON.stringify(prepareIoSessionEntry(row))
-    );
+    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
     sessionStorage.setItem("fsis.io.downloadFilename", filename);
   } catch {
     // If sessionStorage is unavailable, open without auto-download
@@ -2453,6 +2533,7 @@ function inspectionDeleteEntry(idx) {
 function inspectionOpenModal(ioMode) {
   inspectionEditingIdx = null;
   inspectionEditingId = null;
+  inspectionFocusMapAfterSave = false;
 
   // Reset any previously extracted EXIF coordinates and photo data
   currentExifLat = null;
@@ -2821,20 +2902,18 @@ async function inspectionSaveEntry(e) {
   showSaveIndicator("Inspection record saved");
 
   if (!isOnline) {
-    const isEdit = inspectionEditingIdx !== null;
-    const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
-    saveWithoutLogbookNavigation = false;
-    if (notifyOnMapOnly) {
-      notifyMapEntrySaved(
-        "inspection-toast",
-        "Saved on this device (offline). Marker added to map."
-      );
-      return;
-    }
     logbookShowToast(
       "inspection-toast",
       "Saved on this device only (offline mode)."
     );
+    const isEdit = inspectionEditingIdx !== null;
+    if (entry.lat != null && entry.lng != null && !isEdit) {
+      // Stay in logbook instead of jumping to map as per user request
+      showView("inspection");
+      window.location.hash = "inspection";
+      setInspectionTab("with-location");
+      inspectionRenderTable();
+    }
     return;
   }
 
@@ -2977,29 +3056,15 @@ async function inspectionSaveEntry(e) {
       inspectionRenderTable();
       renderInspectionMarkersBatched();
       inspectionCloseModal();
-      const savedMsg = photoUploadedUrl
-        ? "Saved + photo linked ✓"
-        : "Saved to database.";
-      const isEdit = inspectionEditingId != null;
-      const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
-      saveWithoutLogbookNavigation = false;
-
-      if (notifyOnMapOnly) {
-        const hasLocation =
-          Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
-        const mapMsg = hasLocation
-          ? savedMsg + " New marker on map."
-          : savedMsg + " (No location in photo — check logbook later.)";
-        notifyMapEntrySaved("inspection-toast", mapMsg);
-        return;
-      }
-
-      logbookShowToast("inspection-toast", savedMsg);
+      logbookShowToast("inspection-toast", photoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database.");
 
       const hasLocation =
         Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
 
+      const isEdit = inspectionEditingId != null;
       if (hasLocation && !isEdit) {
+        // No longer jumping to map as per user request.
+        // Stay in the logbook and highlight the new row.
         showView("inspection");
         window.location.hash = "inspection";
         setInspectionTab("with-location");
@@ -3016,7 +3081,9 @@ async function inspectionSaveEntry(e) {
             }
           }
         }, 200);
-      } else if (!isEdit) {
+      } else {
+        // No location found: Force them to the logbook "No location" tab so they know it saved!
+        // We highlight it without fully filtering so they see it in context.
         logbookShowToast("inspection-toast", "Saved! (No location found in photo)");
         showView("inspection");
         window.location.hash = "inspection";
@@ -3024,6 +3091,7 @@ async function inspectionSaveEntry(e) {
         inspectionRenderTable();
 
         setTimeout(() => {
+          // Find the newly saved row based on io_number or highest id
           const idx = inspectionData.findIndex((r) => r.io_number === entry.io_number);
           if (idx >= 0) {
             const rowEl = document.getElementById(`inspection-row-${idx}`);
@@ -3095,7 +3163,11 @@ function inspectionBuildPrintTable() {
 }
 
 function inspectionClearFilters() {
-  logbookClearFilters("inspection", inspectionRenderTable);
+  const q = document.getElementById("inspection-filter-q");
+  const month = document.getElementById("inspection-filter-month");
+  if (q) q.value = "";
+  if (month) month.value = "";
+  inspectionRenderTable();
 }
 
 function logbookClearFilters(prefix, renderFn) {
@@ -3204,10 +3276,7 @@ function openInspectionDetailPanel(entry) {
     openIoBtn.textContent = "Open IO (HTML)";
     openIoBtn.onclick = () => {
       try {
-        sessionStorage.setItem(
-          "fsis.io.current",
-          JSON.stringify(prepareIoSessionEntry(entry))
-        );
+        sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
       } catch { }
       window.open("./inspection_io_fsis.html", "_blank");
     };
@@ -3320,10 +3389,7 @@ function openOccupancyDetailPanel(entry) {
     openIoBtn.textContent = "Open IO (HTML)";
     openIoBtn.onclick = () => {
       try {
-        sessionStorage.setItem(
-          "fsis.io.current",
-          JSON.stringify(prepareIoSessionEntry(entry))
-        );
+        sessionStorage.setItem("fsis.io.current", JSON.stringify(entry));
       } catch { }
       window.open("./occupancy_io_fsis.html", "_blank");
     };
@@ -4483,7 +4549,7 @@ function addOccupancyMarkerFromEntry(entry) {
 function renderOccupancyMarkersBatched() {
   if (!mapInstance || !occupancyMarkersLayer || !Array.isArray(occupancyData)) return;
   occupancyMarkersLayer.clearLayers();
-  
+
   const isTypeFilter = mapMarkerFilter !== "all" && mapMarkerFilter !== "businesses" && mapMarkerFilter !== "occupancies";
   const showOccupancy = mapMarkerFilter === "all" || mapMarkerFilter === "occupancies" || isTypeFilter;
 
@@ -4494,12 +4560,20 @@ function renderOccupancyMarkersBatched() {
     if (isTypeFilter && row.type_of_occupancy !== mapMarkerFilter) return false;
     return true;
   });
+
+  beginMarkerBatchRender();
+  if (!withCoords.length) {
+    endMarkerBatchRender();
+    return;
+  }
+
   let i = 0;
   const batchSize = 40;
   function addBatch() {
     const end = Math.min(i + batchSize, withCoords.length);
     for (; i < end; i++) addOccupancyMarkerFromEntry(withCoords[i]);
     if (i < withCoords.length) requestAnimationFrame(addBatch);
+    else endMarkerBatchRender();
   }
   addBatch();
 }
@@ -4514,11 +4588,19 @@ function renderInspectionMarkersBatched() {
   if (!showInspection) return;
 
   const withCoords = inspectionData.filter((row) => row.lat != null && row.lng != null);
+
+  beginMarkerBatchRender();
+  if (!withCoords.length) {
+    endMarkerBatchRender();
+    return;
+  }
+
   let i = 0;
   function addBatch() {
     const end = Math.min(i + INSPECTION_MARKER_BATCH_SIZE, withCoords.length);
     for (; i < end; i++) addInspectionMarkerFromEntry(withCoords[i]);
     if (i < withCoords.length) requestAnimationFrame(addBatch);
+    else endMarkerBatchRender();
   }
   addBatch();
 }
@@ -4739,30 +4821,44 @@ async function inspectionLoadFromSupabase() {
 }
 
 async function inspectionInitData() {
-  if (inspectionDataLoaded) return;
-  inspectionDataLoaded = true;
+  if (inspectionDataLoaded || isLogbookLoading("inspection")) return;
+  beginLogbookLoad("inspection");
 
-  // Clear any stale cache from the old Supabase backend
-  localStorage.removeItem(INSPECTION_STORAGE_KEY);
   inspectionSetPrintDate();
   inspectionRenderTable();
-  renderInspectionMarkersBatched();
   setInspectionTab(inspectionActiveTab);
 
-  if (!isGasEnabled()) return;
+  if (!isGasEnabled()) {
+    inspectionLoadFromLocal();
+    finishLogbookLoad("inspection");
+    inspectionDataLoaded = true;
+    inspectionRenderTable();
+    renderInspectionMarkersBatched();
+    return;
+  }
 
   showDataLoading("Loading inspection records…");
   try {
     await inspectionLoadFromSupabase();
+    localStorage.removeItem(INSPECTION_STORAGE_KEY);
+    inspectionSaveToLocal();
     inspectionSetPrintDate();
+  } catch (err) {
+    console.warn("Inspection load from GAS failed:", err);
+    inspectionLoadFromLocal();
+    logbookShowToast(
+      "inspection-toast",
+      inspectionData.length
+        ? "Server unavailable — showing cached data."
+        : "Could not load data from server."
+    );
+  } finally {
+    hideDataLoading();
+    finishLogbookLoad("inspection");
+    inspectionDataLoaded = true;
     inspectionRenderTable();
     renderInspectionMarkersBatched();
     setInspectionTab(inspectionActiveTab);
-  } catch (err) {
-    console.warn("Inspection load from GAS failed:", err);
-    logbookShowToast("inspection-toast", "Could not load data from server.");
-  } finally {
-    hideDataLoading();
   }
 }
 
@@ -4831,25 +4927,25 @@ function fsecRenderTable() {
   const tableWrap = document.getElementById("table-fsec")?.closest(".table-wrap");
   const countBadge = document.getElementById("fsec-record-count");
   if (!tbody || !empty) return;
+
+  if (isLogbookLoading("fsec")) {
+    applyTableLoadingUi("loading-fsec", empty, tableWrap, true);
+    if (countBadge) countBadge.textContent = "…";
+    return;
+  }
+  applyTableLoadingUi("loading-fsec", empty, tableWrap, false);
+
   const filtered = fsecGetFilteredEntries();
   if (countBadge) countBadge.textContent = String(filtered.length);
 
   tbody.innerHTML = "";
   if (fsecData.length === 0) {
-    logbookSetEmptyState(empty, "none", "fsec", {
-      recordLabel: "FSEC records",
-      noneTitle: "No FSEC Records Yet",
-      noneDesc: 'Click "Add Entry" to log a new building plan.',
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
   }
 
   if (filtered.length === 0) {
-    logbookSetEmptyState(empty, "filter", "fsec", {
-      recordLabel: "FSEC records",
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
@@ -5224,22 +5320,29 @@ async function fsecLoadFromSupabase() {
 }
 
 async function fsecInitData() {
-  if (fsecDataLoaded) return;
-  fsecDataLoaded = true;
+  if (fsecDataLoaded || isLogbookLoading("fsec")) return;
+  beginLogbookLoad("fsec");
   localStorage.removeItem("bfp_fsec");
   fsecSetPrintDate();
   fsecRenderTable();
-  if (!isGasEnabled()) return;
+  if (!isGasEnabled()) {
+    finishLogbookLoad("fsec");
+    fsecDataLoaded = true;
+    fsecRenderTable();
+    return;
+  }
   showDataLoading("Loading FSEC records…");
   try {
     await fsecLoadFromSupabase();
     fsecSetPrintDate();
-    fsecRenderTable();
   } catch (err) {
     console.warn("FSEC load from GAS failed:", err);
     logbookShowToast("fsec-toast", "Could not load data from server.");
   } finally {
     hideDataLoading();
+    finishLogbookLoad("fsec");
+    fsecDataLoaded = true;
+    fsecRenderTable();
   }
 }
 
@@ -5267,26 +5370,25 @@ function conveyanceRenderTable() {
   const tableWrap = document.getElementById("table-conveyance")?.closest(".table-wrap");
   const countBadge = document.getElementById("conveyance-record-count");
   if (!tbody || !empty) return;
+
+  if (isLogbookLoading("conveyance")) {
+    applyTableLoadingUi("loading-conveyance", empty, tableWrap, true);
+    if (countBadge) countBadge.textContent = "…";
+    return;
+  }
+  applyTableLoadingUi("loading-conveyance", empty, tableWrap, false);
+
   const filtered = conveyanceGetFilteredEntries();
   if (countBadge) countBadge.textContent = String(filtered.length);
 
   tbody.innerHTML = "";
   if (conveyanceData.length === 0) {
-    logbookSetEmptyState(empty, "none", "conveyance", {
-      recordLabel: "conveyance records",
-      noneTitle: "No Conveyance Records Yet",
-      noneDesc:
-        "Use this logbook to track conveyance-related inspections based on IO numbers.",
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
   }
 
   if (filtered.length === 0) {
-    logbookSetEmptyState(empty, "filter", "conveyance", {
-      recordLabel: "conveyance records",
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
@@ -5539,21 +5641,29 @@ async function conveyanceLoadFromSupabase() {
 }
 
 async function conveyanceInitData() {
-  if (conveyanceDataLoaded) return;
-  conveyanceDataLoaded = true;
+  if (conveyanceDataLoaded || isLogbookLoading("conveyance")) return;
+  beginLogbookLoad("conveyance");
   localStorage.removeItem(CONVEYANCE_STORAGE_KEY);
+  conveyanceSetPrintDate();
   conveyanceRenderTable();
-  if (!isGasEnabled()) return;
+  if (!isGasEnabled()) {
+    finishLogbookLoad("conveyance");
+    conveyanceDataLoaded = true;
+    conveyanceRenderTable();
+    return;
+  }
   showDataLoading("Loading conveyance records…");
   try {
     await conveyanceLoadFromSupabase();
-    conveyanceRenderTable();
+    conveyanceSetPrintDate();
   } catch (err) {
     console.warn("Conveyance load from GAS failed:", err);
     logbookShowToast("conveyance-toast", "Could not load data from server.");
-    conveyanceRenderTable();
   } finally {
     hideDataLoading();
+    finishLogbookLoad("conveyance");
+    conveyanceDataLoaded = true;
+    conveyanceRenderTable();
   }
 }
 
@@ -5751,26 +5861,25 @@ function fireDrillRenderTable() {
   const tableWrap = document.getElementById("table-fire_drill")?.closest(".table-wrap");
   const countBadge = document.getElementById("fire_drill-record-count");
   if (!tbody || !empty) return;
+
+  if (isLogbookLoading("fire_drill")) {
+    applyTableLoadingUi("loading-fire_drill", empty, tableWrap, true);
+    if (countBadge) countBadge.textContent = "…";
+    return;
+  }
+  applyTableLoadingUi("loading-fire_drill", empty, tableWrap, false);
+
   const filtered = fireDrillGetFilteredEntries();
   if (countBadge) countBadge.textContent = String(filtered.length);
 
   tbody.innerHTML = "";
   if (fireDrillData.length === 0) {
-    logbookSetEmptyState(empty, "none", "fire_drill", {
-      recordLabel: "fire drill records",
-      noneTitle: "No Fire Drill Records Yet",
-      noneDesc:
-        "Add entries to track fire drill / seminar certification data for your records.",
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
   }
 
   if (filtered.length === 0) {
-    logbookSetEmptyState(empty, "filter", "fire_drill", {
-      recordLabel: "fire drill records",
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     return;
@@ -6076,23 +6185,29 @@ async function fireDrillLoadFromSupabase() {
 }
 
 async function fireDrillInitData() {
-  if (fireDrillDataLoaded) return;
-  fireDrillDataLoaded = true;
+  if (fireDrillDataLoaded || isLogbookLoading("fire_drill")) return;
+  beginLogbookLoad("fire_drill");
   localStorage.removeItem(FIRE_DRILL_STORAGE_KEY);
   fireDrillSetPrintDate();
   fireDrillRenderTable();
-  if (!isGasEnabled()) return;
+  if (!isGasEnabled()) {
+    finishLogbookLoad("fire_drill");
+    fireDrillDataLoaded = true;
+    fireDrillRenderTable();
+    return;
+  }
   showDataLoading("Loading fire drill records…");
   try {
     await fireDrillLoadFromSupabase();
     fireDrillSetPrintDate();
-    fireDrillRenderTable();
   } catch (err) {
     console.warn("Fire Drill load from GAS failed:", err);
     logbookShowToast("fire_drill-toast", "Unable to load data from the server.");
-    fireDrillRenderTable();
   } finally {
     hideDataLoading();
+    finishLogbookLoad("fire_drill");
+    fireDrillDataLoaded = true;
+    fireDrillRenderTable();
   }
 }
 
@@ -6137,20 +6252,23 @@ function occupancyRenderTable() {
   const countBadge = document.getElementById("occupancy-record-count");
   const noLocationCountBadge = document.getElementById("occupancy-nolocation-record-count");
   if (!tbody || !empty) return;
+
+  if (isLogbookLoading("occupancy")) {
+    applyTableLoadingUi("loading-occupancy", empty, tableWrap, true);
+    applyTableLoadingUi("loading-occupancy-nolocation", emptyNoLocation, tableWrapNoLocation, true);
+    if (countBadge) countBadge.textContent = "…";
+    if (noLocationCountBadge) noLocationCountBadge.textContent = "…";
+    return;
+  }
+  applyTableLoadingUi("loading-occupancy", empty, tableWrap, false);
+  applyTableLoadingUi("loading-occupancy-nolocation", emptyNoLocation, tableWrapNoLocation, false);
+
   if (tbodyNoLocation) tbodyNoLocation.innerHTML = "";
 
   let withLocationCount = 0;
   let noLocationCount = 0;
 
   const filtered = occupancyGetFilteredEntries();
-  const isFiltered = logbookIsFiltered("occupancy");
-  if (isFiltered) {
-    maybeSwitchLogbookTabForFiltered(
-      filtered,
-      occupancyActiveTab,
-      setOccupancyTab
-    );
-  }
   const filteredWithLoc = filtered.filter(
     ({ row }) => row.lat != null && row.lng != null
   );
@@ -6162,12 +6280,6 @@ function occupancyRenderTable() {
 
   tbody.innerHTML = "";
   if (occupancyData.length > 0 && filtered.length === 0) {
-    logbookSetEmptyState(empty, "filter", "occupancy", {
-      recordLabel: "occupancy records",
-    });
-    logbookSetEmptyState(emptyNoLocation, "filter", "occupancy", {
-      recordLabel: "occupancy records",
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     if (emptyNoLocation) emptyNoLocation.style.display = "block";
@@ -6176,16 +6288,6 @@ function occupancyRenderTable() {
   }
 
   if (occupancyData.length === 0) {
-    logbookSetEmptyState(empty, "none", "occupancy", {
-      recordLabel: "occupancy records",
-      noneTitle: "No Occupancy Records Yet",
-      noneDesc: "Use the red + button on the map to log a new occupancy record.",
-    });
-    logbookSetEmptyState(emptyNoLocation, "none", "occupancy", {
-      recordLabel: "occupancy records",
-      noneTitle: "No Occupancy Records Yet",
-      noneDesc: "Use the red + button on the map to log a new occupancy record.",
-    });
     empty.style.display = "block";
     if (tableWrap) tableWrap.style.display = "none";
     if (emptyNoLocation) emptyNoLocation.style.display = "block";
@@ -6250,25 +6352,8 @@ function occupancyRenderTable() {
     }
   });
 
-  if (withLocationCount === 0) {
-    logbookSetEmptyState(empty, filtered.length ? "with-location" : "filter", "occupancy", {
-      recordLabel: "occupancy records",
-    });
-    empty.style.display = "block";
-    if (tableWrap) tableWrap.style.display = "none";
-  } else {
-    empty.style.display = "none";
-    if (tableWrap) tableWrap.style.display = "";
-  }
-
   if (tbodyNoLocation && emptyNoLocation) {
     if (noLocationCount === 0) {
-      logbookSetEmptyState(
-        emptyNoLocation,
-        filtered.length ? "no-location" : "filter",
-        "occupancy",
-        { recordLabel: "occupancy records" }
-      );
       emptyNoLocation.style.display = "block";
       if (tableWrapNoLocation) tableWrapNoLocation.style.display = "none";
     } else {
@@ -6306,10 +6391,7 @@ function occupancyOpenIoHtml(idx) {
   const row = occupancyData[idx];
   if (!row) return;
   try {
-    sessionStorage.setItem(
-      "fsis.io.current",
-      JSON.stringify(prepareIoSessionEntry(row))
-    );
+    sessionStorage.setItem("fsis.io.current", JSON.stringify(row));
   } catch {
     // If sessionStorage is unavailable, we still open the template;
     // it will show a friendly notice instead of data.
@@ -6709,16 +6791,6 @@ async function occupancySaveEntry(e) {
   addOccupancyMarkerFromEntry(entry);
 
   if (!isOnline) {
-    const isEdit = occupancyEditingIdx !== null;
-    const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
-    saveWithoutLogbookNavigation = false;
-    if (notifyOnMapOnly) {
-      notifyMapEntrySaved(
-        "occupancy-toast",
-        "Saved on this device (offline). Marker added to map."
-      );
-      return;
-    }
     logbookShowToast("occupancy-toast", "Saved on this device only (offline mode).");
     return;
   }
@@ -6831,44 +6903,25 @@ async function occupancySaveEntry(e) {
       await occupancyLoadFromSupabase();
       occupancyRenderTable();
       renderOccupancyMarkersBatched();
-      const savedMsg = occPhotoUploadedUrl
-        ? "Saved + photo linked ✓"
-        : "Saved to database.";
-      const isEdit = occupancyEditingId != null;
-      const notifyOnMapOnly = saveWithoutLogbookNavigation && !isEdit;
-      saveWithoutLogbookNavigation = false;
-
-      if (notifyOnMapOnly) {
-        const hasLocation =
-          Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
-        const mapMsg = hasLocation
-          ? savedMsg + " New marker on map."
-          : savedMsg + " (No location in photo — check logbook later.)";
-        notifyMapEntrySaved("occupancy-toast", mapMsg);
-        return;
-      }
-
-      logbookShowToast("occupancy-toast", savedMsg);
+      logbookShowToast("occupancy-toast", occPhotoUploadedUrl ? "Saved + photo linked ✓" : "Saved to database.");
 
       const hasLocation =
         Number.isFinite(entry.lat) && Number.isFinite(entry.lng);
-      if (!isEdit) {
-        showView("occupancy");
-        window.location.hash = "occupancy";
-        setOccupancyTab(hasLocation ? "with-location" : "no-location");
-        occupancyRenderTable();
-        setTimeout(() => {
-          const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
-          if (idx >= 0) {
-            const rowEl = document.getElementById(`occupancy-row-${idx}`);
-            if (rowEl) {
-              rowEl.classList.add("row-highlight");
-              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
-              setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
-            }
+      showView("occupancy");
+      window.location.hash = "occupancy";
+      setOccupancyTab(hasLocation ? "with-location" : "no-location");
+      occupancyRenderTable();
+      setTimeout(() => {
+        const idx = occupancyData.findIndex((r) => r.io_number === entry.io_number);
+        if (idx >= 0) {
+          const rowEl = document.getElementById(`occupancy-row-${idx}`);
+          if (rowEl) {
+            rowEl.classList.add("row-highlight");
+            rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => rowEl.classList.remove("row-highlight"), 2500);
           }
-        }, 200);
-      }
+        }
+      }, 200);
     } catch (err) {
       const msg = err?.message || String(err);
       logbookShowToast("occupancy-toast", "Save failed: " + msg);
@@ -6919,28 +6972,39 @@ async function occupancyLoadFromSupabase() {
 }
 
 async function occupancyInitData() {
-  if (occupancyDataLoaded) return;
-  occupancyDataLoaded = true;
-  localStorage.removeItem(OCCUPANCY_STORAGE_KEY);
+  if (occupancyDataLoaded || isLogbookLoading("occupancy")) return;
+  beginLogbookLoad("occupancy");
   occupancySetPrintDate();
   occupancyRenderTable();
-  renderOccupancyMarkersBatched();
   setOccupancyTab(occupancyActiveTab);
-  if (!isGasEnabled()) return;
+  if (!isGasEnabled()) {
+    occupancyLoadFromLocal();
+    finishLogbookLoad("occupancy");
+    occupancyDataLoaded = true;
+    occupancyRenderTable();
+    renderOccupancyMarkersBatched();
+    return;
+  }
   showDataLoading("Loading occupancy records…");
   try {
     await occupancyLoadFromSupabase();
     occupancySetPrintDate();
+  } catch (err) {
+    console.warn("Occupancy load from GAS failed:", err);
+    occupancyLoadFromLocal();
+    logbookShowToast(
+      "occupancy-toast",
+      occupancyData.length
+        ? "Server unavailable — showing cached data."
+        : "Could not load data from server."
+    );
+  } finally {
+    hideDataLoading();
+    finishLogbookLoad("occupancy");
+    occupancyDataLoaded = true;
     occupancyRenderTable();
     renderOccupancyMarkersBatched();
     setOccupancyTab(occupancyActiveTab);
-  } catch (err) {
-    console.warn("Occupancy load from GAS failed:", err);
-    logbookShowToast("occupancy-toast", "Could not load data from server.");
-    occupancyRenderTable();
-    renderOccupancyMarkersBatched();
-  } finally {
-    hideDataLoading();
   }
 }
 
@@ -6986,7 +7050,6 @@ function occupancyRowMatchesFilters(row, q, month) {
       row.owner_name,
       row.owner_phone,
       row.business_name,
-      inspectionFormatAddressDisplay(row),
       row.fsic_number,
       row.inspectors,
       row.remarks_signature,
